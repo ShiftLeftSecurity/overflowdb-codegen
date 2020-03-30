@@ -21,11 +21,9 @@ class SchemaMergerTest extends WordSpec with Matchers {
     val jsonA = """{"nodeTypes": [{"name":"foo", "field1":"value1"}]}"""
     val jsonB = """{"nodeTypes": [{"name":"bar", "field2":"value2"}]}"""
 
-    val result = merge(jsonA, jsonB)
-    result shouldBe read(
-      """{
-      "nodeTypes": [{"name":"foo", "field1":"value1"}, {"name":"bar", "field2":"value2"}]
-      }""")
+    val mergedNodeTypes = merge(jsonA, jsonB)("nodeTypes").arr
+    mergedNodeTypes should contain(read(""" {"name":"foo", "field1":"value1"} """))
+    mergedNodeTypes should contain(read(""" {"name":"bar", "field2":"value2"} """))
   }
 
   "combines elements with same `name`" in {
