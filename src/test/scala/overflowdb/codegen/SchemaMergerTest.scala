@@ -24,7 +24,7 @@ class SchemaMergerTest extends WordSpec with Matchers {
     val result = merge(jsonA, jsonB)
     result shouldBe read(
       """{
-      "nodeTypes": [{"name":"bar", "field2":"value2"}, {"name":"foo", "field1":"value1"}]
+      "nodeTypes": [{"name":"foo", "field1":"value1"}, {"name":"bar", "field2":"value2"}]
       }""")
   }
 
