@@ -118,8 +118,8 @@ object SchemaMerger {
     }
 
   private def verifyNoDuplicateIds(collections: Iterator[(String, Value)]) =
-    collections.foreach { case (collectionName, Arr(entries)) =>
-      val idValues = entries.map(_.obj.get(FieldNames.Id)).flatten
+    collections.foreach { case (collectionName, entries) =>
+      val idValues = entries.arr.map(_.obj.get(FieldNames.Id)).flatten
       if (idValues.size != idValues.distinct.size) {
         // there are duplicate ids!
         val duplicateIds = idValues.groupBy(id => id).collect {
