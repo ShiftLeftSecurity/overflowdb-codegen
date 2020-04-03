@@ -1,0 +1,27 @@
+language: scala
+dist: xenial
+jdk: openjdk8
+if: tag IS blank
+before_install:
+- git fetch --tags
+stages:
+- name: test
+- name: release
+  if: branch = master AND type = push
+jobs:
+  include:
+  - stage: test
+    script: sbt +test
+  - stage: release
+    script: sbt ciReleaseTagNextVersion ciReleaseBintray
+before_cache:
+- find $HOME/.sbt -name "*.lock" -type f -delete
+- find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
+- rm -rf $HOME/.ivy2/local
+cache:
+  directories:
+  - "$HOME/.sbt/1.0/dependency"
+  - "$HOME/.sbt/boot/scala*"
+  - "$HOME/.sbt/launchers"
+  - "$HOME/.ivy2/cache"
+  - "$HOME/.coursier"
