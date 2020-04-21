@@ -88,7 +88,8 @@ object Helpers {
             case HigherValueType.List =>
               val memberName = "_" + camelCase(property.name)
               s"""if (key == "${property.name}") {
-                 |  if (cardinality == VertexProperty.Cardinality.list) {
+                 |  if(value.isInstanceOf[List]){this.$memberName = value.asInstanceOf[${getCompleteType(property)}]}
+                 |  else if (cardinality == VertexProperty.Cardinality.list) {
                  |    if (this.$memberName == null) { this.$memberName = Nil }
                  |    this.$memberName = this.$memberName :+ value.asInstanceOf[${getBaseType(property)}]
                  |  } else {
