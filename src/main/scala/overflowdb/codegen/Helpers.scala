@@ -60,19 +60,18 @@ object Helpers {
     properties.map { property =>
       val name = camelCase(property.name)
       val tpe = getCompleteType(property)
+      val unsetValue = propertyUnsetValue(property)
 
-      getHigherType(property) match {
-        case HigherValueType.None =>
-          s"""private var _$name: $tpe = null
-             |def $name(): $tpe = _$name""".stripMargin
-        case HigherValueType.Option =>
-          s"""private var _$name: $tpe = None
-             |def $name(): $tpe = _$name""".stripMargin
-        case HigherValueType.List =>
-          s"""private var _$name: $tpe = Nil
-             |def $name(): $tpe = _$name""".stripMargin
-      }
+      s"""private var _$name: $tpe = $unsetValue
+         |def $name(): $tpe = _$name""".stripMargin
     }.mkString("\n\n")
+
+  def propertyUnsetValue(property: Property): String =
+    getHigherType(property) match {
+      case HigherValueType.None => "null"
+      case HigherValueType.Option => "None"
+      case HigherValueType.List => "Nil"
+    }
 
   def updateSpecificPropertyBody(properties: List[Property]): String = {
     val caseNotFound = "PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)"
@@ -111,7 +110,7 @@ object Helpers {
       case Nil => caseNotFound
       case keys =>
         val casesForKeys: List[String] = keys.map { property =>
-          s""" if (key == "${property.name}") this._${camelCase(property.name)} = null """
+          s""" if (key == "${property.name}") this._${camelCase(property.name)} = ${propertyUnsetValue(property)} """
         }
         (casesForKeys :+ caseNotFound).mkString("\n else ")
     }
