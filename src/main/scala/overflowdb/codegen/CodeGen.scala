@@ -506,7 +506,7 @@ def writeConstants(outputDir: JFile): JFile = {
           nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
             NeighborInfo(
               neighborAccessorNameForEdge(edgeName, Direction.OUT),
-              inNodes.map(Helpers.camelCaseCaps).toSet,
+              inNodes.toSet,
               nextOffsetPos)
           }
 
@@ -514,28 +514,30 @@ def writeConstants(outputDir: JFile): JFile = {
           schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil).map { case InEdgeContext(edgeName, outNodes) =>
             NeighborInfo(
               neighborAccessorNameForEdge(edgeName, Direction.IN),
-              outNodes.map(_.className),
+              outNodes.map(_.name),
               nextOffsetPos)
           }
 
         neighborOutInfos ++ neighborInInfos
       }
 
-      val neighborDelegators = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeType, _) =>
-        /* generic and specific neighbor accessors - as mentioned in comment above, we may not need generic ones (prefixed with `_`) in future */
-        s"""def $accessorNameForEdge: JIterator[$neighborNodeType] = get().$accessorNameForEdge
-           |override def _$accessorNameForEdge(): JIterator[StoredNode] = get()._$accessorNameForEdge
-           |""".stripMargin
+      val neighborDelegators = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeTypes, _) =>
+        val genericEdgeBasedAccessor =
+          s"override def _$accessorNameForEdge(): JIterator[StoredNode] = get()._$accessorNameForEdge"
+
+        val specificNodeBasedAccessors = nodeTypes.map { nodeType =>
+          val accessorName = camelCase(nodeType)
+          val nodeClass = camelCaseCaps(nodeType)
+          s"def $accessorName: JIterator[$nodeClass] = get().$accessorName"
+        }
+        specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
 
       val nodeRefImpl = {
-        val propertyDelegators = keys
-          .map(_.name)
-          .map(camelCase)
-          .map { name =>
-            s"""  override def $name = get().$name"""
-          }
-          .mkString("\n")
+        val propertyDelegators = keys.map { key =>
+          val name = camelCase(key.name)
+          s"""  override def $name = get().$name"""
+        }.mkString("\n")
 
         s"""class $className(graph: OdbGraph, id: Long) extends NodeRef[$classNameDb](graph, id)
            |  with ${className}Base
@@ -553,11 +555,17 @@ def writeConstants(outputDir: JFile): JFile = {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos { case NeighborInfo(accessorNameForEdge, neighborNodeType, offsetPos) =>
-        /* generic and specific neighbor accessors - as mentioned in comment above, we may not need generic ones (prefixed with `_`) in future */
-        s"""def $accessorNameForEdge : JIterator[$neighborNodeType] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[$neighborNodeType]]
-           |override def _$accessorNameForEdge : JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]""".stripMargin
-      }
+      val neighborAccessors = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeTypes, offsetPos) =>
+        val genericEdgeBasedAccessor =
+          s"override def _$accessorNameForEdge : JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
+
+        val specificNodeBasedAccessors = nodeTypes.map { nodeType =>
+          val accessorName = camelCase(nodeType)
+          val nodeClass = camelCaseCaps(nodeType)
+          s"def $accessorName: Iterator[$nodeClass] = createAdjacentNodeIteratorByOffSet($offsetPos).asScala.collect { case node: $nodeClass => node }"
+        }
+        specificNodeBasedAccessors + genericEdgeBasedAccessor
+      }.mkString("\n")
 
       val classImpl =
         s"""class $classNameDb(ref: NodeRef[OdbNode]) extends OdbNode(ref) with StoredNode
