@@ -528,7 +528,7 @@ def writeConstants(outputDir: JFile): JFile = {
         val specificNodeBasedAccessors = nodeTypes.map { nodeType =>
           val accessorName = camelCase(nodeType)
           val nodeClass = camelCaseCaps(nodeType)
-          s"def $accessorName: JIterator[$nodeClass] = get().$accessorName"
+          s"def _$accessorName: JIterator[$nodeClass] = get()._$accessorName"
         }
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
@@ -562,7 +562,7 @@ def writeConstants(outputDir: JFile): JFile = {
         val specificNodeBasedAccessors = nodeTypes.map { nodeType =>
           val accessorName = camelCase(nodeType)
           val nodeClass = camelCaseCaps(nodeType)
-          s"def $accessorName: Iterator[$nodeClass] = createAdjacentNodeIteratorByOffSet($offsetPos).asScala.collect { case node: $nodeClass => node }"
+          s"def _$accessorName: Iterator[$nodeClass] = createAdjacentNodeIteratorByOffSet($offsetPos).asScala.collect { case node: $nodeClass => node }"
         }
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
