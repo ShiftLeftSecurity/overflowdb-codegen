@@ -130,9 +130,11 @@ object Helpers {
        |}
        |""".stripMargin
 
-  /* obtained from repl via
-  :power
-  nme.keywords
+  /** obtained from repl via
+   * {{{
+   * :power
+   * nme.keywords
+   * }}}
    */
   val scalaReservedKeywords = Set(
     "abstract", ">:", "if", ".", "catch", "protected", "final", "super", "while", "true", "val", "do", "throw",

@@ -112,8 +112,8 @@ case class NodeBaseTrait(name: String, hasKeys: List[String], `extends`: Option[
 
 case class InEdgeContext(edgeName: String, outNodes: Set[NodeType])
 
-case class NodeNeighborInfo(accessorName: String, className: String)
-case class NeighborInfo(accessorNameForEdge: String, nodeInfos: Set[NodeNeighborInfo], offsetPosition: Int)
+case class NeighborNodeInfo(accessorName: String, className: String)
+case class NeighborInfo(accessorNameForEdge: String, nodeInfos: Set[NeighborNodeInfo], offsetPosition: Int)
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
