@@ -504,31 +504,29 @@ def writeConstants(outputDir: JFile): JFile = {
 
         val neighborOutInfos =
           nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
-            NeighborInfo(
-              neighborAccessorNameForEdge(edgeName, Direction.OUT),
-              inNodes.toSet,
-              nextOffsetPos)
+            val nodeNeighborInfos = inNodes.map { node =>
+              NodeNeighborInfo(camelCase(node), camelCaseCaps(node))
+            }.toSet
+            NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.OUT), nodeNeighborInfos, nextOffsetPos)
           }
 
         val neighborInInfos =
           schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil).map { case InEdgeContext(edgeName, outNodes) =>
-            NeighborInfo(
-              neighborAccessorNameForEdge(edgeName, Direction.IN),
-              outNodes.map(_.name),
-              nextOffsetPos)
+            val nodeNeighborInfos = outNodes.map { node =>
+              NodeNeighborInfo(camelCase(node.name), node.className)
+            }
+            NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.IN), nodeNeighborInfos, nextOffsetPos)
           }
 
         neighborOutInfos ++ neighborInInfos
       }
 
-      val neighborDelegators = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeTypes, _) =>
+      val neighborDelegators = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, _) =>
         val genericEdgeBasedAccessor =
           s"override def _$accessorNameForEdge(): JIterator[StoredNode] = get()._$accessorNameForEdge"
 
-        val specificNodeBasedAccessors = nodeTypes.map { nodeType =>
-          val accessorName = camelCase(nodeType)
-          val nodeClass = camelCaseCaps(nodeType)
-          s"def _$accessorName: JIterator[$nodeClass] = get()._$accessorName"
+        val specificNodeBasedAccessors = nodeInfos.map { case NodeNeighborInfo(accessorName, className) =>
+          s"def _$accessorName: JIterator[$className] = get()._$accessorName"
         }
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
@@ -555,14 +553,12 @@ def writeConstants(outputDir: JFile): JFile = {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeTypes, offsetPos) =>
+      val neighborAccessors = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, offsetPos) =>
         val genericEdgeBasedAccessor =
           s"override def _$accessorNameForEdge : JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        val specificNodeBasedAccessors = nodeTypes.map { nodeType =>
-          val accessorName = camelCase(nodeType)
-          val nodeClass = camelCaseCaps(nodeType)
-          s"def _$accessorName: Iterator[$nodeClass] = createAdjacentNodeIteratorByOffSet($offsetPos).asScala.collect { case node: $nodeClass => node }"
+        val specificNodeBasedAccessors = nodeInfos.map { case NodeNeighborInfo(accessorName, className) =>
+          s"def _$accessorName: Iterator[$className] = createAdjacentNodeIteratorByOffSet($offsetPos).asScala.collect { case node: $className => node }"
         }
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
