@@ -506,21 +506,38 @@ def writeConstants(outputDir: JFile): JFile = {
           if (scalaReservedKeywords.contains(value)) s"`$value`"
           else value
 
-        def createNeighborNodeInfo(accessorName: String, neighborClassName: String) =
-          NeighborNodeInfo(escapeIfKeyword(s"_$accessorName"), neighborClassName)
+        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil)
+
+        val neighborsThatOccurMultipleTimes: Set[String] = {
+          val neighborNodesViaOutEdges = nodeType.outEdges.flatMap(_.inNodes)
+          val neighborNodesViaInEdges = inEdges.flatMap(_.outNodes.map(_.name))
+          val neighborNodes = neighborNodesViaInEdges ++ neighborNodesViaOutEdges
+          val groupCount = neighborNodes.groupBy(identity).mapValues(_.size)
+          groupCount.collect { case (node, occurrenceCount) if occurrenceCount > 1 => node}.toSet
+        }
+
+        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String) = {
+          val appendixMaybe =
+            if (neighborsThatOccurMultipleTimes.contains(nodeName)) "Via" + edgeAndDirection.capitalize
+            else ""
+          val accessorName = s"_${camelCase(nodeName)}$appendixMaybe"
+          NeighborNodeInfo(escapeIfKeyword(accessorName), neighborClassName)
+        }
 
         val neighborOutInfos =
           nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
-            val neighborNodeInfos = inNodes.map { node =>
-              createNeighborNodeInfo(camelCase(node), camelCaseCaps(node))
+            val viaEdgeAndDirection = camelCase(edgeName) + "Out"
+            val neighborNodeInfos = inNodes.map { nodeName =>
+              createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection)
             }.toSet
             NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.OUT), neighborNodeInfos, nextOffsetPos)
           }
 
         val neighborInInfos =
-          schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil).map { case InEdgeContext(edgeName, outNodes) =>
+          inEdges.map { case InEdgeContext(edgeName, outNodes) =>
+            val viaEdgeAndDirection = camelCase(edgeName) + "In"
             val neighborNodeInfos = outNodes.map { node =>
-              createNeighborNodeInfo(camelCase(node.name), node.className)
+              createNeighborNodeInfo(node.name, node.className, viaEdgeAndDirection)
             }
             NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.IN), neighborNodeInfos, nextOffsetPos)
           }
