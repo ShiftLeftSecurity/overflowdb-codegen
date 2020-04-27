@@ -223,7 +223,7 @@ def writeConstants(outputDir: JFile): JFile = {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType.name, direction)
-      } yield s"def _$accessor(): JIterator[StoredNode] = { JCollections.emptyIterator() }"
+      } yield s"def $accessor(): JIterator[StoredNode] = { JCollections.emptyIterator() }"
 
       val rootTypes =
         s"""$propertyErrorRegisterImpl
