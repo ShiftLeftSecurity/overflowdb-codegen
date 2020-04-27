@@ -508,19 +508,8 @@ def writeConstants(outputDir: JFile): JFile = {
 
         val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil)
 
-        val neighborsThatOccurMultipleTimes: Set[String] = {
-          val neighborNodesViaOutEdges = nodeType.outEdges.flatMap(_.inNodes)
-          val neighborNodesViaInEdges = inEdges.flatMap(_.outNodes.map(_.name))
-          val neighborNodes = neighborNodesViaInEdges ++ neighborNodesViaOutEdges
-          val groupCount = neighborNodes.groupBy(identity).mapValues(_.size)
-          groupCount.collect { case (node, occurrenceCount) if occurrenceCount > 1 => node}.toSet
-        }
-
         def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String) = {
-          val appendixMaybe =
-            if (neighborsThatOccurMultipleTimes.contains(nodeName)) "Via" + edgeAndDirection.capitalize
-            else ""
-          val accessorName = s"_${camelCase(nodeName)}$appendixMaybe"
+          val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
           NeighborNodeInfo(escapeIfKeyword(accessorName), neighborClassName)
         }
 
