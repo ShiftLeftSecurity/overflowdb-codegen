@@ -195,8 +195,8 @@ def writeConstants(outputDir: JFile): JFile = {
     baseDir.toJava
   }
 
-  def neighborAccessorName(edgeTypeName: String, direction: Direction.Value): String =
-    camelCase(edgeTypeName + "_" + direction)
+  def neighborAccessorNameForEdge(edgeTypeName: String, direction: Direction.Value): String =
+    "_" + camelCase(edgeTypeName + "_" + direction)
 
   def writeNodeFiles(outputDir: JFile): JFile = {
     val staticHeader =
@@ -222,8 +222,8 @@ def writeConstants(outputDir: JFile): JFile = {
       val genericNeighborAccessors = for {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
-        accessor = neighborAccessorName(edgeType.name, direction)
-      } yield s"def _$accessor(): JIterator[StoredNode] = { JCollections.emptyIterator() }"
+        accessor = neighborAccessorNameForEdge(edgeType.name, direction)
+      } yield s"def $accessor(): JIterator[StoredNode] = { JCollections.emptyIterator() }"
 
       val rootTypes =
         s"""$propertyErrorRegisterImpl
@@ -495,50 +495,71 @@ def writeConstants(outputDir: JFile): JFile = {
            |}
            |""".stripMargin
 
-      def neighborOut(toCode: NeighborInfo => String): String = {
-        nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
-          val nbaName = neighborAccessorName(edgeName, Direction.OUT)
-          val neighborNodeType: String =
-            if (inNodes.size == 1 && inNodes.head != DefaultNodeTypes.Node) {
-              schema.nodeTypeByName(inNodes.head).className
-            } else "StoredNode"
-          toCode(NeighborInfo(nbaName, neighborNodeType))
+      val neighborInfos: List[NeighborInfo] = {
+        /** the offsetPos determines the index into the adjacent nodes array of a given node type
+         * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
+         * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
+        var offsetPos = -1
+        def nextOffsetPos = { offsetPos += 1; offsetPos }
+
+        def escapeIfKeyword(value: String) =
+          if (scalaReservedKeywords.contains(value)) s"`$value`"
+          else value
+
+        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil)
+
+        val neighborsThatOccurMultipleTimes: Set[String] = {
+          val neighborNodesViaOutEdges = nodeType.outEdges.flatMap(_.inNodes)
+          val neighborNodesViaInEdges = inEdges.flatMap(_.outNodes.map(_.name))
+          val neighborNodes = neighborNodesViaInEdges ++ neighborNodesViaOutEdges
+          val groupCount = neighborNodes.groupBy(identity).mapValues(_.size)
+          groupCount.collect { case (node, occurrenceCount) if occurrenceCount > 1 => node}.toSet
         }
-      }.mkString("\n")
 
-      def neighborIn(toCode: NeighborInfo => String): String = {
-        schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil).map { case InEdgeContext(edgeName, outNodes) =>
-          val nbaName = neighborAccessorName(edgeName, Direction.IN)
-          val neighborNodeType: String =
-            if (outNodes.size == 1) {
-              outNodes.head.className
-            } else "StoredNode"
-          toCode(NeighborInfo(nbaName, neighborNodeType))
-       }
-      }.mkString("\n")
+        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String) = {
+          val appendixMaybe =
+            if (neighborsThatOccurMultipleTimes.contains(nodeName)) "Via" + edgeAndDirection.capitalize
+            else ""
+          val accessorName = s"_${camelCase(nodeName)}$appendixMaybe"
+          NeighborNodeInfo(escapeIfKeyword(accessorName), neighborClassName)
+        }
 
-      val neighborDelegatorsOut = neighborOut { case NeighborInfo(nbaName, neighborNodeType) =>
-        /* generic and specific neighbor accessors - as mentioned in comment above, we may not need generic ones (prefixed with `_`) in future */
-        s"""def $nbaName: JIterator[$neighborNodeType] = get().$nbaName
-           |override def _$nbaName(): JIterator[StoredNode] = get()._$nbaName
-           |""".stripMargin
+        val neighborOutInfos =
+          nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
+            val viaEdgeAndDirection = camelCase(edgeName) + "Out"
+            val neighborNodeInfos = inNodes.map { nodeName =>
+              createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection)
+            }.toSet
+            NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.OUT), neighborNodeInfos, nextOffsetPos)
+          }
+
+        val neighborInInfos =
+          inEdges.map { case InEdgeContext(edgeName, outNodes) =>
+            val viaEdgeAndDirection = camelCase(edgeName) + "In"
+            val neighborNodeInfos = outNodes.map { node =>
+              createNeighborNodeInfo(node.name, node.className, viaEdgeAndDirection)
+            }
+            NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.IN), neighborNodeInfos, nextOffsetPos)
+          }
+
+        neighborOutInfos ++ neighborInInfos
       }
 
-      val neighborDelegatorsIn = neighborIn { case NeighborInfo(nbaName, neighborNodeType) =>
-        /* generic and specific neighbor accessors - as mentioned in comment above, we may not need generic ones (prefixed with `_`) in future */
-        s"""def $nbaName: JIterator[$neighborNodeType] = get().$nbaName
-           |override def _$nbaName(): JIterator[StoredNode] = get()._$nbaName
-           |""".stripMargin
-      }
+      val neighborDelegators = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, _) =>
+        val genericEdgeBasedAccessor =
+          s"override def $accessorNameForEdge(): JIterator[StoredNode] = get().$accessorNameForEdge"
+
+        val specificNodeBasedAccessors = nodeInfos.map { case NeighborNodeInfo(accessorName, className) =>
+          s"def $accessorName: Iterator[$className] = get().$accessorName"
+        }
+        specificNodeBasedAccessors + genericEdgeBasedAccessor
+      }.mkString("\n")
 
       val nodeRefImpl = {
-        val propertyDelegators = keys
-          .map(_.name)
-          .map(camelCase)
-          .map { name =>
-            s"""  override def $name = get().$name"""
-          }
-          .mkString("\n")
+        val propertyDelegators = keys.map { key =>
+          val name = camelCase(key.name)
+          s"""  override def $name = get().$name"""
+        }.mkString("\n")
 
         s"""class $className(graph: OdbGraph, id: Long) extends NodeRef[$classNameDb](graph, id)
            |  with ${className}Base
@@ -546,8 +567,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |  $mixinTraits {
            |  $propertyDelegators
            |  $delegatingContainedNodeAccessors
-           |  $neighborDelegatorsOut
-           |  $neighborDelegatorsIn
+           |  $neighborDelegators
            |  override def valueMap: JMap[String, AnyRef] = get.valueMap
            |  override def canEqual(that: Any): Boolean = get.canEqual(that)
            |  override def label: String = {
@@ -557,19 +577,15 @@ def writeConstants(outputDir: JFile): JFile = {
            |""".stripMargin
       }
 
-      var offsetPos = -1
-      val neighborAccessorsOut = neighborOut { case NeighborInfo(nbaName, neighborNodeType) =>
-        offsetPos += 1
-        /* generic and specific neighbor accessors - as mentioned in comment above, we may not need generic ones (prefixed with `_`) in future */
-        s"""def $nbaName : JIterator[$neighborNodeType] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[$neighborNodeType]]
-           |override def _$nbaName : JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]""".stripMargin
-      }
-      val neighborAccessorsIn = neighborIn { case NeighborInfo(nbaName, neighborNodeType) =>
-        offsetPos += 1
-        /* generic and specific neighbor accessors - as mentioned in comment above, we may not need generic ones (prefixed with `_`) in future */
-        s"""def $nbaName : JIterator[$neighborNodeType] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[$neighborNodeType]]
-           |override def _$nbaName : JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]""".stripMargin
-      }
+      val neighborAccessors = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, offsetPos) =>
+        val genericEdgeBasedAccessor =
+          s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
+
+        val specificNodeBasedAccessors = nodeInfos.map { case NeighborNodeInfo(accessorNameForNode, className) =>
+          s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
+        }
+        specificNodeBasedAccessors + genericEdgeBasedAccessor
+      }.mkString("\n")
 
       val classImpl =
         s"""class $classNameDb(ref: NodeRef[OdbNode]) extends OdbNode(ref) with StoredNode
@@ -582,8 +598,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |  override def valueMap: JMap[String, AnyRef] = $valueMapImpl
            |
            |  ${propertyBasedFields(keys)}
-           |  $neighborAccessorsOut
-           |  $neighborAccessorsIn
+           |  $neighborAccessors
            |
            |  override def label: String = {
            |    $className.Label

@@ -129,4 +129,17 @@ object Helpers {
        |  }
        |}
        |""".stripMargin
+
+  /** obtained from repl via
+   * {{{
+   * :power
+   * nme.keywords
+   * }}}
+   */
+  val scalaReservedKeywords = Set(
+    "abstract", ">:", "if", ".", "catch", "protected", "final", "super", "while", "true", "val", "do", "throw",
+    "<-", "package", "_", "macro", "@", "object", "false", "this", "then", "var", "trait", "with", "def", "else",
+    "class", "type", "#", "lazy", "null", "=", "<:", "override", "=>", "private", "sealed", "finally", "new",
+    "implicit", "extends", "for", "return", "case", "import", "forSome", ":", "yield", "try", "match", "<%")
+
 }
