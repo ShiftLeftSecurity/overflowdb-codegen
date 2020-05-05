@@ -37,21 +37,33 @@ class SchemaMergerTest extends WordSpec with Matchers {
       }""")
   }
 
-  "combines and deduplicates outEdges" in {
-    val jsonA = """{"nodeTypes": [ { "name": "TYPE_DECL", "outEdges": [
-           { "edgeName": "AST","inNodes": ["ANNOTATION"] },
-           { "edgeName": "ALIAS_OF","inNodes": ["TYPE"] } ]
+  "combines and deduplicates outEdges" when {
+    "not using cardinalities" in {
+      val jsonA =
+        """{"nodeTypes": [ { "name": "TYPE_DECL", "outEdges": [
+            { "edgeName": "AST","inNodes": [{"name": "ANNOTATION"}] },
+            { "edgeName": "ALIAS_OF","inNodes": [{"name": "TYPE"}] } ]
        }]}"""
-    val jsonB = """{"nodeTypes": [ { "name": "TYPE_DECL", "outEdges": [ { "edgeName": "AST","inNodes": ["TYPE_DECL","METHOD"] } ]}]}"""
+      val jsonB =
+        """{"nodeTypes": [ { "name": "TYPE_DECL", "outEdges": [
+            { "edgeName": "AST", "inNodes": [
+              {"name": "TYPE_DECL"},
+              {"name": "METHOD"}
+            ]}
+           ]}]}"""
 
-    val result = merge(jsonA, jsonB)
-    result shouldBe read(
-      """{"nodeTypes": [ { "name": "TYPE_DECL", "outEdges": [
-           { "edgeName": "AST","inNodes": ["ANNOTATION","TYPE_DECL","METHOD"] },
-           { "edgeName": "ALIAS_OF","inNodes": ["TYPE"] } ,
-           { "edgeName": "CONTAINS_NODE","inNodes":["NODE"]}
-         ]
-       }]}""")
+      val result = merge(jsonA, jsonB)
+      result shouldBe read(
+        """{"nodeTypes": [ { "name": "TYPE_DECL", "outEdges": [
+            { "edgeName": "AST","inNodes": [
+              {"name": "ANNOTATION"},
+              {"name": "TYPE_DECL"},
+              {"name": "METHOD"}
+            ] },
+            { "edgeName": "ALIAS_OF","inNodes": [{"name": "TYPE"}] } ,
+            { "edgeName": "CONTAINS_NODE","inNodes":[{"name": "NODE"}]}
+           ]}]}""")
+    }
   }
 
   "errors if same element has property defined multiple times with different values" in {
@@ -78,7 +90,7 @@ class SchemaMergerTest extends WordSpec with Matchers {
            {
              "name":"CALL_SITE",
              "outEdges": [
-               { "edgeName": "SOME_EDGE", "inNodes": [ "SOME_OTHER_NODE" ] }
+               { "edgeName": "SOME_EDGE", "inNodes": [{"name": "SOME_OTHER_NODE"} ] }
              ]
            }
          ]}"""
@@ -89,8 +101,8 @@ class SchemaMergerTest extends WordSpec with Matchers {
            {
              "name":"CALL_SITE",
              "outEdges": [
-               { "edgeName": "SOME_EDGE", "inNodes": [ "SOME_OTHER_NODE" ] },
-               { "edgeName": "CONTAINS_NODE", "inNodes": [ "NODE" ] }
+               { "edgeName": "SOME_EDGE", "inNodes": [ {"name": "SOME_OTHER_NODE"} ] },
+               { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "NODE" }] }
              ]
            }
          ]}""")
@@ -104,7 +116,7 @@ class SchemaMergerTest extends WordSpec with Matchers {
              "name":"CALL_SITE",
              "containedNodes": [{ "nodeType": "METHOD" }, { "nodeType": "CALL" } ],
              "outEdges": [
-               { "edgeName": "SOME_EDGE", "inNodes": [ "SOME_OTHER_NODE" ] }
+               { "edgeName": "SOME_EDGE", "inNodes": [ {"name": "SOME_OTHER_NODE"} ] }
              ]
            }
          ]}"""
@@ -116,8 +128,12 @@ class SchemaMergerTest extends WordSpec with Matchers {
              "name":"CALL_SITE",
              "containedNodes": [{ "nodeType": "METHOD" }, { "nodeType": "CALL" } ],
              "outEdges": [
-               { "edgeName": "SOME_EDGE", "inNodes": [ "SOME_OTHER_NODE" ] },
-               { "edgeName": "CONTAINS_NODE", "inNodes": [ "NODE", "METHOD", "CALL" ] }
+               { "edgeName": "SOME_EDGE", "inNodes": [ {"name": "SOME_OTHER_NODE" }] },
+               { "edgeName": "CONTAINS_NODE", "inNodes": [
+                 {"name": "NODE"},
+                 {"name": "METHOD"},
+                 {"name": "CALL"}
+               ] }
              ]
            }
          ]}""")
