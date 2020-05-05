@@ -6,6 +6,7 @@ import play.api.libs.functional.syntax._
 
 class Schema(schemaFile: String) {
   implicit private val nodeBaseTraitRead = Json.reads[NodeBaseTrait]
+  implicit private val inNodeRead = Json.reads[InNode]
   implicit private val outEdgeEntryRead = Json.reads[OutEdgeEntry]
   implicit private val containedNodeRead = Json.reads[ContainedNode]
   implicit private val nodeTypesRead = Json.reads[NodeType]
@@ -35,7 +36,7 @@ class Schema(schemaFile: String) {
         nodeType <- nodeTypes
         outEdge <- nodeType.outEdges
         inNodeName <- outEdge.inNodes
-        inNode = nodeTypeByName.get(inNodeName) if inNode.isDefined
+        inNode = nodeTypeByName.get(inNodeName.name) if inNode.isDefined
       } yield (inNode.get, outEdge.edgeName, nodeType)
 
     /* grouping above (node, inEdge, adjacentNode) tuples by `node` and `inEdge`
@@ -81,7 +82,9 @@ case class NodeType(
   lazy val containedNodesList = containedNodes.getOrElse(Nil)
 }
 
-case class OutEdgeEntry(edgeName: String, inNodes: List[String])
+case class OutEdgeEntry(edgeName: String, inNodes: List[InNode])
+
+case class InNode(name: String, cardinality: Option[String])
 
 case class ContainedNode(nodeType: String, localName: String, cardinality: String) {
   lazy val nodeTypeClassName = Helpers.camelCaseCaps(nodeType)
