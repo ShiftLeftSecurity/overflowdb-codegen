@@ -58,7 +58,7 @@ object SchemaMerger {
         val outEdgeNames = outEdges.map(_.obj("edgeName").str).toSet
 
         if (!outEdgeNames.contains("CONTAINS_NODE")) {
-          val containsNodeEntry = read(""" { "edgeName": "CONTAINS_NODE", "inNodes": ["NODE"] }""")
+          val containsNodeEntry = read(""" { "edgeName": "CONTAINS_NODE", "inNodes": [{"name": "NODE"}] }""")
           outEdges.append(containsNodeEntry)
         }
 
@@ -67,18 +67,19 @@ object SchemaMerger {
         }
 
         /* replace entry with `edge["edgeName"] == "CONTAINS_NODE"` if it exists, or add one if it doesn't.
-       * to do that, convert outEdges to Map<EdgeName, OutEdge> and back at the end */
+         * to do that, convert outEdges to Map<EdgeName, OutEdge> and back at the end */
         val inNodesByOutEdgeName = outEdges.map { edge =>
-          edge.obj("edgeName").str -> edge.obj("inNodes").arr.map(_.str)
+          edge.obj("edgeName").str -> edge.obj("inNodes").arr.map(_.obj("name").str)
         }.toMap
         val containsInNodesBefore = inNodesByOutEdgeName.getOrElse("CONTAINS_NODE", Seq.empty)
         val containsInNodes = (containsInNodesBefore ++ requiredInNodesForContains).distinct
 
         outEdges.clear
         inNodesByOutEdgeName.+("CONTAINS_NODE" -> containsInNodes).foreach { case (edgeName, inNodes) =>
+          val inNodesWrapped = inNodes.map { nodeName => Obj("name" -> nodeName) }
           outEdges.append(Obj(
             "edgeName" -> edgeName,
-            "inNodes" -> inNodes
+            "inNodes" -> inNodesWrapped
           ))
         }
       }

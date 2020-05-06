@@ -516,7 +516,8 @@ def writeConstants(outputDir: JFile): JFile = {
         val neighborOutInfos =
           nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
             val viaEdgeAndDirection = camelCase(edgeName) + "Out"
-            val neighborNodeInfos = inNodes.map { nodeName =>
+            val neighborNodeInfos = inNodes.map { node =>
+              val nodeName = node.name
               createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection)
             }.toSet
             NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.OUT), neighborNodeInfos, nextOffsetPos)
