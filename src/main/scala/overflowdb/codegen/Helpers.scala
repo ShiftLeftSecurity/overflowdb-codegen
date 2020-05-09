@@ -142,4 +142,8 @@ object Helpers {
     "class", "type", "#", "lazy", "null", "=", "<:", "override", "=>", "private", "sealed", "finally", "new",
     "implicit", "extends", "for", "return", "case", "import", "forSome", ":", "yield", "try", "match", "<%")
 
+  def escapeIfKeyword(value: String) =
+    if (scalaReservedKeywords.contains(value)) s"`$value`"
+    else value
+
 }

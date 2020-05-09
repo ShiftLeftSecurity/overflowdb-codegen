@@ -40,7 +40,7 @@ class Schema(schemaFile: String) {
       } yield (inNode.get, outEdge.edgeName, nodeType)
 
     /* grouping above (node, inEdge, adjacentNode) tuples by `node` and `inEdge`
-     * TODO use scala 2.13's `groupMap` */
+     * we use this from sbt, so unfortunately we can't yet use scala 2.13's `groupMap` :( */
     val grouped: Map[NodeType, Map[String, Seq[NodeType]]] =
       tuples.groupBy(_._1).mapValues(_.groupBy(_._2).mapValues(_.map(_._3)).toMap)
 
@@ -115,7 +115,7 @@ case class NodeBaseTrait(name: String, hasKeys: List[String], `extends`: Option[
 
 case class InEdgeContext(edgeName: String, outNodes: Set[NodeType])
 
-case class NeighborNodeInfo(accessorName: String, className: String)
+case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
 case class NeighborInfo(accessorNameForEdge: String, nodeInfos: Set[NeighborNodeInfo], offsetPosition: Int)
 
 object HigherValueType extends Enumeration {
