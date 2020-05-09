@@ -36,22 +36,25 @@ class Schema(schemaFile: String) {
         nodeType <- nodeTypes
         outEdge <- nodeType.outEdges
         inNodeName <- outEdge.inNodes
-        inNode = nodeTypeByName.get(inNodeName.name) if inNode.isDefined
-      } yield (inNode.get, outEdge.edgeName, nodeType)
+        neighborNodeType = nodeTypeByName.get(inNodeName.name)
+        if neighborNodeType.isDefined
+      } yield (neighborNodeType.get, outEdge.edgeName, nodeType)
 
-    /* grouping above (node, inEdge, adjacentNode) tuples by `node` and `inEdge`
+    /* grouping above tuples by `neighborNodeType` and `inEdgeName`
      * we use this from sbt, so unfortunately we can't yet use scala 2.13's `groupMap` :( */
-    val grouped: Map[NodeType, Map[String, Seq[NodeType]]] =
+    type NeighborNodeType = NodeType
+    type EdgeLabel = String
+    val grouped: Map[NeighborNodeType, Map[EdgeLabel, Seq[NodeType]]] =
       tuples.groupBy(_._1).mapValues(_.groupBy(_._2).mapValues(_.map(_._3)).toMap)
 
-    grouped.mapValues { inEdgesWithAdjacentNodes =>
+    grouped.mapValues { inEdgesWithNeighborNodes =>
       // all nodes can have incoming `CONTAINS_NODE` edges
-      val adjustedInEdgesWithAdjacentNodes =
-        if (inEdgesWithAdjacentNodes.contains(DefaultEdgeTypes.ContainsNode)) inEdgesWithAdjacentNodes
-        else inEdgesWithAdjacentNodes + (DefaultEdgeTypes.ContainsNode -> Set.empty)
+      val adjustedInEdgesWithNeighborNodes =
+        if (inEdgesWithNeighborNodes.contains(DefaultEdgeTypes.ContainsNode)) inEdgesWithNeighborNodes
+        else inEdgesWithNeighborNodes + (DefaultEdgeTypes.ContainsNode -> Set.empty)
 
-      adjustedInEdgesWithAdjacentNodes.map { case (edge, adjacentNodes) =>
-        InEdgeContext(edge, adjacentNodes.toSet)
+      adjustedInEdgesWithNeighborNodes.map { case (edge, neighborNodes) =>
+        InEdgeContext(edge, neighborNodes.toSet)
       }.toSeq
     }
   }
