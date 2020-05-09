@@ -63,23 +63,28 @@ object SchemaMerger {
         }
 
         val requiredInNodesForContains = nodeType.get("containedNodes").map(_.arr).getOrElse(Nil).map { containedNode =>
-          containedNode.obj("nodeType").str
+          InNode(name = containedNode.obj("nodeType").str, cardinality = None)
         }
 
         /* replace entry with `edge["edgeName"] == "CONTAINS_NODE"` if it exists, or add one if it doesn't.
          * to do that, convert outEdges to Map<EdgeName, OutEdge> and back at the end */
-        val inNodesByOutEdgeName = outEdges.map { edge =>
-          edge.obj("edgeName").str -> edge.obj("inNodes").arr.map(_.obj("name").str)
+        val inNodesByOutEdgeName: Map[String, Seq[InNode]] = outEdges.map { edge =>
+          edge.obj("edgeName").str -> edge.obj("inNodes").arr.map(parseInNode)
         }.toMap
         val containsInNodesBefore = inNodesByOutEdgeName.getOrElse("CONTAINS_NODE", Seq.empty)
         val containsInNodes = (containsInNodesBefore ++ requiredInNodesForContains).distinct
 
         outEdges.clear
         inNodesByOutEdgeName.+("CONTAINS_NODE" -> containsInNodes).foreach { case (edgeName, inNodes) =>
-          val inNodesWrapped = inNodes.map { nodeName => Obj("name" -> nodeName) }
+          val inNodesJson = mergeByName(inNodes).map {
+            case InNode(name, None) =>
+              Obj("name" -> name)
+            case InNode(name, Some(cardinality)) =>
+              Obj("name" -> name, "cardinality" -> cardinality)
+          }
           outEdges.append(Obj(
             "edgeName" -> edgeName,
-            "inNodes" -> inNodesWrapped
+            "inNodes" -> inNodesJson
           ))
         }
       }
@@ -87,6 +92,28 @@ object SchemaMerger {
     }
     result
   }
+
+  private def mergeByName(inNodes: Seq[InNode]): Seq[InNode] = {
+    inNodes.groupBy(_.name).toList.map {
+      case (name, List(inNode)) =>
+        // inNode with this name appeared only once, just take it as is
+        inNode
+      case (name, inNodes) =>
+        // multiple inNodes with the same name, merge cardinalities
+        InNode(name, cardinality = mergeCardinalities(inNodes.map(_.cardinality).toList, name))
+    }
+  }
+
+  private def mergeCardinalities(cardinalities: List[Option[String]], inNodeName: String): Option[String] =
+    cardinalities.distinct match {
+      case Nil => None
+      case List(cardinality) => cardinality
+      case cardinalities if cardinalities.forall(c => c == None || c == Some("n:n")) =>
+        // None and Some("n:n") are equivalent
+        Some("n:n")
+      case cardinalities =>
+        throw new NotImplementedError(s"different cardinalities defined for inNodeName=$inNodeName: $cardinalities. That's not (yet) supported.")
+    }
 
   private def mergeLists(oldValues: mutable.ArrayBuffer[Value], newValues: mutable.ArrayBuffer[Value]): Arr = {
     val combined = (oldValues ++ newValues).map(_.obj)
@@ -165,6 +192,11 @@ object SchemaMerger {
       oldValue.put(name, combinedValue)
     }
     oldValue
+  }
+
+  private def parseInNode(inNodeJson: Value) = {
+    val inNodeObj = inNodeJson.obj
+    InNode(inNodeObj("name").str, inNodeObj.get("cardinality").map(_.str))
   }
 
   private def isComment(line: String): Boolean =
