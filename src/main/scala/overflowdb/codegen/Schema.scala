@@ -31,20 +31,21 @@ class Schema(schemaFile: String) {
 
   /* schema only specifies `node.outEdges` - this builds a reverse map (essentially `node.inEdges`) along with the outNodes */
   lazy val nodeToInEdgeContexts: Map[String, Seq[InEdgeContext]] = {
-    type NeighborNodeLabel = String
-    type NodeLabel = String
-    type EdgeLabel = String
-    val tuples: Seq[(NeighborNodeLabel, String, NodeLabel)] =
+    case class NeighborContext(neighborNode: String, edgeLabel: String, node: String)
+    val tuples: Seq[NeighborContext] =
       for {
         nodeType <- nodeTypes
         outEdge <- nodeType.outEdges
         inNode <- outEdge.inNodes
-      } yield (inNode.name, outEdge.edgeName, nodeType.name)
+      } yield NeighborContext(inNode.name, outEdge.edgeName, nodeType.name)
 
     /* grouping above tuples by `neighborNodeType` and `inEdgeName`
      * we use this from sbt, so unfortunately we can't yet use scala 2.13's `groupMap` :( */
+    type NeighborNodeLabel = String
+    type EdgeLabel = String
+    type NodeLabel = String
     val grouped: Map[NeighborNodeLabel, Map[EdgeLabel, Seq[NodeLabel]]] =
-      tuples.groupBy(_._1).mapValues(_.groupBy(_._2).mapValues(_.map(_._3)).toMap)
+      tuples.groupBy(_.neighborNode).mapValues(_.groupBy(_.edgeLabel).mapValues(_.map(_.node)).toMap)
 
     grouped.mapValues { inEdgesWithNeighborNodes =>
       // all nodes can have incoming `CONTAINS_NODE` edges
