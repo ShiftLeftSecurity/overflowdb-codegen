@@ -30,22 +30,20 @@ class Schema(schemaFile: String) {
     edgeKeys.map(property => property.name -> property).toMap
 
   /* schema only specifies `node.outEdges` - this builds a reverse map (essentially `node.inEdges`) along with the outNodes */
-  lazy val nodeToInEdgeContexts: Map[NodeType, Seq[InEdgeContext]] = {
-    type NeighborNodeType = NodeType
+  lazy val nodeToInEdgeContexts: Map[String, Seq[InEdgeContext]] = {
     type NeighborNodeLabel = String
+    type NodeLabel = String
     type EdgeLabel = String
-    val tuples: Seq[(NodeType, String, NeighborNodeLabel)] =
+    val tuples: Seq[(NeighborNodeLabel, String, NodeLabel)] =
       for {
         nodeType <- nodeTypes
         outEdge <- nodeType.outEdges
-        inNodeName <- outEdge.inNodes
-        neighborNodeType = nodeTypeByName.get(inNodeName.name)
-        if neighborNodeType.isDefined
-      } yield (neighborNodeType.get, outEdge.edgeName, nodeType.name)
+        inNode <- outEdge.inNodes
+      } yield (inNode.name, outEdge.edgeName, nodeType.name)
 
     /* grouping above tuples by `neighborNodeType` and `inEdgeName`
      * we use this from sbt, so unfortunately we can't yet use scala 2.13's `groupMap` :( */
-    val grouped: Map[NeighborNodeType, Map[EdgeLabel, Seq[NeighborNodeLabel]]] =
+    val grouped: Map[NeighborNodeLabel, Map[EdgeLabel, Seq[NodeLabel]]] =
       tuples.groupBy(_._1).mapValues(_.groupBy(_._2).mapValues(_.map(_._3)).toMap)
 
     grouped.mapValues { inEdgesWithNeighborNodes =>

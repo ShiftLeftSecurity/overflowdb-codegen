@@ -323,7 +323,7 @@ def writeConstants(outputDir: JFile): JFile = {
       }.mkString(",\n")
 
       val outEdgeNames: Seq[String] = nodeType.outEdges.map(_.edgeName)
-      val inEdgeNames:  Seq[String] = schema.nodeToInEdgeContexts.getOrElse(nodeType, Seq.empty).map(_.edgeName)
+      val inEdgeNames:  Seq[String] = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Seq.empty).map(_.edgeName)
 
       val outEdgeLayouts = outEdgeNames.map(edge => s"edges.${camelCaseCaps(edge)}.layoutInformation").mkString(", ")
       val inEdgeLayouts = inEdgeNames.map(edge => s"edges.${camelCaseCaps(edge)}.layoutInformation").mkString(", ")
@@ -502,7 +502,7 @@ def writeConstants(outputDir: JFile): JFile = {
         var offsetPos = -1
         def nextOffsetPos = { offsetPos += 1; offsetPos }
 
-        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil)
+        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Nil)
 
         def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
           val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
