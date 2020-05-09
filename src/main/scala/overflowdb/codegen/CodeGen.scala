@@ -529,7 +529,8 @@ def writeConstants(outputDir: JFile): JFile = {
             val viaEdgeAndDirection = camelCase(edgeName) + "In"
             val neighborNodeInfos = neighborNodes.map { neighborNode =>
               // TODO cardinality for IN node - need to hold in InEdgeContext?
-              createNeighborNodeInfo(neighborNode.name, neighborNode.className, viaEdgeAndDirection, Cardinality.List)
+              val neighborNodeClassName = schema.nodeTypeByName(neighborNode).className
+              createNeighborNodeInfo(neighborNode.name, neighborNodeClassName, viaEdgeAndDirection, Cardinality.List)
             }
             NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.IN), neighborNodeInfos, nextOffsetPos)
           }
