@@ -230,6 +230,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |trait Node extends Product {
            |  def label: String
+           |  def labelId : Int
            |  def getId: JLong
            |
            |  /** labels of product elements, used e.g. for pretty-printing */
@@ -563,6 +564,9 @@ def writeConstants(outputDir: JFile): JFile = {
            |  override def label: String = {
            |    $className.Label
            |  }
+           |  override def labelId: Int = {
+           |    $className.LabelId
+           |  }
            |}
            |""".stripMargin
       }
@@ -592,6 +596,10 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |  override def label: String = {
            |    $className.Label
+           |  }
+           |
+           |  override def labelId: Int = {
+           |    $className.LabelId
            |  }
            |
            |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameDb]
@@ -671,6 +679,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
          |trait NewNode extends Node {
          |  override def label: String
+         |  override def labelId: Int
          |  def properties: Map[String, Any]
          |  def containedNodesByLocalName: Map[String, List[Node]]
          |  def allContainedNodes: List[Node] = containedNodesByLocalName.values.flatten.toList
@@ -737,6 +746,7 @@ def writeConstants(outputDir: JFile): JFile = {
 
       s"""case class New${nodeType.className}($fields) extends NewNode with ${nodeType.className}Base {
          |  override val label = "${nodeType.name}"
+         |  override val labelId = ${nodeType.id}
          |  override val properties: Map[String, Any] = $propertiesImpl
          |  override def containedNodesByLocalName: Map[String, List[Node]] = $containedNodesByLocalName
          |}
