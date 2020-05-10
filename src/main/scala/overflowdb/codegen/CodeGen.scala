@@ -514,10 +514,10 @@ def writeConstants(outputDir: JFile): JFile = {
             val viaEdgeAndDirection = camelCase(edgeName) + "Out"
             val neighborNodeInfos = inNodes.map { inNode =>
               val nodeName = inNode.name
-              val cardinality = inNode.cardinality.getOrElse("n:n") match {
-                case c if c.endsWith(":1") => Cardinality.One
-                case c if c.endsWith(":0-1") => Cardinality.ZeroOrOne
-                case c if c.endsWith(":n") => Cardinality.List
+              val cardinality = inNode.cardinality match {
+                case Some(c) if c.endsWith(":1") => Cardinality.One
+                case Some(c) if c.endsWith(":0-1") => Cardinality.ZeroOrOne
+                case _ => Cardinality.List
               }
               createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection, cardinality)
             }.toSet
@@ -528,9 +528,15 @@ def writeConstants(outputDir: JFile): JFile = {
           inEdges.map { case InEdgeContext(edgeName, neighborNodes) =>
             val viaEdgeAndDirection = camelCase(edgeName) + "In"
             val neighborNodeInfos = neighborNodes.map { neighborNode =>
-              // TODO cardinality for IN node - need to hold in InEdgeContext?
-              val neighborNodeClassName = schema.nodeTypeByName(neighborNode).className
-              createNeighborNodeInfo(neighborNode, neighborNodeClassName, viaEdgeAndDirection, Cardinality.List)
+              val neighborNodeClassName = schema.nodeTypeByName(neighborNode.name).className
+              // note: cardinalities are defined on the 'other' side, i.e. on `outEdges.inEdges.cardinality`
+              // therefor, here we're interested in the left side of the `:`
+              val cardinality = neighborNode.cardinality match {
+                case Some(c) if c.startsWith("1:") => Cardinality.One
+                case Some(c) if c.startsWith("0-1:") => Cardinality.ZeroOrOne
+                case _ => Cardinality.List
+              }
+              createNeighborNodeInfo(neighborNode.name, neighborNodeClassName, viaEdgeAndDirection, cardinality)
             }
             NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.IN), neighborNodeInfos, nextOffsetPos)
           }
