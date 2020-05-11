@@ -323,7 +323,7 @@ def writeConstants(outputDir: JFile): JFile = {
       }.mkString(",\n")
 
       val outEdgeNames: Seq[String] = nodeType.outEdges.map(_.edgeName)
-      val inEdgeNames:  Seq[String] = schema.nodeToInEdgeContexts.getOrElse(nodeType, Seq.empty).map(_.edgeName)
+      val inEdgeNames:  Seq[String] = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Seq.empty).map(_.edgeName)
 
       val outEdgeLayouts = outEdgeNames.map(edge => s"edges.${camelCaseCaps(edge)}.layoutInformation").mkString(", ")
       val inEdgeLayouts = inEdgeNames.map(edge => s"edges.${camelCaseCaps(edge)}.layoutInformation").mkString(", ")
@@ -502,32 +502,41 @@ def writeConstants(outputDir: JFile): JFile = {
         var offsetPos = -1
         def nextOffsetPos = { offsetPos += 1; offsetPos }
 
-        def escapeIfKeyword(value: String) =
-          if (scalaReservedKeywords.contains(value)) s"`$value`"
-          else value
+        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Nil)
 
-        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil)
-
-        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String) = {
+        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
           val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
-          NeighborNodeInfo(escapeIfKeyword(accessorName), neighborClassName)
+          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), neighborClassName, cardinality)
         }
 
         val neighborOutInfos =
           nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
             val viaEdgeAndDirection = camelCase(edgeName) + "Out"
-            val neighborNodeInfos = inNodes.map { node =>
-              val nodeName = node.name
-              createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection)
+            val neighborNodeInfos = inNodes.map { inNode =>
+              val nodeName = inNode.name
+              val cardinality = inNode.cardinality match {
+                case Some(c) if c.endsWith(":1") => Cardinality.One
+                case Some(c) if c.endsWith(":0-1") => Cardinality.ZeroOrOne
+                case _ => Cardinality.List
+              }
+              createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection, cardinality)
             }.toSet
             NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.OUT), neighborNodeInfos, nextOffsetPos)
           }
 
         val neighborInInfos =
-          inEdges.map { case InEdgeContext(edgeName, outNodes) =>
+          inEdges.map { case InEdgeContext(edgeName, neighborNodes) =>
             val viaEdgeAndDirection = camelCase(edgeName) + "In"
-            val neighborNodeInfos = outNodes.map { node =>
-              createNeighborNodeInfo(node.name, node.className, viaEdgeAndDirection)
+            val neighborNodeInfos = neighborNodes.map { neighborNode =>
+              val neighborNodeClassName = schema.nodeTypeByName(neighborNode.name).className
+              // note: cardinalities are defined on the 'other' side, i.e. on `outEdges.inEdges.cardinality`
+              // therefor, here we're interested in the left side of the `:`
+              val cardinality = neighborNode.cardinality match {
+                case Some(c) if c.startsWith("1:") => Cardinality.One
+                case Some(c) if c.startsWith("0-1:") => Cardinality.ZeroOrOne
+                case _ => Cardinality.List
+              }
+              createNeighborNodeInfo(neighborNode.name, neighborNodeClassName, viaEdgeAndDirection, cardinality)
             }
             NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.IN), neighborNodeInfos, nextOffsetPos)
           }
@@ -536,13 +545,18 @@ def writeConstants(outputDir: JFile): JFile = {
       }
 
       val neighborDelegators = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, _) =>
-        val genericEdgeBasedAccessor =
+        val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge(): JIterator[StoredNode] = get().$accessorNameForEdge"
 
-        val specificNodeBasedAccessors = nodeInfos.map { case NeighborNodeInfo(accessorName, className) =>
-          s"def $accessorName: Iterator[$className] = get().$accessorName"
+        val specificNodeBasedDelegators = nodeInfos.map { case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
+          val returnType = cardinality match {
+            case Cardinality.List => s"Iterator[$className]"
+            case Cardinality.ZeroOrOne => s"Option[$className]"
+            case Cardinality.One => s"$className"
+          }
+          s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
         }
-        specificNodeBasedAccessors + genericEdgeBasedAccessor
+        specificNodeBasedDelegators + genericEdgeBasedDelegators
       }.mkString("\n")
 
       val nodeRefImpl = {
@@ -571,8 +585,15 @@ def writeConstants(outputDir: JFile): JFile = {
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        val specificNodeBasedAccessors = nodeInfos.map { case NeighborNodeInfo(accessorNameForNode, className) =>
-          s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
+        val specificNodeBasedAccessors = nodeInfos.map { case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
+          cardinality match {
+            case Cardinality.List =>
+              s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
+            case Cardinality.ZeroOrOne =>
+              s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption"
+            case Cardinality.One =>
+              s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next"
+          }
         }
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")

@@ -56,9 +56,9 @@ class SchemaMergerTest extends WordSpec with Matchers {
       result shouldBe read(
         """{"nodeTypes": [ { "name": "TYPE_DECL", "outEdges": [
             { "edgeName": "AST","inNodes": [
-              {"name": "ANNOTATION"},
+              {"name": "METHOD"},
               {"name": "TYPE_DECL"},
-              {"name": "METHOD"}
+              {"name": "ANNOTATION"}
             ] },
             { "edgeName": "ALIAS_OF","inNodes": [{"name": "TYPE"}] } ,
             { "edgeName": "CONTAINS_NODE","inNodes":[{"name": "NODE"}]}
@@ -108,7 +108,6 @@ class SchemaMergerTest extends WordSpec with Matchers {
          ]}""")
   }
 
-
   "for any node that has `containedNode` entries, automatically add the corresponding `outEdges`" in {
     val jsonA =
       """{ "nodeTypes": [
@@ -131,12 +130,111 @@ class SchemaMergerTest extends WordSpec with Matchers {
                { "edgeName": "SOME_EDGE", "inNodes": [ {"name": "SOME_OTHER_NODE" }] },
                { "edgeName": "CONTAINS_NODE", "inNodes": [
                  {"name": "NODE"},
-                 {"name": "METHOD"},
-                 {"name": "CALL"}
+                 {"name": "CALL"},
+                 {"name": "METHOD"}
                ] }
              ]
            }
          ]}""")
+  }
+
+  "merge outEdges with cardinalities" when {
+    "specific inNode is mentioned only once" in {
+      val jsonA =
+        """{ "nodeTypes": [
+         { "name":"NODE_A",
+           "outEdges": [
+             { "edgeName": "SOME_EDGE", "inNodes": [
+               {"name": "NODE_B"}
+             ]}
+           ]
+         }
+       ]}"""
+      val jsonB =
+        """{ "nodeTypes": [
+         { "name":"NODE_A",
+           "outEdges": [
+             { "edgeName": "SOME_EDGE", "inNodes": [
+               {"name": "NODE_C", "cardinality":"1:1"}
+             ]}
+           ]
+         }
+       ]}"""
+
+      merge(jsonA, jsonB) shouldBe read(
+        """{ "nodeTypes": [
+         { "name":"NODE_A",
+           "outEdges": [
+             { "edgeName": "SOME_EDGE", "inNodes": [
+               {"name": "NODE_C", "cardinality":"1:1"},
+               {"name": "NODE_B"}
+             ]},
+             { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "NODE" }] }
+           ]
+         }
+       ]}""")
+    }
+
+    "specific inNode is mentioned multiple times with the same cardinality. note: default cardinality is n:n" in {
+      val jsonA =
+        """{ "nodeTypes": [
+         { "name":"NODE_A",
+           "outEdges": [
+             { "edgeName": "SOME_EDGE", "inNodes": [
+               {"name": "NODE_B"}
+             ]}
+           ]
+         }
+       ]}"""
+      val jsonB =
+        """{ "nodeTypes": [
+         { "name":"NODE_A",
+           "outEdges": [
+             { "edgeName": "SOME_EDGE", "inNodes": [
+               {"name": "NODE_B", "cardinality":"n:n"}
+             ]}
+           ]
+         }
+       ]}"""
+
+      merge(jsonA, jsonB) shouldBe read(
+        """{ "nodeTypes": [
+         { "name":"NODE_A",
+           "outEdges": [
+             { "edgeName": "SOME_EDGE", "inNodes": [
+               {"name": "NODE_B", "cardinality":"n:n"}
+             ]},
+             { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "NODE" }] }
+           ]
+         }
+       ]}""")
+    }
+
+    // n.b. for now this isn't supported but we may do so in future - we just don't need it yet - there's many different cases to handle that we don't need yet
+    "error if specific inNode is mentioned multiple times with different cardinalities. note: default cardinality is n:n" in {
+      val jsonA =
+        """{ "nodeTypes": [
+         { "name":"NODE_A",
+           "outEdges": [
+             { "edgeName": "SOME_EDGE", "inNodes": [
+               {"name": "NODE_B", "cardinality":"1:n"}
+             ]}
+           ]
+         }
+       ]}"""
+      val jsonB =
+        """{ "nodeTypes": [
+         { "name":"NODE_A",
+           "outEdges": [
+             { "edgeName": "SOME_EDGE", "inNodes": [
+               {"name": "NODE_B", "cardinality":"n:n"}
+             ]}
+           ]
+         }
+       ]}"""
+      intercept[NotImplementedError](merge(jsonA, jsonB))
+    }
+
   }
 
   def merge(jsonA: String, jsonB: String) =

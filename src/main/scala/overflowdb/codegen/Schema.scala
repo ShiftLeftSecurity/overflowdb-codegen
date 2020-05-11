@@ -30,28 +30,30 @@ class Schema(schemaFile: String) {
     edgeKeys.map(property => property.name -> property).toMap
 
   /* schema only specifies `node.outEdges` - this builds a reverse map (essentially `node.inEdges`) along with the outNodes */
-  lazy val nodeToInEdgeContexts: Map[NodeType, Seq[InEdgeContext]] = {
-    val tuples: Seq[(NodeType, String, NodeType)] =
+  lazy val nodeToInEdgeContexts: Map[String, Seq[InEdgeContext]] = {
+    case class NeighborContext(neighborNode: String, edgeLabel: String, outNode: OutNode)
+    val tuples: Seq[NeighborContext] =
       for {
         nodeType <- nodeTypes
         outEdge <- nodeType.outEdges
-        inNodeName <- outEdge.inNodes
-        inNode = nodeTypeByName.get(inNodeName.name) if inNode.isDefined
-      } yield (inNode.get, outEdge.edgeName, nodeType)
+        inNode <- outEdge.inNodes
+      } yield NeighborContext(inNode.name, outEdge.edgeName, OutNode(nodeType.name, inNode.cardinality))
 
-    /* grouping above (node, inEdge, adjacentNode) tuples by `node` and `inEdge`
-     * TODO use scala 2.13's `groupMap` */
-    val grouped: Map[NodeType, Map[String, Seq[NodeType]]] =
-      tuples.groupBy(_._1).mapValues(_.groupBy(_._2).mapValues(_.map(_._3)).toMap)
+    /* grouping above tuples by `neighborNodeType` and `inEdgeName`
+     * we use this from sbt, so unfortunately we can't yet use scala 2.13's `groupMap` :( */
+    type NeighborNodeLabel = String
+    type EdgeLabel = String
+    val grouped: Map[NeighborNodeLabel, Map[EdgeLabel, Seq[OutNode]]] =
+      tuples.groupBy(_.neighborNode).mapValues(_.groupBy(_.edgeLabel).mapValues(_.map(_.outNode)).toMap)
 
-    grouped.mapValues { inEdgesWithAdjacentNodes =>
+    grouped.mapValues { inEdgesWithNeighborNodes =>
       // all nodes can have incoming `CONTAINS_NODE` edges
-      val adjustedInEdgesWithAdjacentNodes =
-        if (inEdgesWithAdjacentNodes.contains(DefaultEdgeTypes.ContainsNode)) inEdgesWithAdjacentNodes
-        else inEdgesWithAdjacentNodes + (DefaultEdgeTypes.ContainsNode -> Set.empty)
+      val adjustedInEdgesWithNeighborNodes =
+        if (inEdgesWithNeighborNodes.contains(DefaultEdgeTypes.ContainsNode)) inEdgesWithNeighborNodes
+        else inEdgesWithNeighborNodes + (DefaultEdgeTypes.ContainsNode -> Set.empty)
 
-      adjustedInEdgesWithAdjacentNodes.map { case (edge, adjacentNodes) =>
-        InEdgeContext(edge, adjacentNodes.toSet)
+      adjustedInEdgesWithNeighborNodes.map { case (edge, neighborNodes) =>
+        InEdgeContext(edge, neighborNodes.toSet)
       }.toSeq
     }
   }
@@ -85,6 +87,7 @@ case class NodeType(
 case class OutEdgeEntry(edgeName: String, inNodes: List[InNode])
 
 case class InNode(name: String, cardinality: Option[String])
+case class OutNode(name: String, cardinality: Option[String])
 
 case class ContainedNode(nodeType: String, localName: String, cardinality: String) {
   lazy val nodeTypeClassName = Helpers.camelCaseCaps(nodeType)
@@ -113,9 +116,9 @@ case class NodeBaseTrait(name: String, hasKeys: List[String], `extends`: Option[
   lazy val className = Helpers.camelCaseCaps(name)
 }
 
-case class InEdgeContext(edgeName: String, outNodes: Set[NodeType])
+case class InEdgeContext(edgeName: String, neighborNodes: Set[OutNode])
 
-case class NeighborNodeInfo(accessorName: String, className: String)
+case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
 case class NeighborInfo(accessorNameForEdge: String, nodeInfos: Set[NeighborNodeInfo], offsetPosition: Int)
 
 object HigherValueType extends Enumeration {
