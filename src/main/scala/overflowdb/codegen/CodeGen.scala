@@ -50,6 +50,7 @@ def writeConstants(outputDir: JFile): JFile = {
     }
   }
 
+  // TODO phase out once we're not using gremlin any more
   def writeKeyConstants(className: String, constants: List[Constant]): Unit = {
     writeConstantsFile(className, constants) { constant =>
       val tpe = constant.tpe.getOrElse(throw new AssertionError(s"`tpe` must be defined for Key constant - not the case for $constant"))
@@ -59,6 +60,18 @@ def writeConstants(outputDir: JFile): JFile = {
         case "boolean" => "Boolean"
       }
       s"""public static final gremlin.scala.Key<$javaType> ${constant.name} = new gremlin.scala.Key<>("${constant.value}");"""
+    }
+  }
+
+  def writePropertyKeyConstants(className: String, constants: List[Constant]): Unit = {
+    writeConstantsFile(className, constants) { constant =>
+      val tpe = constant.tpe.getOrElse(throw new AssertionError(s"`tpe` must be defined for Key constant - not the case for $constant"))
+      val javaType = tpe match {
+        case "string"  => "String"
+        case "int"     => "Integer"
+        case "boolean" => "Boolean"
+      }
+      s"""public static final io.shiftleft.overflowdb.PropertyKey<$javaType> ${constant.name} = new io.shiftleft.overflowdb.PropertyKey<>("${constant.value}");"""
     }
   }
 
@@ -72,6 +85,7 @@ def writeConstants(outputDir: JFile): JFile = {
   }
   List("edgeKeys", "nodeKeys").foreach { element =>
     writeKeyConstants(element.capitalize, schema.constantsFromElement(element))
+    writePropertyKeyConstants(s"${element.capitalize}Odb", schema.constantsFromElement(element))
   }
   writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
 
@@ -208,8 +222,8 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex, VertexProperty}
-         |import io.shiftleft.overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbNode, OdbGraph, OdbNodeProperty, NodeRef}
-         |import io.shiftleft.overflowdb.traversal.{NodeRefOps, PropertyKey, Traversal}
+         |import io.shiftleft.overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
+         |import io.shiftleft.overflowdb.traversal.{NodeRefOps, Traversal}
          |import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
