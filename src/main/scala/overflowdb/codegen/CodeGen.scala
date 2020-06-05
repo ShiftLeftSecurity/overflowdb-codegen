@@ -222,7 +222,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex, VertexProperty}
-         |import io.shiftleft.overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
+         |import io.shiftleft.overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbElement, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
          |import io.shiftleft.overflowdb.traversal.{NodeRefOps, Traversal}
          |import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils
          |import scala.jdk.CollectionConverters._
@@ -251,7 +251,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |}
            |
            |/* a node that stored inside an OdbGraph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Vertex with Node {
+           |trait StoredNode extends Vertex with Node with OdbElement {
            |  /* underlying vertex in the graph database.
            |   * since this is a StoredNode, this is always set */
            |  def underlying: Vertex = this
