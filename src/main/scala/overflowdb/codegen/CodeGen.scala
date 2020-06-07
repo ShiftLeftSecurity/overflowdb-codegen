@@ -71,7 +71,7 @@ def writeConstants(outputDir: JFile): JFile = {
         case "int"     => "Integer"
         case "boolean" => "Boolean"
       }
-      s"""public static final io.shiftleft.overflowdb.PropertyKey<$javaType> ${constant.name} = new io.shiftleft.overflowdb.PropertyKey<>("${constant.value}");"""
+      s"""public static final overflowdb.PropertyKey<$javaType> ${constant.name} = new overflowdb.PropertyKey<>("${constant.value}");"""
     }
   }
 
@@ -101,7 +101,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.util.{List => JList}
          |import org.apache.tinkerpop.gremlin.structure.Property
          |import org.apache.tinkerpop.gremlin.structure.{Vertex, VertexProperty}
-         |import io.shiftleft.overflowdb.{EdgeLayoutInformation, EdgeFactory, NodeFactory, OdbEdge, OdbNode, OdbGraph, NodeRef}
+         |import overflowdb.{EdgeLayoutInformation, EdgeFactory, NodeFactory, OdbEdge, OdbNode, OdbGraph, NodeRef}
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
@@ -222,8 +222,8 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex, VertexProperty}
-         |import io.shiftleft.overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbElement, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
-         |import io.shiftleft.overflowdb.traversal.{NodeRefOps, Traversal}
+         |import overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbElement, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
+         |import overflowdb.traversal.{NodeRefOps, Traversal}
          |import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
