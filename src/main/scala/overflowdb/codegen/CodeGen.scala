@@ -53,7 +53,7 @@ def writeConstants(outputDir: JFile): JFile = {
   // TODO phase out once we're not using gremlin any more
   def writeKeyConstants(className: String, constants: List[Constant]): Unit = {
     writeConstantsFile(className, constants) { constant =>
-      val tpe = constant.tpe.getOrElse(throw new AssertionError(s"`tpe` must be defined for Key constant - not the case for $constant"))
+      val tpe = constant.valueType.getOrElse(throw new AssertionError(s"`tpe` must be defined for Key constant - not the case for $constant"))
       val javaType = tpe match {
         case "string"  => "String"
         case "int"     => "Integer"
@@ -65,13 +65,19 @@ def writeConstants(outputDir: JFile): JFile = {
 
   def writePropertyKeyConstants(className: String, constants: List[Constant]): Unit = {
     writeConstantsFile(className, constants) { constant =>
-      val tpe = constant.tpe.getOrElse(throw new AssertionError(s"`tpe` must be defined for Key constant - not the case for $constant"))
-      val javaType = tpe match {
+      val valueType = constant.valueType.getOrElse(throw new AssertionError(s"`valueType` must be defined for Key constant - not the case for $constant"))
+      val cardinality = constant.cardinality.getOrElse(throw new AssertionError(s"`cardinality` must be defined for Key constant - not the case for $constant"))
+      val baseType = valueType match {
         case "string"  => "String"
         case "int"     => "Integer"
         case "boolean" => "Boolean"
       }
-      s"""public static final overflowdb.PropertyKey<$javaType> ${constant.name} = new overflowdb.PropertyKey<>("${constant.value}");"""
+      val completeType = Cardinality.fromName(cardinality) match {
+        case Cardinality.One       => baseType
+        case Cardinality.ZeroOrOne => baseType
+        case Cardinality.List      => s"scala.collection.Seq<$baseType>"
+      }
+      s"""public static final overflowdb.PropertyKey<$completeType> ${constant.name} = new overflowdb.PropertyKey<>("${constant.value}");"""
     }
   }
 
