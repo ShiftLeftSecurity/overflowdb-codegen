@@ -250,7 +250,6 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |trait Node extends Product {
            |  def label: String
-           |  def getId: JLong
            |
            |  /** labels of product elements, used e.g. for pretty-printing */
            |  def productElementLabel(n: Int): String
