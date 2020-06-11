@@ -147,7 +147,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |  }
            |
            |  object Properties {
-           |    val keyToValue: Map[String, $edgeClassName => Any] = Map(
+           |    val keyToValue: Map[String, $edgeClassName => AnyRef] = Map(
            |      $keyToValueMap
            |    )
            |  }
@@ -371,7 +371,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |  }
            |
            |  object Properties {
-           |    val keyToValue: Map[String, $classNameDb => Any] = Map(
+           |    val keyToValue: Map[String, $classNameDb => AnyRef] = Map(
            |      $keyToValueMap
            |    )
            |  }
@@ -651,19 +651,8 @@ def writeConstants(outputDir: JFile): JFile = {
            |    }
            |  }
            |
-           |  override protected def specificProperties[A](key: String): JIterator[VertexProperty[A]] = {
-           |    $className.Properties.keyToValue.get(key) match {
-           |      case None => JCollections.emptyIterator[VertexProperty[A]]
-           |      case Some(fieldAccess) =>
-           |        fieldAccess(this) match {
-           |          case null => JCollections.emptyIterator[VertexProperty[A]]
-           |          case values: List[_] =>
-           |            values.map { value =>
-           |              new OdbNodeProperty(-1, this, key, value).asInstanceOf[VertexProperty[A]]
-           |            }.iterator.asJava
-           |          case value => IteratorUtils.of(new OdbNodeProperty(-1, this, key, value.asInstanceOf[A]))
-           |        }
-           |    }
+           |  override protected def specificProperty2(key: String): AnyRef = {
+           |    $className.Properties.keyToValue.get(key).map(fieldAccess => fieldAccess(this)).orNull
            |  }
            |
            |  override protected def updateSpecificProperty[A](cardinality: VertexProperty.Cardinality, key: String, value: A): VertexProperty[A] = {
