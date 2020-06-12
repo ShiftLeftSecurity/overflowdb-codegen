@@ -248,18 +248,18 @@ def writeConstants(outputDir: JFile): JFile = {
       val rootTypes =
         s"""$propertyErrorRegisterImpl
            |
-           |trait Node extends Product {
-           |  /** labels of product elements, used e.g. for pretty-printing */
-           |  def productElementLabel(n: Int): String
-           |}
+           |trait Node
            |
            |/* a node that stored inside an OdbGraph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Vertex with Node with OdbElement {
+           |trait StoredNode extends Vertex with Node with OdbElement with Product {
            |  /* underlying vertex in the graph database.
            |   * since this is a StoredNode, this is always set */
            |  def underlying: Vertex = this
            |
            |  def asNodeRef: NodeRef[_] = this.asInstanceOf[NodeRef[_]]
+           |
+           |  /** labels of product elements, used e.g. for pretty-printing */
+           |  def productElementLabel(n: Int): String
            |
            |  // Java does not seem to be capable of calling methods from java classes if a scala trait is in the inheritance
            |  // chain.
@@ -498,19 +498,6 @@ def writeConstants(outputDir: JFile): JFile = {
            |  def asStored : StoredNode = this.asInstanceOf[StoredNode]
            |
            |  $abstractContainedNodeAccessors
-           |
-           |  override def productElementLabel(n: Int): String =
-           |      n match {
-           |        $productElementLabels
-           |      }
-           |
-           |  override def productElement(n: Int): Any =
-           |      n match {
-           |        $productElementAccessors
-           |      }
-           |
-           |  override def productPrefix = "$className"
-           |  override def productArity = ${productElements.size}
            |}
            |""".stripMargin
 
@@ -596,6 +583,19 @@ def writeConstants(outputDir: JFile): JFile = {
            |  override def label: String = {
            |    $className.Label
            |  }
+           |
+           |  override def productElementLabel(n: Int): String =
+           |    n match {
+           |      $productElementLabels
+           |    }
+           |
+           |  override def productElement(n: Int): Any =
+           |    n match {
+           |      $productElementAccessors
+           |    }
+           |
+           |  override def productPrefix = "$className"
+           |  override def productArity = ${productElements.size}
            |}
            |""".stripMargin
       }
@@ -632,6 +632,19 @@ def writeConstants(outputDir: JFile): JFile = {
            |  override def label: String = {
            |    $className.Label
            |  }
+           |
+           |  override def productElementLabel(n: Int): String =
+           |    n match {
+           |      $productElementLabels
+           |    }
+           |
+           |  override def productElement(n: Int): Any =
+           |    n match {
+           |      $productElementAccessors
+           |    }
+           |
+           |  override def productPrefix = "$className"
+           |  override def productArity = ${productElements.size}
            |
            |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameDb]
            |
