@@ -249,8 +249,6 @@ def writeConstants(outputDir: JFile): JFile = {
         s"""$propertyErrorRegisterImpl
            |
            |trait Node extends Product {
-           |  def label: String
-           |
            |  /** labels of product elements, used e.g. for pretty-printing */
            |  def productElementLabel(n: Int): String
            |}
@@ -700,7 +698,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
          |trait NewNode extends Node {
-         |  override def label: String
+         |  def label: String
          |  def properties: Map[String, Any]
          |  def containedNodesByLocalName: Map[String, List[Node]]
          |  def allContainedNodes: List[Node] = containedNodesByLocalName.values.flatten.toList
