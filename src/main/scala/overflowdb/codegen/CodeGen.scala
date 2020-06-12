@@ -248,10 +248,10 @@ def writeConstants(outputDir: JFile): JFile = {
       val rootTypes =
         s"""$propertyErrorRegisterImpl
            |
-           |trait Node
+           |trait CpgNode
            |
            |/* a node that stored inside an OdbGraph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Vertex with Node with OdbElement with Product {
+           |trait StoredNode extends Vertex with CpgNode with OdbElement with Product {
            |  /* underlying vertex in the graph database.
            |   * since this is a StoredNode, this is always set */
            |  def underlying: Vertex = this
@@ -299,7 +299,7 @@ def writeConstants(outputDir: JFile): JFile = {
             s"with ${camelCaseCaps(traitName)}Base"
           }.mkString(" ")
 
-        s"""trait ${nodeBaseTrait.className}Base extends Node $mixins $mixinTraitsForBase
+        s"""trait ${nodeBaseTrait.className}Base extends CpgNode $mixins $mixinTraitsForBase
            |trait ${nodeBaseTrait.className} extends StoredNode with ${nodeBaseTrait.className}Base $mixinTraits
            |""".stripMargin
       }.mkString("\n")
@@ -494,7 +494,7 @@ def writeConstants(outputDir: JFile): JFile = {
       }.mkString("\n")
 
       val nodeBaseImpl =
-        s"""trait ${className}Base extends Node $mixinTraitsForBase $propertyBasedTraits {
+        s"""trait ${className}Base extends CpgNode $mixinTraitsForBase $propertyBasedTraits {
            |  def asStored : StoredNode = this.asInstanceOf[StoredNode]
            |
            |  $abstractContainedNodeAccessors
@@ -710,7 +710,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.util.{Map => JMap, Set => JSet}
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
-         |trait NewNode extends Node {
+         |trait NewNode extends CpgNode {
          |  def label: String
          |  def properties: Map[String, Any]
          |  def containedNodesByLocalName: Map[String, List[Node]]
