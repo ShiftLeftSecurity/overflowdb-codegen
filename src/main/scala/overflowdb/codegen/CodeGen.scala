@@ -263,7 +263,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |  // Java does not seem to be capable of calling methods from java classes if a scala trait is in the inheritance
            |  // chain.
-           |  override def getId: JLong = underlying.id.asInstanceOf[JLong]
+           |  protected def getId: JLong = underlying.id.asInstanceOf[JLong]
            |
            |  /* all properties plus label and id */
            |  def toMap: Map[String, Any] = {
@@ -460,7 +460,8 @@ def writeConstants(outputDir: JFile): JFile = {
       val productElements: List[ProductElement] = {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
-        val forId = ProductElement("id", "getId", nextIdx)
+//        val forId = ProductElement("id", "getId", nextIdx)
+        val forId = ProductElement("id", "-1", nextIdx)
         val forKeys = keys.map { key =>
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
@@ -495,7 +496,6 @@ def writeConstants(outputDir: JFile): JFile = {
       val nodeBaseImpl =
         s"""trait ${className}Base extends Node $mixinTraitsForBase $propertyBasedTraits {
            |  def asStored : StoredNode = this.asInstanceOf[StoredNode]
-           |  override def getId: JLong = -1L
            |
            |  $abstractContainedNodeAccessors
            |
@@ -622,7 +622,6 @@ def writeConstants(outputDir: JFile): JFile = {
            |  $mixinTraits with ${className}Base {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
-           |  override def getId = ref.id
            |
            |  /* all properties */
            |  override def valueMap: JMap[String, AnyRef] = $valueMapImpl
