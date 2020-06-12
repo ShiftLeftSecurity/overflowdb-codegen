@@ -261,6 +261,8 @@ def writeConstants(outputDir: JFile): JFile = {
            |   * since this is a StoredNode, this is always set */
            |  def underlying: Vertex = this
            |
+           |  def asNodeRef: NodeRef[_] = this.asInstanceOf[NodeRef[_]]
+           |
            |  // Java does not seem to be capable of calling methods from java classes if a scala trait is in the inheritance
            |  // chain.
            |  protected def getId: JLong = underlying.id.asInstanceOf[JLong]
