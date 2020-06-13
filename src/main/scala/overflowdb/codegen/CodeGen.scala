@@ -251,7 +251,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |trait CpgNode
            |
            |/* a node that stored inside an OdbGraph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Vertex with CpgNode with OdbElement with Product {
+           |trait StoredNode extends Vertex with CpgNode with overflowdb.Node with Product {
            |  /* underlying vertex in the graph database.
            |   * since this is a StoredNode, this is always set */
            |  def underlying: Vertex = this
@@ -264,6 +264,8 @@ def writeConstants(outputDir: JFile): JFile = {
            |  // Java does not seem to be capable of calling methods from java classes if a scala trait is in the inheritance
            |  // chain.
            |  protected def getId: JLong = underlying.id.asInstanceOf[JLong]
+           |
+           |  override def id2: Long = underlying.id.asInstanceOf[Long]
            |
            |  /* all properties plus label and id */
            |  def toMap: Map[String, Any] = {
