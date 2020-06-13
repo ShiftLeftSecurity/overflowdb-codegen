@@ -58,7 +58,7 @@ object SchemaMerger {
         val outEdgeNames = outEdges.map(_.obj("edgeName").str).toSet
 
         if (!outEdgeNames.contains("CONTAINS_NODE")) {
-          val containsNodeEntry = read(""" { "edgeName": "CONTAINS_NODE", "inNodes": [{"name": "NODE"}] }""")
+          val containsNodeEntry = read(s""" { "edgeName": "CONTAINS_NODE", "inNodes": [{"name": "${DefaultNodeTypes.Node}"}] }""")
           outEdges.append(containsNodeEntry)
         }
 

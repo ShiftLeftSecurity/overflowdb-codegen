@@ -554,14 +554,15 @@ def writeConstants(outputDir: JFile): JFile = {
         val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge(): JIterator[StoredNode] = get().$accessorNameForEdge"
 
-        val specificNodeBasedDelegators = nodeInfos.map { case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
-          val returnType = cardinality match {
-            case Cardinality.List => s"Iterator[$className]"
-            case Cardinality.ZeroOrOne => s"Option[$className]"
-            case Cardinality.One => s"$className"
+        val specificNodeBasedDelegators = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
+          case NeighborNodeInfo(accessorNameForNode, className, cardinality)  =>
+            val returnType = cardinality match {
+              case Cardinality.List => s"Iterator[$className]"
+              case Cardinality.ZeroOrOne => s"Option[$className]"
+              case Cardinality.One => s"$className"
+            }
+            s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
           }
-          s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
-        }
         specificNodeBasedDelegators + genericEdgeBasedDelegators
       }.mkString("\n")
 
@@ -604,15 +605,16 @@ def writeConstants(outputDir: JFile): JFile = {
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        val specificNodeBasedAccessors = nodeInfos.map { case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
-          cardinality match {
-            case Cardinality.List =>
-              s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
-            case Cardinality.ZeroOrOne =>
-              s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption"
-            case Cardinality.One =>
-              s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next"
-          }
+        val specificNodeBasedAccessors = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
+          case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
+            cardinality match {
+              case Cardinality.List =>
+                s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
+              case Cardinality.ZeroOrOne =>
+                s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption"
+              case Cardinality.One =>
+                s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next"
+            }
         }
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
@@ -713,8 +715,8 @@ def writeConstants(outputDir: JFile): JFile = {
          |trait NewNode extends CpgNode {
          |  def label: String
          |  def properties: Map[String, Any]
-         |  def containedNodesByLocalName: Map[String, List[Node]]
-         |  def allContainedNodes: List[Node] = containedNodesByLocalName.values.flatten.toList
+         |  def containedNodesByLocalName: Map[String, List[${DefaultNodeTypes.NodeClassname}]]
+         |  def allContainedNodes: List[${DefaultNodeTypes.NodeClassname}] = containedNodesByLocalName.values.flatten.toList
          |}
          |""".stripMargin
 
@@ -779,7 +781,7 @@ def writeConstants(outputDir: JFile): JFile = {
       s"""case class New${nodeType.className}($fields) extends NewNode with ${nodeType.className}Base {
          |  override val label = "${nodeType.name}"
          |  override val properties: Map[String, Any] = $propertiesImpl
-         |  override def containedNodesByLocalName: Map[String, List[Node]] = $containedNodesByLocalName
+         |  override def containedNodesByLocalName: Map[String, List[${DefaultNodeTypes.NodeClassname}]] = $containedNodesByLocalName
          |}
          |""".stripMargin
     }
