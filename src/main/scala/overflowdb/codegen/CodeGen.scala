@@ -229,7 +229,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex, VertexProperty}
          |import overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbElement, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
-         |import overflowdb.traversal.{NodeRefOps, Traversal}
+         |import overflowdb.traversal.Traversal
          |import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
