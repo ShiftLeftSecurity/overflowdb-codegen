@@ -256,8 +256,6 @@ def writeConstants(outputDir: JFile): JFile = {
            |   * since this is a StoredNode, this is always set */
            |  def underlying: Vertex = this
            |
-           |  def asNodeRef: NodeRef[_] = this.asInstanceOf[NodeRef[_]]
-           |
            |  /** labels of product elements, used e.g. for pretty-printing */
            |  def productElementLabel(n: Int): String
            |
