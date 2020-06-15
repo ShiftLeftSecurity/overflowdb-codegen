@@ -229,7 +229,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex, VertexProperty}
          |import overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbElement, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
-         |import overflowdb.traversal.{NodeRefOps, Traversal}
+         |import overflowdb.traversal.Traversal
          |import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
@@ -248,23 +248,24 @@ def writeConstants(outputDir: JFile): JFile = {
       val rootTypes =
         s"""$propertyErrorRegisterImpl
            |
-           |trait Node extends Product {
+           |trait CpgNode {
            |  def label: String
-           |  def getId: JLong
-           |
-           |  /** labels of product elements, used e.g. for pretty-printing */
-           |  def productElementLabel(n: Int): String
            |}
            |
            |/* a node that stored inside an OdbGraph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Vertex with Node with OdbElement {
+           |trait StoredNode extends Vertex with CpgNode with overflowdb.Node with Product {
            |  /* underlying vertex in the graph database.
            |   * since this is a StoredNode, this is always set */
            |  def underlying: Vertex = this
            |
+           |  /** labels of product elements, used e.g. for pretty-printing */
+           |  def productElementLabel(n: Int): String
+           |
            |  // Java does not seem to be capable of calling methods from java classes if a scala trait is in the inheritance
            |  // chain.
-           |  override def getId: JLong = underlying.id.asInstanceOf[JLong]
+           |  protected def getId: JLong = underlying.id.asInstanceOf[JLong]
+           |
+           |  override def id2: Long = underlying.id.asInstanceOf[Long]
            |
            |  /* all properties plus label and id */
            |  def toMap: Map[String, Any] = {
@@ -300,7 +301,7 @@ def writeConstants(outputDir: JFile): JFile = {
             s"with ${camelCaseCaps(traitName)}Base"
           }.mkString(" ")
 
-        s"""trait ${nodeBaseTrait.className}Base extends Node $mixins $mixinTraitsForBase
+        s"""trait ${nodeBaseTrait.className}Base extends CpgNode $mixins $mixinTraitsForBase
            |trait ${nodeBaseTrait.className} extends StoredNode with ${nodeBaseTrait.className}Base $mixinTraits
            |""".stripMargin
       }.mkString("\n")
@@ -461,7 +462,7 @@ def writeConstants(outputDir: JFile): JFile = {
       val productElements: List[ProductElement] = {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
-        val forId = ProductElement("id", "getId", nextIdx)
+        val forId = ProductElement("id", "id2", nextIdx)
         val forKeys = keys.map { key =>
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
@@ -494,24 +495,10 @@ def writeConstants(outputDir: JFile): JFile = {
       }.mkString("\n")
 
       val nodeBaseImpl =
-        s"""trait ${className}Base extends Node $mixinTraitsForBase $propertyBasedTraits {
+        s"""trait ${className}Base extends CpgNode $mixinTraitsForBase $propertyBasedTraits {
            |  def asStored : StoredNode = this.asInstanceOf[StoredNode]
-           |  override def getId: JLong = -1L
            |
            |  $abstractContainedNodeAccessors
-           |
-           |  override def productElementLabel(n: Int): String =
-           |      n match {
-           |        $productElementLabels
-           |      }
-           |
-           |  override def productElement(n: Int): Any =
-           |      n match {
-           |        $productElementAccessors
-           |      }
-           |
-           |  override def productPrefix = "$className"
-           |  override def productArity = ${productElements.size}
            |}
            |""".stripMargin
 
@@ -568,14 +555,15 @@ def writeConstants(outputDir: JFile): JFile = {
         val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge(): JIterator[StoredNode] = get().$accessorNameForEdge"
 
-        val specificNodeBasedDelegators = nodeInfos.map { case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
-          val returnType = cardinality match {
-            case Cardinality.List => s"Iterator[$className]"
-            case Cardinality.ZeroOrOne => s"Option[$className]"
-            case Cardinality.One => s"$className"
+        val specificNodeBasedDelegators = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
+          case NeighborNodeInfo(accessorNameForNode, className, cardinality)  =>
+            val returnType = cardinality match {
+              case Cardinality.List => s"Iterator[$className]"
+              case Cardinality.ZeroOrOne => s"Option[$className]"
+              case Cardinality.One => s"$className"
+            }
+            s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
           }
-          s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
-        }
         specificNodeBasedDelegators + genericEdgeBasedDelegators
       }.mkString("\n")
 
@@ -597,6 +585,19 @@ def writeConstants(outputDir: JFile): JFile = {
            |  override def label: String = {
            |    $className.Label
            |  }
+           |
+           |  override def productElementLabel(n: Int): String =
+           |    n match {
+           |      $productElementLabels
+           |    }
+           |
+           |  override def productElement(n: Int): Any =
+           |    n match {
+           |      $productElementAccessors
+           |    }
+           |
+           |  override def productPrefix = "$className"
+           |  override def productArity = ${productElements.size}
            |}
            |""".stripMargin
       }
@@ -605,15 +606,16 @@ def writeConstants(outputDir: JFile): JFile = {
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        val specificNodeBasedAccessors = nodeInfos.map { case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
-          cardinality match {
-            case Cardinality.List =>
-              s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
-            case Cardinality.ZeroOrOne =>
-              s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption"
-            case Cardinality.One =>
-              s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next"
-          }
+        val specificNodeBasedAccessors = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
+          case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
+            cardinality match {
+              case Cardinality.List =>
+                s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
+              case Cardinality.ZeroOrOne =>
+                s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption"
+              case Cardinality.One =>
+                s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next"
+            }
         }
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
@@ -623,7 +625,6 @@ def writeConstants(outputDir: JFile): JFile = {
            |  $mixinTraits with ${className}Base {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
-           |  override def getId = ref.id
            |
            |  /* all properties */
            |  override def valueMap: JMap[String, AnyRef] = $valueMapImpl
@@ -634,6 +635,19 @@ def writeConstants(outputDir: JFile): JFile = {
            |  override def label: String = {
            |    $className.Label
            |  }
+           |
+           |  override def productElementLabel(n: Int): String =
+           |    n match {
+           |      $productElementLabels
+           |    }
+           |
+           |  override def productElement(n: Int): Any =
+           |    n match {
+           |      $productElementAccessors
+           |    }
+           |
+           |  override def productPrefix = "$className"
+           |  override def productArity = ${productElements.size}
            |
            |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameDb]
            |
@@ -699,11 +713,10 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.util.{Map => JMap, Set => JSet}
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
-         |trait NewNode extends Node {
-         |  override def label: String
+         |trait NewNode extends CpgNode {
          |  def properties: Map[String, Any]
-         |  def containedNodesByLocalName: Map[String, List[Node]]
-         |  def allContainedNodes: List[Node] = containedNodesByLocalName.values.flatten.toList
+         |  def containedNodesByLocalName: Map[String, List[${DefaultNodeTypes.NodeClassname}]]
+         |  def allContainedNodes: List[${DefaultNodeTypes.NodeClassname}] = containedNodesByLocalName.values.flatten.toList
          |}
          |""".stripMargin
 
@@ -768,7 +781,7 @@ def writeConstants(outputDir: JFile): JFile = {
       s"""case class New${nodeType.className}($fields) extends NewNode with ${nodeType.className}Base {
          |  override val label = "${nodeType.name}"
          |  override val properties: Map[String, Any] = $propertiesImpl
-         |  override def containedNodesByLocalName: Map[String, List[Node]] = $containedNodesByLocalName
+         |  override def containedNodesByLocalName: Map[String, List[${DefaultNodeTypes.NodeClassname}]] = $containedNodesByLocalName
          |}
          |""".stripMargin
     }

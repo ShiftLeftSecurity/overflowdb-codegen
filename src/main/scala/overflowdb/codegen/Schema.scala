@@ -134,7 +134,8 @@ object Direction extends Enumeration {
 
 object DefaultNodeTypes {
   /** root type for all nodes */
-  val Node = "NODE"
+  val Node = "CPG_NODE"
+  val NodeClassname = "CpgNode"
 }
 
 object DefaultEdgeTypes {
