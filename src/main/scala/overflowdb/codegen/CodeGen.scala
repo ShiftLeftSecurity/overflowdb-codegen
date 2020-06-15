@@ -462,8 +462,7 @@ def writeConstants(outputDir: JFile): JFile = {
       val productElements: List[ProductElement] = {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
-//        val forId = ProductElement("id", "getId", nextIdx)
-        val forId = ProductElement("id", "-1", nextIdx)
+        val forId = ProductElement("id", "id2", nextIdx)
         val forKeys = keys.map { key =>
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
