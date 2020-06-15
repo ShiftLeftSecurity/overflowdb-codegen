@@ -61,7 +61,7 @@ class SchemaMergerTest extends WordSpec with Matchers {
               {"name": "ANNOTATION"}
             ] },
             { "edgeName": "ALIAS_OF","inNodes": [{"name": "TYPE"}] } ,
-            { "edgeName": "CONTAINS_NODE","inNodes":[{"name": "NODE"}]}
+            { "edgeName": "CONTAINS_NODE","inNodes":[{"name": "CPG_NODE"}]}
            ]}]}""")
     }
   }
@@ -102,7 +102,7 @@ class SchemaMergerTest extends WordSpec with Matchers {
              "name":"CALL_SITE",
              "outEdges": [
                { "edgeName": "SOME_EDGE", "inNodes": [ {"name": "SOME_OTHER_NODE"} ] },
-               { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "NODE" }] }
+               { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "CPG_NODE" }] }
              ]
            }
          ]}""")
@@ -129,9 +129,9 @@ class SchemaMergerTest extends WordSpec with Matchers {
              "outEdges": [
                { "edgeName": "SOME_EDGE", "inNodes": [ {"name": "SOME_OTHER_NODE" }] },
                { "edgeName": "CONTAINS_NODE", "inNodes": [
-                 {"name": "NODE"},
                  {"name": "CALL"},
-                 {"name": "METHOD"}
+                 {"name": "METHOD"},
+                 {"name": "CPG_NODE"}
                ] }
              ]
            }
@@ -169,7 +169,7 @@ class SchemaMergerTest extends WordSpec with Matchers {
                {"name": "NODE_C", "cardinality":"1:1"},
                {"name": "NODE_B"}
              ]},
-             { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "NODE" }] }
+             { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "CPG_NODE" }] }
            ]
          }
        ]}""")
@@ -204,7 +204,7 @@ class SchemaMergerTest extends WordSpec with Matchers {
              { "edgeName": "SOME_EDGE", "inNodes": [
                {"name": "NODE_B", "cardinality":"n:n"}
              ]},
-             { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "NODE" }] }
+             { "edgeName": "CONTAINS_NODE", "inNodes": [{ "name": "CPG_NODE" }] }
            ]
          }
        ]}""")
