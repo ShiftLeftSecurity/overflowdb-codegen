@@ -248,7 +248,9 @@ def writeConstants(outputDir: JFile): JFile = {
       val rootTypes =
         s"""$propertyErrorRegisterImpl
            |
-           |trait CpgNode
+           |trait CpgNode {
+           |  def label: String
+           |}
            |
            |/* a node that stored inside an OdbGraph (rather than e.g. DiffGraph) */
            |trait StoredNode extends Vertex with CpgNode with overflowdb.Node with Product {
@@ -713,7 +715,6 @@ def writeConstants(outputDir: JFile): JFile = {
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
          |trait NewNode extends CpgNode {
-         |  def label: String
          |  def properties: Map[String, Any]
          |  def containedNodesByLocalName: Map[String, List[${DefaultNodeTypes.NodeClassname}]]
          |  def allContainedNodes: List[${DefaultNodeTypes.NodeClassname}] = containedNodesByLocalName.values.flatten.toList
