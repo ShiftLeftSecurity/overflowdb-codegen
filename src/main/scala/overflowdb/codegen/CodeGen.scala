@@ -3,7 +3,12 @@ package overflowdb.codegen
 import better.files._
 import java.io.{File => JFile}
 
-import play.api.libs.json.Reads
+object CodeGen extends App {
+  assert(args.size == 2, s"expected two arguments (path to schema json file, basePackage), but got ${args.length}")
+  val schemaFile :: basePackage :: Nil = args.toList
+  val outputDir = new java.io.File("target")
+  new CodeGen(schemaFile, basePackage).run(outputDir)
+}
 
 /** Generates a domain model for OverflowDb traversals based on your domain-specific json schema.
   *
