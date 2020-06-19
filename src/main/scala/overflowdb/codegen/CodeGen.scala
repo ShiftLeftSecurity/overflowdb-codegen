@@ -261,17 +261,13 @@ def writeConstants(outputDir: JFile): JFile = {
            |  /** labels of product elements, used e.g. for pretty-printing */
            |  def productElementLabel(n: Int): String
            |
-           |  // Java does not seem to be capable of calling methods from java classes if a scala trait is in the inheritance
-           |  // chain.
-           |  protected def getId: JLong = underlying.id.asInstanceOf[JLong]
-           |
            |  override def id2: Long = underlying.id.asInstanceOf[Long]
            |
            |  /* all properties plus label and id */
            |  def toMap: Map[String, Any] = {
            |    val map = valueMap
            |    map.put("_label", label)
-           |    map.put("_id", getId)
+           |    map.put("_id", id2: JLong)
            |    map.asScala.toMap
            |  }
            |
