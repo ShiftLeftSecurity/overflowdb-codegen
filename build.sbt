@@ -26,8 +26,21 @@ Compile/scalacOptions ++= Seq(
   // "-language:existentials",
 )
 
-bintrayVcsUrl := Some("https://github.com/ShiftLeftSecurity/overflowdb-codgen")
 licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
+scmInfo := Some(ScmInfo(url("https://github.com/ShiftLeftSecurity/overflowdb-codegen"),
+                        "scm:git@github.com:ShiftLeftSecurity/overflowdb-codegen.git"))
+homepage := Some(url("https://github.com/ShiftLeftSecurity/overflowdb-codegen/"))
+developers := List(
+  /* sonatype requires this to be non-empty */
+  Developer(
+    "mpollmeier",
+    "Michael Pollmeier",
+    "michael@michaelpollmeier.com",
+    url("http://www.michaelpollmeier.com/")
+  )
+)
+publishTo := sonatypePublishToBundle.value
+Global/useGpg := false
 
 Global/cancelable := true
 Global/onChangedBuildSource := ReloadOnSourceChanges
