@@ -728,6 +728,7 @@ def writeConstants(outputDir: JFile): JFile = {
             if (getHigherType(key) == HigherValueType.Option) " = None"
             else if (key.valueType == "int") " = -1"
             else if (getHigherType(key) == HigherValueType.None && key.valueType == "string") """ ="" """
+	    else if (getHigherType(key) == HigherValueType.None && key.valueType == "boolean") """ =false """
             else if (getHigherType(key) == HigherValueType.List) "= List()"
             else ""
           s"${camelCase(key.name)}: ${getCompleteType(key)} $optionalDefault"
