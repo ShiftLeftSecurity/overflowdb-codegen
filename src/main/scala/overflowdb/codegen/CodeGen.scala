@@ -524,11 +524,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
             val memberName = camelCase(key.name)
             Cardinality.fromName(key.cardinality) match {
               case Cardinality.One =>
-                s"""   if ($memberName != null) { properties.put("${key.name}", $memberName) }"""
+                s"""   if (this._$memberName != null) { properties.put("${key.name}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
-                s"""  $memberName.map { value => properties.put("${key.name}", value) }"""
+                s"""   if (this._$memberName.nonEmpty) { properties.put("${key.name}", this._$memberName.get) }"""
               case Cardinality.List => // need java list, e.g. for NodeSerializer
-                s"""  if ($memberName.nonEmpty) { properties.put("${key.name}", $memberName.asJava) }"""
+                s"""   if (this._$memberName.nonEmpty) { properties.put("${key.name}", this._$memberName.asJava) }"""
             }
           }
           .mkString("\n")
@@ -537,11 +537,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
             val memberName = cnt.localName
             Cardinality.fromName(cnt.cardinality) match {
               case Cardinality.One =>
-                s"""  if (this._$memberName != null) { properties.put("$memberName", this._$memberName) }"""
+                s"""   if (this._$memberName != null) { properties.put("${memberName}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
-                s"""  $memberName.map { value => properties.put("$memberName", value) }"""
+                s"""   if (this._$memberName.nonEmpty) { properties.put("${memberName}", this._$memberName.get) }"""
               case Cardinality.List => // need java list, e.g. for NodeSerializer
-                s"""  if ($memberName.nonEmpty) { properties.put("$memberName", $memberName.asJava) }"""
+                s"""  if (this._$memberName.nonEmpty) { properties.put("${memberName}", this._$memberName.asJava) }"""
             }
           }
         }.mkString("\n")
@@ -557,6 +557,14 @@ class CodeGen(schemaFile: String, basePackage: String) {
         val initKeysImpl = keys
           .map { key: Property =>
             val memberName = camelCase(key.name)
+            Cardinality.fromName(key.cardinality) match {
+              case Cardinality.One =>
+                s"""   this._$memberName = other.$memberName""".stripMargin
+              case Cardinality.ZeroOrOne =>
+                s"""   this._$memberName = if(other.$memberName != null) other.$memberName else None""".stripMargin
+              case Cardinality.List =>
+                s"""   this._$memberName = if(other.$memberName != null) other.$memberName else Nil""".stripMargin
+            }
             s"""   this._$memberName = other.$memberName""".stripMargin
           }
           .mkString("\n")
@@ -575,16 +583,14 @@ class CodeGen(schemaFile: String, basePackage: String) {
                    |  }""".stripMargin
               case Cardinality.ZeroOrOne =>
                 s"""  this._$memberName = other.$memberName match {
-                   |    case null => None
-                   |    case None => None
-                   |    case Some(null) => None
+                   |    case null | None => None
                    |    case Some(newNode:NewNode) => Some(mapping(newNode).asInstanceOf[$containedNodeType])
                    |    case Some(oldNode:StoredNode) => Some(oldNode.asInstanceOf[$containedNodeType])
                    |    case _ => throw new MatchError("unreachable")
                    |  }""".stripMargin
               case Cardinality.List => // need java list, e.g. for NodeSerializer
-                s"""  this._$memberName = other.$memberName.map { nodeRef => nodeRef match {
-                   |    case null => null
+                s"""  this._$memberName = if(other.$memberName == null) Nil else other.$memberName.map { nodeRef => nodeRef match {
+                   |    case null => throw new NullPointerException("Nullpointers forbidden in contained nodes")
                    |    case newNode:NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
                    |    case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
                    |    case _ => throw new MatchError("unreachable")
@@ -605,22 +611,23 @@ class CodeGen(schemaFile: String, basePackage: String) {
           .map { containedNode =>
             val containedNodeType = containedNode.nodeTypeClassName
             val cardinality = Cardinality.fromName(containedNode.cardinality)
-            val completeType = cardinality match {
-              case Cardinality.ZeroOrOne => s"Option[$containedNodeType]"
-              case Cardinality.One       => containedNodeType
-              case Cardinality.List      => s"List[$containedNodeType]"
+            cardinality match {
+              case Cardinality.One =>
+                s"""
+                     |private var _${containedNode.localName}: $containedNodeType = null
+                     |def ${containedNode.localName}: $containedNodeType = this._${containedNode.localName}
+                     |""".stripMargin
+              case Cardinality.ZeroOrOne =>
+                s"""
+                     |private var _${containedNode.localName}: Option[$containedNodeType] = None
+                     |def ${containedNode.localName}: Option[$containedNodeType] = this._${containedNode.localName}
+                     |""".stripMargin
+              case Cardinality.List =>
+                s"""
+                     |private var _${containedNode.localName}: List[$containedNodeType] = Nil
+                     |def ${containedNode.localName}: List[$containedNodeType] = this._${containedNode.localName}
+                     |""".stripMargin
             }
-            s"""
-             |private var _${containedNode.localName}: $completeType = null
-             |def ${containedNode.localName}: $completeType = {
-             |""".stripMargin
-              .+(cardinality match {
-                case Cardinality.ZeroOrOne =>
-                  s"if(this._${containedNode.localName} == null) None else this._${containedNode.localName}\n}\n"
-                case Cardinality.One => s"this._${containedNode.localName}\n}"
-                case Cardinality.List =>
-                  s"if(this._${containedNode.localName} == null) Nil else this._${containedNode.localName}\n}\n"
-              })
           }
           .mkString("\n")
 
@@ -856,18 +863,16 @@ class CodeGen(schemaFile: String, basePackage: String) {
                 s"value.asInstanceOf[${getCompleteType(key)}]"
               case Cardinality.ZeroOrOne =>
                 s"""value match {
-                 |    case null => None
+                 |    case null | None => None
                  |    case someVal:${getBaseType(key)} => Some(someVal)
-                 |    case None => None
-                 |    case wrapped: Option[_] => wrapped.asInstanceOf[Option[${getBaseType(
-                     key
-                   )}]]
                  |  }""".stripMargin
               case Cardinality.List =>
                 s"""value match {
-                 |    case null => Nil
+                 |    case null | None => Nil
                  |    case someVal:${getBaseType(key)} => List(someVal)
-                 |    case None => Nil
+                 |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${getBaseType(
+                     key
+                   )}]].iterator.asScala.toList
                  |    case lst: List[_] => value.asInstanceOf[List[${getBaseType(
                      key
                    )}]]
@@ -876,6 +881,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
             s"""  case "${key.name}" => this._${camelCase(key.name)} = $s"""
           }
           .mkString("\n")
+
         val containedKeys = nodeType.containedNodesList
           .map { containedNode =>
             val s = Cardinality.fromName(containedNode.cardinality) match {
@@ -883,20 +889,18 @@ class CodeGen(schemaFile: String, basePackage: String) {
                 s"    value.asInstanceOf[${containedNode.nodeTypeClassName}]"
               case Cardinality.ZeroOrOne =>
                 s"""value match {
-                 |    case null => None
+                 |    case null | None => None
                  |    case someVal:${containedNode.nodeTypeClassName} => Some(someVal)
-                 |    case None => None
-                 |    case wrapped: Option[_] => wrapped.asInstanceOf[Option[${containedNode.nodeTypeClassName}]]
                  |  }""".stripMargin
               case Cardinality.List =>
                 s"""value match {
-                 |    case null => Nil
+                 |    case null | None => Nil
                  |    case someVal:${containedNode.nodeTypeClassName} => List(someVal)
-                 |    case None => Nil
+                 |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${containedNode.nodeTypeClassName}]].iterator.asScala.toList
                  |    case lst: List[_] => value.asInstanceOf[List[${containedNode.nodeTypeClassName}]]
                  |  }""".stripMargin
             }
-            s"""  case "${containedNode.localName}" => this._${containedNode.localName} =$s"""
+            s"""  case "${containedNode.localName}" => this._${containedNode.localName} = $s"""
           }
           .mkString("\n")
 
@@ -909,39 +913,84 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}""".stripMargin
       }
 
-      val removePropertyBody: String = {
+      val specificProperty2body: String = {
+        val vanillaKeys = keys
+          .map { key =>
+            Cardinality.fromName(key.cardinality) match {
+              case Cardinality.One | Cardinality.List =>
+                s"""  case "${key.name}" => this._${camelCase(key.name)}"""
+              case Cardinality.ZeroOrOne =>
+                s"""  case "${key.name}" => this._${camelCase(key.name)}.orNull""".stripMargin
+            }
+          }
+          .mkString("\n")
+
+        val containedKeys = nodeType.containedNodesList
+          .map { containedNode =>
+            Cardinality.fromName(containedNode.cardinality) match {
+              case Cardinality.One | Cardinality.List =>
+                s"""  case "${containedNode.localName}" => this._${containedNode.localName}"""
+              case Cardinality.ZeroOrOne =>
+                s"""  case "${containedNode.localName}" => this._${containedNode.localName}.orNull""".stripMargin
+            }
+          }
+          .mkString("\n")
+
+        s"""override def specificProperty2(key:String): AnyRef = {
+           |  key match {
+           |$vanillaKeys
+           |$containedKeys
+           |  case _ => null
+           |  }
+           |}""".stripMargin
+      }
+
+      val specificProperty1body: String = {
         val vanillaKeys = keys
           .map { key =>
             Cardinality.fromName(key.cardinality) match {
               case Cardinality.One =>
-                s"""  case "${key.name}" => this._${camelCase(key.name)} = null"""
+                s"""  case "${key.name}" => if(this._${camelCase(key.name)} == null) VertexProperty.empty[A] 
+                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(
+                     key.name
+                   )}.asInstanceOf[A])""".stripMargin
               case Cardinality.ZeroOrOne =>
-                s"""  case "${key.name}" => this._${camelCase(key.name)} = None"""
+                s"""  case "${key.name}" => if(this._${camelCase(key.name)}.isEmpty) VertexProperty.empty[A] 
+                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(
+                     key.name
+                   )}.get.asInstanceOf[A])""".stripMargin
               case Cardinality.List =>
-                s"""  case "${key.name}" => this._${camelCase(key.name)} = Nil"""
+                s"""  case "${key.name}" => throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)""".stripMargin
             }
           }
           .mkString("\n")
+
         val containedKeys = nodeType.containedNodesList
           .map { containedNode =>
             Cardinality.fromName(containedNode.cardinality) match {
               case Cardinality.One =>
-                s"""  case "${containedNode.localName}" => this._${containedNode.localName} = null"""
+                s"""  case "${containedNode.localName}" => if(this._${containedNode.localName} == null) VertexProperty.empty[A]
+                   |      else new OdbNodeProperty(-1, this, key, this._${containedNode.localName}.asInstanceOf[A])""".stripMargin
               case Cardinality.ZeroOrOne =>
-                s"""  case "${containedNode.localName}" => this._${containedNode.localName} = None"""
+                s"""  case "${containedNode.localName}" => if(this._${containedNode.localName}.isEmpty) VertexProperty.empty[A]
+                   |      else new OdbNodeProperty(-1, this, key, this._${containedNode.localName}.get.asInstanceOf[A])""".stripMargin
               case Cardinality.List =>
-                s"""  case "${containedNode.localName}" => this._${containedNode.localName} = Nil"""
-
+                s"""  case "${containedNode.localName}" => throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)""".stripMargin
             }
           }
           .mkString("\n")
 
-        s"""override def removeSpecificProperty(key:String):Unit = {
+        s"""override protected def specificProperty[A](key: String): VertexProperty[A] = {
            |  key match {
            |$vanillaKeys
            |$containedKeys
+           |  case _ => VertexProperty.empty[A]
            |  }
            |}""".stripMargin
+      }
+
+      val removePropertyBody: String = {
+        """override def removeSpecificProperty(key: String): Unit = this.setProperty(key, null)"""
       }
 
       val classImpl =
@@ -950,10 +999,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
+           |${propertyBasedFields(keys)}
+           |$containedNodesAsMembers2
+           |
            |  /* all properties */
            |  override def valueMap: JMap[String, AnyRef] = $valueMapImpl
            |
-           |  ${propertyBasedFields(keys)}
            |  $neighborAccessors
            |
            |  override def label: String = {
@@ -976,33 +1027,17 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameDb]
            |
            |  /* performance optimisation to save instantiating an iterator for each property lookup */
-           |  override protected def specificProperty[A](key: String): VertexProperty[A] = {
-           |    $className.Properties.keyToValue.get(key) match {
-           |      case None => VertexProperty.empty[A]
-           |      case Some(fieldAccess) =>
-           |        fieldAccess(this) match {
-           |          case null | None => VertexProperty.empty[A]
-           |          case values: List[_] => throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)
-           |          case Some(value) => new OdbNodeProperty(-1, this, key, value.asInstanceOf[A])
-           |          case value => new OdbNodeProperty(-1, this, key, value.asInstanceOf[A])
-           |        }
-           |    }
-           |  }
-           |
-           |  override protected def specificProperty2(key: String): AnyRef = {
-           |    $className.Properties.keyToValue.get(key).map(fieldAccess => fieldAccess(this)).orNull
-           |  }
+           |$specificProperty1body  
            |
            |  override protected def updateSpecificProperty[A](cardinality: VertexProperty.Cardinality, key: String, value: A): VertexProperty[A] = {
-           |    ${updateSpecificPropertyBody(keys)}
+           |    this.setProperty(key, value)
            |    new OdbNodeProperty(-1, this, key, value)
            |  }
+           |$specificProperty2body  
            |  
            |$setPropertyBody
            |
            |$removePropertyBody
-           |
-           |$containedNodesAsMembers2
            |
            |$fromNew
            |

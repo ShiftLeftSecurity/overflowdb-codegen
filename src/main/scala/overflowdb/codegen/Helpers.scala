@@ -2,11 +2,8 @@ package overflowdb.codegen
 
 object Helpers {
 
-  def isNodeBaseTrait(baseTraits: List[NodeBaseTrait],
-                      nodeName: String): Boolean =
-    nodeName == DefaultNodeTypes.Node || baseTraits
-      .map(_.name)
-      .contains(nodeName)
+  def isNodeBaseTrait(baseTraits: List[NodeBaseTrait], nodeName: String): Boolean =
+    nodeName == DefaultNodeTypes.Node || baseTraits.map(_.name).contains(nodeName)
 
   def camelCaseCaps(snakeCase: String): String = camelCase(snakeCase).capitalize
 
@@ -15,11 +12,10 @@ object Helpers {
       if (snakeCase.startsWith("_")) snakeCase.drop(1)
       else snakeCase
 
-    val elements: List[String] =
-      corrected.split("_").map(_.toLowerCase).toList match {
-        case head :: tail => head :: tail.map(_.capitalize)
-        case Nil          => Nil
-      }
+    val elements: List[String] = corrected.split("_").map(_.toLowerCase).toList match {
+      case head :: tail => head :: tail.map(_.capitalize)
+      case Nil          => Nil
+    }
     elements.mkString
   }
 
@@ -61,56 +57,43 @@ object Helpers {
   }
 
   def propertyBasedFields(properties: List[Property]): String =
-    properties
-      .map { property =>
-        val name = camelCase(property.name)
-        val tpe = getCompleteType(property)
-        val unsetValue = propertyUnsetValue(property)
+    properties.map { property =>
+      val name = camelCase(property.name)
+      val tpe = getCompleteType(property)
+      val unsetValue = propertyUnsetValue(property)
 
-        s"""private var _$name: $tpe = $unsetValue
+      s"""private var _$name: $tpe = $unsetValue
          |def $name(): $tpe = _$name""".stripMargin
-      }
-      .mkString("\n\n")
+    }.mkString("\n\n")
 
   def propertyUnsetValue(property: Property): String =
     getHigherType(property) match {
-      case HigherValueType.None   => "null"
+      case HigherValueType.None => "null"
       case HigherValueType.Option => "None"
-      case HigherValueType.List   => "Nil"
+      case HigherValueType.List => "Nil"
     }
 
   def updateSpecificPropertyBody(properties: List[Property]): String = {
-    val caseNotFound =
-      "PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)"
+    val caseNotFound = "PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)"
     properties match {
       case Nil => caseNotFound
       case keys =>
         val casesForKeys: List[String] = keys.map { property =>
           getHigherType(property) match {
             case HigherValueType.None =>
-              s""" if (key == "${property.name}") this._${camelCase(
-                property.name
-              )} = value.asInstanceOf[${getBaseType(property)}] """
+              s""" if (key == "${property.name}") this._${camelCase(property.name)} = value.asInstanceOf[${getBaseType(property)}] """
             case HigherValueType.Option =>
-              s""" if (key == "${property.name}") this._${camelCase(
-                property.name
-              )} = Option(value).asInstanceOf[${getCompleteType(property)}] """
+              s""" if (key == "${property.name}") this._${camelCase(property.name)} = Option(value).asInstanceOf[${getCompleteType(property)}] """
             case HigherValueType.List =>
               val memberName = "_" + camelCase(property.name)
               s"""if (key == "${property.name}") {
                  |  if( value.isInstanceOf[List[_]]) { 
-                 |    this.$memberName = value.asInstanceOf[${getCompleteType(
-                   property
-                 )}] 
+                 |    this.$memberName = value.asInstanceOf[${getCompleteType(property)}] 
                  |  } else if (cardinality == VertexProperty.Cardinality.list) {
                  |    if (this.$memberName == null) { this.$memberName = Nil }
-                 |    this.$memberName = this.$memberName :+ value.asInstanceOf[${getBaseType(
-                   property
-                 )}]
+                 |    this.$memberName = this.$memberName :+ value.asInstanceOf[${getBaseType(property)}]
                  |  } else {
-                 |    this.$memberName = List(value.asInstanceOf[${getBaseType(
-                   property
-                 )}])
+                 |    this.$memberName = List(value.asInstanceOf[${getBaseType(property)}])
                  |  }
                  |}
                  |""".stripMargin
@@ -127,9 +110,7 @@ object Helpers {
       case Nil => caseNotFound
       case keys =>
         val casesForKeys: List[String] = keys.map { property =>
-          s""" if (key == "${property.name}") this._${camelCase(property.name)} = ${propertyUnsetValue(
-            property
-          )} """
+          s""" if (key == "${property.name}") this._${camelCase(property.name)} = ${propertyUnsetValue(property)} """
         }
         (casesForKeys :+ caseNotFound).mkString("\n else ")
     }
@@ -150,65 +131,16 @@ object Helpers {
        |""".stripMargin
 
   /** obtained from repl via
-    * {{{
-    * :power
-    * nme.keywords
-    * }}}
-    */
+   * {{{
+   * :power
+   * nme.keywords
+   * }}}
+   */
   val scalaReservedKeywords = Set(
-    "abstract",
-    ">:",
-    "if",
-    ".",
-    "catch",
-    "protected",
-    "final",
-    "super",
-    "while",
-    "true",
-    "val",
-    "do",
-    "throw",
-    "<-",
-    "package",
-    "_",
-    "macro",
-    "@",
-    "object",
-    "false",
-    "this",
-    "then",
-    "var",
-    "trait",
-    "with",
-    "def",
-    "else",
-    "class",
-    "type",
-    "#",
-    "lazy",
-    "null",
-    "=",
-    "<:",
-    "override",
-    "=>",
-    "private",
-    "sealed",
-    "finally",
-    "new",
-    "implicit",
-    "extends",
-    "for",
-    "return",
-    "case",
-    "import",
-    "forSome",
-    ":",
-    "yield",
-    "try",
-    "match",
-    "<%"
-  )
+    "abstract", ">:", "if", ".", "catch", "protected", "final", "super", "while", "true", "val", "do", "throw",
+    "<-", "package", "_", "macro", "@", "object", "false", "this", "then", "var", "trait", "with", "def", "else",
+    "class", "type", "#", "lazy", "null", "=", "<:", "override", "=>", "private", "sealed", "finally", "new",
+    "implicit", "extends", "for", "return", "case", "import", "forSome", ":", "yield", "try", "match", "<%")
 
   def escapeIfKeyword(value: String) =
     if (scalaReservedKeywords.contains(value)) s"`$value`"
