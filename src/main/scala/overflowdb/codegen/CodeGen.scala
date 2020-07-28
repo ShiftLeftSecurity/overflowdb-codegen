@@ -996,12 +996,6 @@ def writeConstants(outputDir: JFile): JFile = {
          |// fixme: This should never have been a case class. Softly deprecate that.
          |case class New${nodeType.className}($defaultsVal) extends NewNode with ${nodeType.className}Base {
          |  override def label:String = "${nodeType.name}"
-         |  def canEqual(other: Any):Boolean = other.isInstanceOf[New${nodeType.className}]
-         |   override def equals(other:Any):Boolean = other match {
-         |       case typed:New${nodeType.className} => this eq typed
-         |       case _ => false
-         |   }
-         |  override def hashCode():Int = System.identityHashCode(this)
          |
          |  $valueMapImpl
          |}
