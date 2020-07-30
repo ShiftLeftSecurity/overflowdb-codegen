@@ -346,6 +346,9 @@ def writeConstants(outputDir: JFile): JFile = {
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
 
+      val keyStrings = (keys.map { key => "\"" + key.name + "\""}
+        ++ nodeType.containedNodesList.map{containedNode => "\"" + containedNode.localName + "\""}).mkString(", ")
+
       val companionObject =
         s"""object $className {
            |  def apply(graph: OdbGraph, id: Long) = new $className(graph, id)
@@ -360,7 +363,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |    List($inEdgeLayouts).asJava)
            |
            |  object PropertyNames {
-           |    val all: Set[String] = Set(${(keys.map { key => "\"" + key.name + "\""} ++  nodeType.containedNodesList.map{containedNode => "\"" + containedNode.localName + "\""}).mkString(", ")})
+           |    val all: Set[String] = Set(${keyStrings})
            |    val allAsJava: JSet[String] = all.asJava
            |  }
            |
@@ -450,6 +453,7 @@ def writeConstants(outputDir: JFile): JFile = {
             s"""   this._$memberName = other.$memberName""".stripMargin
           }
           .mkString("\n")
+
         val initRefsImpl = {
           nodeType.containedNodesList.map { containedNode =>
             val memberName = containedNode.localName
@@ -480,6 +484,7 @@ def writeConstants(outputDir: JFile): JFile = {
             }
           }
         }.mkString("\n")
+
         s"""override def fromNewNode(someNewNode: NewNode, mapping: NewNode => StoredNode):Unit = {
            |  //this will throw for bad types -- no need to check by hand, we don't have a better error message
            |  val other = someNewNode.asInstanceOf[New${nodeType.className}]
@@ -690,12 +695,8 @@ def writeConstants(outputDir: JFile): JFile = {
                 s"""value match {
                    |    case null | None => Nil
                    |    case someVal:${getBaseType(key)} => List(someVal)
-                   |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${getBaseType(
-                  key
-                )}]].iterator.asScala.toList
-                   |    case lst: List[_] => value.asInstanceOf[List[${getBaseType(
-                  key
-                )}]]
+                   |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${getBaseType(key)}]].iterator.asScala.toList
+                   |    case lst: List[_] => value.asInstanceOf[List[${getBaseType(key)}]]
                    |  }""".stripMargin
             }
             s"""  case "${key.name}" => this._${camelCase(key.name)} = $s"""
@@ -771,14 +772,10 @@ def writeConstants(outputDir: JFile): JFile = {
             Cardinality.fromName(key.cardinality) match {
               case Cardinality.One =>
                 s"""  case "${key.name}" => if(this._${camelCase(key.name)} == null) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(
-                  key.name
-                )}.asInstanceOf[A])""".stripMargin
+                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(key.name)}.asInstanceOf[A])""".stripMargin
               case Cardinality.ZeroOrOne =>
                 s"""  case "${key.name}" => if(this._${camelCase(key.name)}.isEmpty) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(
-                  key.name
-                )}.get.asInstanceOf[A])""".stripMargin
+                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(key.name)}.get.asInstanceOf[A])""".stripMargin
               case Cardinality.List =>
                 s"""  case "${key.name}" => throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)""".stripMargin
             }
@@ -901,7 +898,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |""".stripMargin
 
     def generateNewNodeSource(nodeType: NodeType, keys: List[Property]) = {
-      var fieldsM = List[(String, String, Option[String])]()
+      var fieldDescriptions = List[(String, String, Option[String])]() // fieldName, type, default
       for (key <- keys) {
         val optionalDefault =
           if (getHigherType(key) == HigherValueType.Option) Some("None")
@@ -913,7 +910,7 @@ def writeConstants(outputDir: JFile): JFile = {
           else if (getHigherType(key) == HigherValueType.List) Some("List()")
           else None
         val typ = getCompleteType(key)
-        fieldsM = (camelCase(key.name), typ, optionalDefault) :: fieldsM
+        fieldDescriptions = (camelCase(key.name), typ, optionalDefault) :: fieldDescriptions
       }
       for (containedNode <- nodeType.containedNodesList) {
         val optionalDefault =
@@ -923,31 +920,21 @@ def writeConstants(outputDir: JFile): JFile = {
             case _                     => None
           }
         val typ = getCompleteType(containedNode)
-        fieldsM = (containedNode.localName, typ, optionalDefault) :: fieldsM
+        fieldDescriptions = (containedNode.localName, typ, optionalDefault) :: fieldDescriptions
       }
-      fieldsM = fieldsM.reverse
-      val defaultsVal = fieldsM
-        .map { t =>
-          t match {
-            case (name, typ, Some(default)) => s"var $name: $typ = $default"
-            case (name, typ, None)          => s"var $name: $typ"
-          }
-        }
+      fieldDescriptions = fieldDescriptions.reverse
+      val defaultsVal = fieldDescriptions
+        .map {case (name, typ, Some(default)) => s"var $name: $typ = $default"
+              case (name, typ, None)          => s"var $name: $typ"}
         .mkString(", ")
-      val defaultsNoVal = fieldsM
-        .map { t =>
-          t match {
-            case (name, typ, Some(default)) => s"$name: $typ = $default"
-            case (name, typ, None)          => s"$name: $typ"
-          }
-        }
+
+      val defaultsNoVal = fieldDescriptions
+        .map {case (name, typ, Some(default)) => s"$name: $typ = $default"
+              case (name, typ, None)          => s"$name: $typ"}
         .mkString(", ")
-      val paramId = fieldsM
-        .map { t =>
-          t match {
-            case (name, _, _) => s"$name = $name"
-          }
-        }
+
+      val paramId = fieldDescriptions
+        .map {case (name, _, _) => s"$name = $name"}
         .mkString(", ")
 
       val valueMapImpl = {
