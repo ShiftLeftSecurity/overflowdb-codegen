@@ -73,48 +73,7 @@ object Helpers {
       case HigherValueType.List => "Nil"
     }
 
-  def updateSpecificPropertyBody(properties: List[Property]): String = {
-    val caseNotFound = "PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)"
-    properties match {
-      case Nil => caseNotFound
-      case keys =>
-        val casesForKeys: List[String] = keys.map { property =>
-          getHigherType(property) match {
-            case HigherValueType.None =>
-              s""" if (key == "${property.name}") this._${camelCase(property.name)} = value.asInstanceOf[${getBaseType(property)}] """
-            case HigherValueType.Option =>
-              s""" if (key == "${property.name}") this._${camelCase(property.name)} = Option(value).asInstanceOf[${getCompleteType(property)}] """
-            case HigherValueType.List =>
-              val memberName = "_" + camelCase(property.name)
-              s"""if (key == "${property.name}") {
-                 |  if( value.isInstanceOf[List[_]]) { 
-                 |    this.$memberName = value.asInstanceOf[${getCompleteType(property)}] 
-                 |  } else if (cardinality == VertexProperty.Cardinality.list) {
-                 |    if (this.$memberName == null) { this.$memberName = Nil }
-                 |    this.$memberName = this.$memberName :+ value.asInstanceOf[${getBaseType(property)}]
-                 |  } else {
-                 |    this.$memberName = List(value.asInstanceOf[${getBaseType(property)}])
-                 |  }
-                 |}
-                 |""".stripMargin
-          }
-        }
-        (casesForKeys :+ caseNotFound).mkString("\n else ")
-    }
-  }
 
-  def removeSpecificPropertyBody(properties: List[Property]): String = {
-    val caseNotFound =
-      """throw new RuntimeException("property with key=" + key + " not (yet) supported by " + this.getClass.getName + ". You may want to add it to the schema...")"""
-    properties match {
-      case Nil => caseNotFound
-      case keys =>
-        val casesForKeys: List[String] = keys.map { property =>
-          s""" if (key == "${property.name}") this._${camelCase(property.name)} = ${propertyUnsetValue(property)} """
-        }
-        (casesForKeys :+ caseNotFound).mkString("\n else ")
-    }
-  }
 
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {
