@@ -694,7 +694,7 @@ def writeConstants(outputDir: JFile): JFile = {
               case Cardinality.List =>
                 s"""value match {
                    |    case null | None => Nil
-                   |    case someVal:${getBaseType(key)} => List(someVal)
+                   |    case someVal:${getBaseType(key)} => this._${camelCase(key.name)} :+ someVal // todo: deprecate
                    |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${getBaseType(key)}]].iterator.asScala.toList
                    |    case lst: List[_] => value.asInstanceOf[List[${getBaseType(key)}]]
                    |  }""".stripMargin
@@ -716,7 +716,7 @@ def writeConstants(outputDir: JFile): JFile = {
               case Cardinality.List =>
                 s"""value match {
                    |    case null | None => Nil
-                   |    case someVal:${containedNode.nodeTypeClassName} => List(someVal)
+                   |    case someVal:${containedNode.nodeTypeClassName} => this._${containedNode.localName} :+ someVal // todo: deprecate
                    |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${containedNode.nodeTypeClassName}]].iterator.asScala.toList
                    |    case lst: List[_] => value.asInstanceOf[List[${containedNode.nodeTypeClassName}]]
                    |  }""".stripMargin
