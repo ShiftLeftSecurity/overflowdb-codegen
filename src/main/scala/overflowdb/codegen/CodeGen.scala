@@ -485,11 +485,16 @@ def writeConstants(outputDir: JFile): JFile = {
           }
         }.mkString("\n")
 
+        val registerFullName = if(!keys.map{_.name}.contains("FULL_NAME")) "" else {
+          s"""  graph2().indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
+        }
+
         s"""override def fromNewNode(someNewNode: NewNode, mapping: NewNode => StoredNode):Unit = {
            |  //this will throw for bad types -- no need to check by hand, we don't have a better error message
            |  val other = someNewNode.asInstanceOf[New${nodeType.className}]
            |$initKeysImpl
            |$initRefsImpl
+           |$registerFullName
            |}""".stripMargin
       }
 
@@ -725,7 +730,7 @@ def writeConstants(outputDir: JFile): JFile = {
           }
           .mkString("\n")
 
-        s"""override def setProperty[A](key:String, value: A):Unit = {
+        s"""private def internalSetProperty[A](key:String, value: A):Unit = {
            |  key match {
            |$vanillaKeys
            |$containedKeys
@@ -807,7 +812,7 @@ def writeConstants(outputDir: JFile): JFile = {
       }
 
       val removePropertyBody: String = {
-        """override def removeSpecificProperty(key: String): Unit = this.setProperty(key, null)"""
+        """override def removeSpecificProperty(key: String): Unit = this.internalSetProperty(key, null)"""
       }
 
       val classImpl =
@@ -847,7 +852,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |$specificProperty1body
            |
            |  override protected def updateSpecificProperty[A](cardinality: VertexProperty.Cardinality, key: String, value: A): VertexProperty[A] = {
-           |    this.setProperty(key, value)
+           |    this.internalSetProperty(key, value)
            |    new OdbNodeProperty(-1, this, key, value)
            |  }
            |$specificProperty2body
