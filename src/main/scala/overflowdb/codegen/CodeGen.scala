@@ -42,6 +42,8 @@ def writeConstants(outputDir: JFile): JFile = {
     baseDir.createChild(s"$className.java").write(
       s"""package io.shiftleft.codepropertygraph.generated;
          |
+         |import overflowdb._
+         |
          |public class $className {
          |
          |$src
@@ -52,19 +54,6 @@ def writeConstants(outputDir: JFile): JFile = {
   def writeStringConstants(className: String, constants: List[Constant]): Unit = {
     writeConstantsFile(className, constants) { constant =>
       s"""public static final String ${constant.name} = "${constant.value}";"""
-    }
-  }
-
-  // TODO phase out once we're not using gremlin any more
-  def writeKeyConstants(className: String, constants: List[Constant]): Unit = {
-    writeConstantsFile(className, constants) { constant =>
-      val tpe = constant.valueType.getOrElse(throw new AssertionError(s"`tpe` must be defined for Key constant - not the case for $constant"))
-      val javaType = tpe match {
-        case "string"  => "String"
-        case "int"     => "Integer"
-        case "boolean" => "Boolean"
-      }
-      s"""public static final gremlin.scala.Key<$javaType> ${constant.name} = new gremlin.scala.Key<>("${constant.value}");"""
     }
   }
 
@@ -82,7 +71,7 @@ def writeConstants(outputDir: JFile): JFile = {
         case Cardinality.ZeroOrOne => baseType
         case Cardinality.List      => s"scala.collection.Seq<$baseType>"
       }
-      s"""public static final overflowdb.PropertyKey<$completeType> ${constant.name} = new overflowdb.PropertyKey<>("${constant.value}");"""
+      s"""public static final PropertyKey<$completeType> ${constant.name} = new PropertyKey<>("${constant.value}");"""
     }
   }
 
@@ -95,8 +84,7 @@ def writeConstants(outputDir: JFile): JFile = {
     writeStringConstants(element.capitalize, schema.constantsFromElement(element))
   }
   List("edgeKeys", "nodeKeys").foreach { element =>
-    writeKeyConstants(element.capitalize, schema.constantsFromElement(element))
-    writePropertyKeyConstants(s"${element.capitalize}Odb", schema.constantsFromElement(element))
+    writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
   }
   writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
 
@@ -110,9 +98,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Set => JSet}
          |import java.util.{List => JList}
-         |import org.apache.tinkerpop.gremlin.structure.Property
-         |import org.apache.tinkerpop.gremlin.structure.{Vertex, VertexProperty}
-         |import overflowdb.{EdgeLayoutInformation, EdgeFactory, NodeFactory, OdbEdge, OdbNode, OdbGraph, NodeRef}
+         |import overflowdb._
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
@@ -227,15 +213,12 @@ def writeConstants(outputDir: JFile): JFile = {
     val staticHeader =
       s"""package $nodesPackage
          |
-         |import gremlin.scala._
          |import $basePackage.EdgeKeys
          |import $edgesPackage
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
-         |import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex, VertexProperty}
-         |import overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbElement, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
+         |import overflowdb._
          |import overflowdb.traversal.Traversal
-         |import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
