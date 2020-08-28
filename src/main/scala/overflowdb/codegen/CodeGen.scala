@@ -128,7 +128,17 @@ def writeConstants(outputDir: JFile): JFile = {
       }.mkString("\n|    ")
 
       val propertyDefs = keys.map { p =>
-        s"""val ${camelCaseCaps(p.name)} = new PropertyKey[${getBaseType(p)}]("${p.name}") """
+        val baseType = p.valueType match {
+          case "string"  => "String"
+          case "int"     => "Integer"
+          case "boolean" => "Boolean"
+        }
+        val completeType = Cardinality.fromName(p.cardinality) match {
+          case Cardinality.One       => baseType
+          case Cardinality.ZeroOrOne => baseType
+          case Cardinality.List      => s"scala.collection.Seq<$baseType>"
+        }
+        s"""val ${camelCaseCaps(p.name)} = new PropertyKey[$completeType]("${p.name}") """
       }.mkString("\n|    ")
 
       val keyToValueMap = keys.map { key =>
