@@ -121,26 +121,36 @@ def writeConstants(outputDir: JFile): JFile = {
     def generateEdgeSource(edgeType: EdgeType, keys: List[Property]) = {
       val edgeClassName = edgeType.className
 
-      val keysQuoted = quoted(keys.map(_.name))
-      val keyToValueMap = keys
-        .map { key =>
-          s""" "${key.name}" -> { instance: $edgeClassName => instance.${camelCase(key.name)}()}"""
-        }
-        .mkString(",\n")
+      val keyNames = keys.map(p => camelCaseCaps(p.name))
+
+      val propertyNameDefs = keys.map { p =>
+        s"""val ${camelCaseCaps(p.name)} = "${p.name}" """
+      }.mkString("\n|    ")
+
+      val propertyDefs = keys.map { p =>
+        s"""val ${camelCaseCaps(p.name)} = new PropertyKey[${getBaseType(p)}]("${p.name}") """
+      }.mkString("\n|    ")
+
+      val keyToValueMap = keys.map { key =>
+        s""" "${key.name}" -> { instance: $edgeClassName => instance.${camelCase(key.name)}}"""
+      }.mkString(",\n")
 
       val companionObject =
         s"""object $edgeClassName {
            |  val Label = "${edgeType.name}"
            |
-           |  object PropertyNames {
-           |    val all: Set[String] = Set(${keysQuoted.mkString(", ")})
-           |    val allAsJava: JSet[String] = all.asJava
+           |  object Properties {
+           |    $propertyDefs
+           |
+           |    val keyToValue: Map[String, $edgeClassName => AnyRef] = Map(
+           |    $keyToValueMap
+           |    )
            |  }
            |
-           |  object Properties {
-           |    val keyToValue: Map[String, $edgeClassName => AnyRef] = Map(
-           |      $keyToValueMap
-           |    )
+           |  object PropertyNames {
+           |    $propertyNameDefs
+           |    val all: Set[String] = Set(${keyNames.mkString(", ")})
+           |    val allAsJava: JSet[String] = all.asJava
            |  }
            |
            |  val layoutInformation = new EdgeLayoutInformation(Label, PropertyNames.allAsJava)
@@ -148,7 +158,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |  val factory = new EdgeFactory[$edgeClassName] {
            |    override val forLabel = $edgeClassName.Label
            |
-           |    override def createEdge(graph: OdbGraph, outNode: NodeRef[OdbNode], inNode: NodeRef[OdbNode]) =
+           |    override def createEdge(graph: Graph, outNode: NodeRef[Node], inNode: NodeRef[Node]) =
            |      new $edgeClassName(graph, outNode, inNode)
            |  }
            |}
@@ -181,8 +191,8 @@ def writeConstants(outputDir: JFile): JFile = {
         }.mkString("\n\n")
 
       val classImpl =
-        s"""class $edgeClassName(_graph: OdbGraph, _outNode: NodeRef[OdbNode], _inNode: NodeRef[OdbNode])
-           |extends OdbEdge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
+        s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[Node], _inNode: NodeRef[Node])
+           |extends Edge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
            |${propertyBasedFieldAccessors(keys)}
            |}
            |""".stripMargin
@@ -240,7 +250,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |  def label: String
            |}
            |
-           |/* a node that stored inside an OdbGraph (rather than e.g. DiffGraph) */
+           |/* a node that stored inside an Graph (rather than e.g. DiffGraph) */
            |trait StoredNode extends Vertex with CpgNode with overflowdb.Node with Product {
            |  /* underlying vertex in the graph database.
            |   * since this is a StoredNode, this is always set */
@@ -334,7 +344,7 @@ def writeConstants(outputDir: JFile): JFile = {
 
       val companionObject =
         s"""object $className {
-           |  def apply(graph: OdbGraph, id: Long) = new $className(graph, id)
+           |  def apply(graph: Graph, id: Long) = new $className(graph, id)
            |
            |  val Label = "${nodeType.name}"
            |  val LabelId: Int = ${nodeType.id}
@@ -360,9 +370,9 @@ def writeConstants(outputDir: JFile): JFile = {
            |    override val forLabelId = $className.LabelId
            |
            |    override def createNode(ref: NodeRef[$classNameDb]) =
-           |      new $classNameDb(ref.asInstanceOf[NodeRef[OdbNode]])
+           |      new $classNameDb(ref.asInstanceOf[NodeRef[Node]])
            |
-           |    override def createNodeRef(graph: OdbGraph, id: Long) = $className(graph, id)
+           |    override def createNodeRef(graph: Graph, id: Long) = $className(graph, id)
            |  }
            |}
            |""".stripMargin
@@ -620,7 +630,7 @@ def writeConstants(outputDir: JFile): JFile = {
           s"""  override def $name: ${getCompleteType(key)} = get().$name"""
         }.mkString("\n")
 
-        s"""class $className(graph: OdbGraph, id: Long) extends NodeRef[$classNameDb](graph, id)
+        s"""class $className(graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
            |  with ${className}Base
            |  with StoredNode
            |  $mixinTraits {
@@ -799,7 +809,7 @@ def writeConstants(outputDir: JFile): JFile = {
       }
 
       val classImpl =
-        s"""class $classNameDb(ref: NodeRef[OdbNode]) extends OdbNode(ref) with StoredNode
+        s"""class $classNameDb(ref: NodeRef[Node]) extends Node(ref) with StoredNode
            |  $mixinTraits with ${className}Base {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
