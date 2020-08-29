@@ -26,14 +26,17 @@ object Helpers {
       case Cardinality.List      => HigherValueType.List
     }
 
-  def getBaseType(property: Property): String = {
-    property.valueType match {
+  def getBaseType(schemaType: String): String = {
+    schemaType match {
       case "string"  => "String"
       case "int"     => "Integer"
       case "boolean" => "JBoolean"
-      case _         => "UNKNOWN"
+      case _         => "Nothing"
     }
   }
+
+  def getBaseType(property: Property): String =
+    getBaseType(property.valueType)
 
   def getCompleteType(property: Property): String =
     getHigherType(property) match {

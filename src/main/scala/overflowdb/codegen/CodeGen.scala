@@ -704,58 +704,39 @@ def writeConstants(outputDir: JFile): JFile = {
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
 
-      val setPropertyBody: String = {
-        val vanillaKeys = keys
-          .map { key =>
-            val s = Cardinality.fromName(key.cardinality) match {
-              case Cardinality.One =>
-                s"value.asInstanceOf[${getCompleteType(key)}]"
-              case Cardinality.ZeroOrOne =>
-                s"""value match {
-                   |    case null | None => None
-                   |    case someVal:${getBaseType(key)} => Some(someVal)
-                   |  }""".stripMargin
-              case Cardinality.List =>
-                s"""value match {
-                   |    case null | None => Nil
-                   |    case someVal:${getBaseType(key)} => this._${camelCase(key.name)} :+ someVal // todo: deprecate
-                   |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${getBaseType(key)}]].iterator.asScala.toList
-                   |    case lst: List[_] => value.asInstanceOf[List[${getBaseType(key)}]]
-                   |  }""".stripMargin
-            }
-            s"""  case "${key.name}" => this._${camelCase(key.name)} = $s"""
+      val updateSpecificPropertyImpl: String = {
+        def caseEntry(name: String, cardinality: String, baseType: String) = {
+          val setter = Cardinality.fromName(cardinality) match {
+            case Cardinality.One =>
+              s"value.asInstanceOf[$baseType]"
+            case Cardinality.ZeroOrOne =>
+              s"""value match {
+                 |        case null | None => None
+                 |        case someVal: baseType => Some(someVal)
+                 |      }""".stripMargin
+            case Cardinality.List =>
+              s"""value match {
+                 |        case null | None => Nil
+                 |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
+                 |        case lst: List[_] => value.asInstanceOf[List[$baseType}]]
+                 |      }""".stripMargin
           }
-          .mkString("\n")
+          s"""|      case "$name" => this._${camelCase(name)} = $setter"""
+        }
 
-        val containedKeys = nodeType.containedNodesList
-          .map { containedNode =>
-            val s = Cardinality.fromName(containedNode.cardinality) match {
-              case Cardinality.One =>
-                s"    value.asInstanceOf[${containedNode.nodeTypeClassName}]"
-              case Cardinality.ZeroOrOne =>
-                s"""value match {
-                   |    case null | None => None
-                   |    case someVal:${containedNode.nodeTypeClassName} => Some(someVal)
-                   |  }""".stripMargin
-              case Cardinality.List =>
-                s"""value match {
-                   |    case null | None => Nil
-                   |    case someVal:${containedNode.nodeTypeClassName} => this._${containedNode.localName} :+ someVal // todo: deprecate
-                   |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${containedNode.nodeTypeClassName}]].iterator.asScala.toList
-                   |    case lst: List[_] => value.asInstanceOf[List[${containedNode.nodeTypeClassName}]]
-                   |  }""".stripMargin
-            }
-            s"""  case "${containedNode.localName}" => this._${containedNode.localName} = $s"""
-          }
-          .mkString("\n")
+        val forKeys = keys.map(key => caseEntry(key.name, key.cardinality, getBaseType(key.valueType))).mkString("\n")
 
-        s"""private def internalSetProperty[A](key:String, value: A):Unit = {
-           |  key match {
-           |$vanillaKeys
-           |$containedKeys
-           |  case _ => PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)
-           |  }
-           |}""".stripMargin
+        val forContaintedNodes = nodeType.containedNodesList.map(containedNode =>
+          caseEntry(containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
+        ).mkString("\n")
+
+        s"""  override protected def updateSpecificProperty(key:String, value: Object): Unit = {
+           |    key match {
+           |    $forKeys
+           |    $forContaintedNodes
+           |      case _ => PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)
+           |    }
+           |  }""".stripMargin
       }
 
       val propertyImpl: String = {
@@ -783,10 +764,6 @@ def writeConstants(outputDir: JFile): JFile = {
            |      case _ => null
            |    }
            |  }""".stripMargin
-      }
-
-      val removePropertyBody: String = {
-        """override def removeSpecificProperty(key: String): Unit = this.internalSetProperty(key, null)"""
       }
 
       val classImpl =
@@ -824,14 +801,10 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |  $propertyImpl
            |
-           |  override protected def updateSpecificProperty[A](cardinality: VertexProperty.Cardinality, key: String, value: A): VertexProperty[A] = {
-           |    this.internalSetProperty(key, value)
-           |    new OdbNodeProperty(-1, this, key, value)
-           |  }
+           |$updateSpecificPropertyImpl
            |
-           |$setPropertyBody
-           |
-           |$removePropertyBody
+           |override def removeSpecificProperty(key: String): Unit =
+           |  this.updateSpecificProperty(key, null)
            |
            |$fromNew
            |
