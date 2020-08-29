@@ -42,7 +42,7 @@ def writeConstants(outputDir: JFile): JFile = {
     baseDir.createChild(s"$className.java").write(
       s"""package io.shiftleft.codepropertygraph.generated;
          |
-         |import overflowdb._
+         |import overflowdb._;
          |
          |public class $className {
          |
@@ -163,7 +163,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |  val factory = new EdgeFactory[$edgeClassName] {
            |    override val forLabel = $edgeClassName.Label
            |
-           |    override def createEdge(graph: Graph, outNode: NodeRef[Node], inNode: NodeRef[Node]) =
+           |    override def createEdge(graph: Graph, outNode: NodeRef[NodeDb], inNode: NodeRef[NodeDb]) =
            |      new $edgeClassName(graph, outNode, inNode)
            |  }
            |}
@@ -196,7 +196,7 @@ def writeConstants(outputDir: JFile): JFile = {
         }.mkString("\n\n")
 
       val classImpl =
-        s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[Node], _inNode: NodeRef[Node])
+        s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
            |extends Edge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
            |${propertyBasedFieldAccessors(keys)}
            |}
@@ -256,7 +256,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |}
            |
            |/* a node that stored inside an Graph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Vertex with CpgNode with overflowdb.Node with Product {
+           |trait StoredNode extends Node with CpgNode with Product {
            |  /* underlying vertex in the graph database.
            |   * since this is a StoredNode, this is always set */
            |  def underlying: Vertex = this
@@ -264,13 +264,13 @@ def writeConstants(outputDir: JFile): JFile = {
            |  /** labels of product elements, used e.g. for pretty-printing */
            |  def productElementLabel(n: Int): String
            |
-           |  override def id2: Long = underlying.id.asInstanceOf[Long]
+           |  override def id: Long = underlying.id.asInstanceOf[Long]
            |
            |  /* all properties plus label and id */
            |  def toMap: Map[String, Any] = {
            |    val map = valueMap
            |    map.put("_label", label)
-           |    map.put("_id", id2: JLong)
+           |    map.put("_id", id)
            |    map.asScala.toMap
            |  }
            |
@@ -396,7 +396,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |    override val forLabelId = $className.LabelId
            |
            |    override def createNode(ref: NodeRef[$classNameDb]) =
-           |      new $classNameDb(ref.asInstanceOf[NodeRef[Node]])
+           |      new $classNameDb(ref.asInstanceOf[NodeRef[NodeDb]])
            |
            |    override def createNodeRef(graph: Graph, id: Long) = $className(graph, id)
            |  }
@@ -505,7 +505,8 @@ def writeConstants(outputDir: JFile): JFile = {
         }.mkString("\n")
 
         val registerFullName = if(!keys.map{_.name}.contains("FULL_NAME")) "" else {
-          s"""  graph2().indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
+//          s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
+          "???" //TODO MP
         }
 
         s"""override def fromNewNode(someNewNode: NewNode, mapping: NewNode => StoredNode):Unit = {
@@ -545,7 +546,7 @@ def writeConstants(outputDir: JFile): JFile = {
       val productElements: List[ProductElement] = {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
-        val forId = ProductElement("id", "id2", nextIdx)
+        val forId = ProductElement("id", "id", nextIdx)
         val forKeys = keys.map { key =>
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
@@ -705,29 +706,29 @@ def writeConstants(outputDir: JFile): JFile = {
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
-        def caseEntry(name: String, cardinality: String, baseType: String) = {
+        def caseEntry(name: String, accessorName: String, cardinality: String, baseType: String) = {
           val setter = Cardinality.fromName(cardinality) match {
             case Cardinality.One =>
               s"value.asInstanceOf[$baseType]"
             case Cardinality.ZeroOrOne =>
               s"""value match {
                  |        case null | None => None
-                 |        case someVal: baseType => Some(someVal)
+                 |        case someVal: $baseType => Some(someVal)
                  |      }""".stripMargin
             case Cardinality.List =>
               s"""value match {
                  |        case null | None => Nil
                  |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
-                 |        case lst: List[_] => value.asInstanceOf[List[$baseType}]]
+                 |        case lst: List[_] => value.asInstanceOf[List[$baseType]]
                  |      }""".stripMargin
           }
-          s"""|      case "$name" => this._${camelCase(name)} = $setter"""
+          s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = keys.map(key => caseEntry(key.name, key.cardinality, getBaseType(key.valueType))).mkString("\n")
+        val forKeys = keys.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
 
         val forContaintedNodes = nodeType.containedNodesList.map(containedNode =>
-          caseEntry(containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
+          caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
         ).mkString("\n")
 
         s"""  override protected def updateSpecificProperty(key:String, value: Object): Unit = {
@@ -740,21 +741,21 @@ def writeConstants(outputDir: JFile): JFile = {
       }
 
       val propertyImpl: String = {
-        def caseEntry(name: String, cardinality: String) = {
+        def caseEntry(name: String, accessorName: String, cardinality: String) = {
           Cardinality.fromName(cardinality) match {
             case Cardinality.One | Cardinality.List =>
-              s"""|      case "$name" => this._${camelCase(name)}"""
+              s"""|      case "$name" => this._$accessorName"""
             case Cardinality.ZeroOrOne =>
-              s"""|      case "$name" => this._${camelCase(name)}.orNull"""
+              s"""|      case "$name" => this._$accessorName.orNull"""
           }
         }
 
         val forKeys = keys.map(key =>
-          caseEntry(key.name, key.cardinality)
+          caseEntry(key.name, camelCase(key.name), key.cardinality)
         ).mkString("\n")
 
         val forContainedKeys = nodeType.containedNodesList.map(containedNode =>
-          caseEntry(containedNode.localName, containedNode.cardinality)
+          caseEntry(containedNode.localName ,containedNode.localName, containedNode.cardinality)
         ).mkString("\n")
 
         s"""override def property(key:String): AnyRef = {
@@ -767,7 +768,7 @@ def writeConstants(outputDir: JFile): JFile = {
       }
 
       val classImpl =
-        s"""class $classNameDb(ref: NodeRef[Node]) extends NodeDb(ref) with StoredNode
+        s"""class $classNameDb(ref: NodeRef[NodeDb]) extends NodeDb(ref) with StoredNode
            |  $mixinTraits with ${className}Base {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
