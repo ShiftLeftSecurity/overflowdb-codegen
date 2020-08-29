@@ -758,76 +758,31 @@ def writeConstants(outputDir: JFile): JFile = {
            |}""".stripMargin
       }
 
-      val specificProperty2body: String = {
-        val vanillaKeys = keys
-          .map { key =>
-            Cardinality.fromName(key.cardinality) match {
-              case Cardinality.One | Cardinality.List =>
-                s"""  case "${key.name}" => this._${camelCase(key.name)}"""
-              case Cardinality.ZeroOrOne =>
-                s"""  case "${key.name}" => this._${camelCase(key.name)}.orNull""".stripMargin
-            }
+      val propertyImpl: String = {
+        def caseEntry(name: String, cardinality: String) = {
+          Cardinality.fromName(cardinality) match {
+            case Cardinality.One | Cardinality.List =>
+              s"""|      case "$name" => this._${camelCase(name)}"""
+            case Cardinality.ZeroOrOne =>
+              s"""|      case "$name" => this._${camelCase(name)}.orNull"""
           }
-          .mkString("\n")
+        }
 
-        val containedKeys = nodeType.containedNodesList
-          .map { containedNode =>
-            Cardinality.fromName(containedNode.cardinality) match {
-              case Cardinality.One | Cardinality.List =>
-                s"""  case "${containedNode.localName}" => this._${containedNode.localName}"""
-              case Cardinality.ZeroOrOne =>
-                s"""  case "${containedNode.localName}" => this._${containedNode.localName}.orNull""".stripMargin
-            }
-          }
-          .mkString("\n")
+        val forKeys = keys.map(key =>
+          caseEntry(key.name, key.cardinality)
+        ).mkString("\n")
 
-        s"""override def specificProperty2(key:String): AnyRef = {
-           |  key match {
-           |$vanillaKeys
-           |$containedKeys
-           |  case _ => null
-           |  }
-           |}""".stripMargin
-      }
+        val forContainedKeys = nodeType.containedNodesList.map(containedNode =>
+          caseEntry(containedNode.localName, containedNode.cardinality)
+        ).mkString("\n")
 
-      val specificProperty1body: String = {
-        val vanillaKeys = keys
-          .map { key =>
-            Cardinality.fromName(key.cardinality) match {
-              case Cardinality.One =>
-                s"""  case "${key.name}" => if(this._${camelCase(key.name)} == null) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(key.name)}.asInstanceOf[A])""".stripMargin
-              case Cardinality.ZeroOrOne =>
-                s"""  case "${key.name}" => if(this._${camelCase(key.name)}.isEmpty) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(key.name)}.get.asInstanceOf[A])""".stripMargin
-              case Cardinality.List =>
-                s"""  case "${key.name}" => throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)""".stripMargin
-            }
-          }
-          .mkString("\n")
-
-        val containedKeys = nodeType.containedNodesList
-          .map { containedNode =>
-            Cardinality.fromName(containedNode.cardinality) match {
-              case Cardinality.One =>
-                s"""  case "${containedNode.localName}" => if(this._${containedNode.localName} == null) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${containedNode.localName}.asInstanceOf[A])""".stripMargin
-              case Cardinality.ZeroOrOne =>
-                s"""  case "${containedNode.localName}" => if(this._${containedNode.localName}.isEmpty) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${containedNode.localName}.get.asInstanceOf[A])""".stripMargin
-              case Cardinality.List =>
-                s"""  case "${containedNode.localName}" => throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)""".stripMargin
-            }
-          }
-          .mkString("\n")
-
-        s"""override protected def specificProperty[A](key: String): VertexProperty[A] = {
-           |  key match {
-           |$vanillaKeys
-           |$containedKeys
-           |  case _ => VertexProperty.empty[A]
-           |  }
-           |}""".stripMargin
+        s"""override def property(key:String): AnyRef = {
+           |    key match {
+           |      $forKeys
+           |      $forContainedKeys
+           |      case _ => null
+           |    }
+           |  }""".stripMargin
       }
 
       val removePropertyBody: String = {
@@ -867,14 +822,12 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameDb]
            |
-           |  /* performance optimisation to save instantiating an iterator for each property lookup */
-           |$specificProperty1body
+           |  $propertyImpl
            |
            |  override protected def updateSpecificProperty[A](cardinality: VertexProperty.Cardinality, key: String, value: A): VertexProperty[A] = {
            |    this.internalSetProperty(key, value)
            |    new OdbNodeProperty(-1, this, key, value)
            |  }
-           |$specificProperty2body
            |
            |$setPropertyBody
            |
