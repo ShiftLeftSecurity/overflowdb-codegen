@@ -73,7 +73,14 @@ object Helpers {
       case HigherValueType.List => "Nil"
     }
 
-
+  def propertyKeyDef(name: String, baseType: String, cardinality: String) = {
+    val completeType = Cardinality.fromName(cardinality) match {
+      case Cardinality.One       => baseType
+      case Cardinality.ZeroOrOne => baseType
+      case Cardinality.List      => s"Seq[$baseType]"
+    }
+    s"""val ${camelCaseCaps(name)} = new PropertyKey[$completeType]("$name") """
+  }
 
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {

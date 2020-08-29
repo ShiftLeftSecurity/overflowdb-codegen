@@ -133,12 +133,7 @@ def writeConstants(outputDir: JFile): JFile = {
           case "int"     => "Integer"
           case "boolean" => "Boolean"
         }
-        val completeType = Cardinality.fromName(p.cardinality) match {
-          case Cardinality.One       => baseType
-          case Cardinality.ZeroOrOne => baseType
-          case Cardinality.List      => s"scala.collection.Seq<$baseType>"
-        }
-        s"""val ${camelCaseCaps(p.name)} = new PropertyKey[$completeType]("${p.name}") """
+        propertyKeyDef(p.name, baseType, p.cardinality)
       }.mkString("\n|    ")
 
       val keyToValueMap = keys.map { key =>
@@ -149,18 +144,18 @@ def writeConstants(outputDir: JFile): JFile = {
         s"""object $edgeClassName {
            |  val Label = "${edgeType.name}"
            |
+           |  object PropertyNames {
+           |    $propertyNameDefs
+           |    val all: Set[String] = Set(${keyNames.mkString(", ")})
+           |    val allAsJava: JSet[String] = all.asJava
+           |  }
+           |
            |  object Properties {
            |    $propertyDefs
            |
            |    val keyToValue: Map[String, $edgeClassName => AnyRef] = Map(
            |    $keyToValueMap
            |    )
-           |  }
-           |
-           |  object PropertyNames {
-           |    $propertyNameDefs
-           |    val all: Set[String] = Set(${keyNames.mkString(", ")})
-           |    val allAsJava: JSet[String] = all.asJava
            |  }
            |
            |  val layoutInformation = new EdgeLayoutInformation(Label, PropertyNames.allAsJava)
@@ -340,6 +335,24 @@ def writeConstants(outputDir: JFile): JFile = {
     }
 
     def generateNodeSource(nodeType: NodeType, keys: List[Property]) = {
+      val keyNames = keys.map(_.name) ++ nodeType.containedNodesList.map(_.localName)
+      val propertyNameDefs = keyNames.map { name =>
+        s"""val ${camelCaseCaps(name)} = "$name" """
+      }.mkString("\n|    ")
+
+      val propertyDefs = keys.map { p =>
+        val baseType = p.valueType match {
+          case "string"  => "String"
+          case "int"     => "Integer"
+          case "boolean" => "Boolean"
+        }
+        propertyKeyDef(p.name, baseType, p.cardinality)
+      }.mkString("\n|    ")
+
+      val propertyDefsForContainedNodes = nodeType.containedNodesList.map { containedNode =>
+        propertyKeyDef(containedNode.localName, containedNode.nodeTypeClassName, containedNode.cardinality)
+      }.mkString("\n|    ")
+
       val outEdgeNames: Seq[String] = nodeType.outEdges.map(_.edgeName)
       val inEdgeNames:  Seq[String] = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Seq.empty).map(_.edgeName)
 
@@ -349,9 +362,6 @@ def writeConstants(outputDir: JFile): JFile = {
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
 
-      val keyStrings = (keys.map { key => "\"" + key.name + "\""}
-        ++ nodeType.containedNodesList.map{containedNode => "\"" + containedNode.localName + "\""}).mkString(", ")
-
       val companionObject =
         s"""object $className {
            |  def apply(graph: Graph, id: Long) = new $className(graph, id)
@@ -359,16 +369,22 @@ def writeConstants(outputDir: JFile): JFile = {
            |  val Label = "${nodeType.name}"
            |  val LabelId: Int = ${nodeType.id}
            |
+           |  object PropertyNames {
+           |    $propertyNameDefs
+           |    val all: Set[String] = Set(${keyNames.map(camelCaseCaps).mkString(", ")})
+           |    val allAsJava: JSet[String] = all.asJava
+           |  }
+           |
+           |  object Properties {
+           |    $propertyDefs
+           |    $propertyDefsForContainedNodes
+           |  }
+           |
            |  val layoutInformation = new NodeLayoutInformation(
            |    LabelId,
            |    PropertyNames.allAsJava,
            |    List($outEdgeLayouts).asJava,
            |    List($inEdgeLayouts).asJava)
-           |
-           |  object PropertyNames {
-           |    val all: Set[String] = Set(${keyStrings})
-           |    val allAsJava: JSet[String] = all.asJava
-           |  }
            |
            |  object Edges {
            |    val In: Array[String] = Array(${quoted(inEdgeNames).mkString(",")})
@@ -819,7 +835,7 @@ def writeConstants(outputDir: JFile): JFile = {
       }
 
       val classImpl =
-        s"""class $classNameDb(ref: NodeRef[Node]) extends Node(ref) with StoredNode
+        s"""class $classNameDb(ref: NodeRef[Node]) extends NodeDb(ref) with StoredNode
            |  $mixinTraits with ${className}Base {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
