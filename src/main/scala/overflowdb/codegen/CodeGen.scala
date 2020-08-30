@@ -497,8 +497,7 @@ def writeConstants(outputDir: JFile): JFile = {
         }.mkString("\n")
 
         val registerFullName = if(!keys.map{_.name}.contains("FULL_NAME")) "" else {
-//          s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
-          "???" //TODO MP
+          s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
         }
 
         s"""override def fromNewNode(someNewNode: NewNode, mapping: NewNode => StoredNode):Unit = {
