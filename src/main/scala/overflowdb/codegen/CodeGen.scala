@@ -136,10 +136,6 @@ def writeConstants(outputDir: JFile): JFile = {
         propertyKeyDef(p.name, baseType, p.cardinality)
       }.mkString("\n|    ")
 
-      val keyToValueMap = keys.map { key =>
-        s""" "${key.name}" -> { instance: $edgeClassName => instance.${camelCase(key.name)}}"""
-      }.mkString(",\n")
-
       val companionObject =
         s"""object $edgeClassName {
            |  val Label = "${edgeType.name}"
@@ -152,10 +148,6 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |  object Properties {
            |    $propertyDefs
-           |
-           |    val keyToValue: Map[String, $edgeClassName => AnyRef] = Map(
-           |    $keyToValueMap
-           |    )
            |  }
            |
            |  val layoutInformation = new EdgeLayoutInformation(Label, PropertyNames.allAsJava)
