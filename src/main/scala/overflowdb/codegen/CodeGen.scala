@@ -42,7 +42,7 @@ def writeConstants(outputDir: JFile): JFile = {
     baseDir.createChild(s"$className.java").write(
       s"""package io.shiftleft.codepropertygraph.generated;
          |
-         |import overflowdb._;
+         |import overflowdb.*;
          |
          |public class $className {
          |
@@ -172,24 +172,18 @@ def writeConstants(outputDir: JFile): JFile = {
       def propertyBasedFieldAccessors(properties: List[Property]): String =
         properties.map { property =>
           val name = camelCase(property.name)
-          val baseType = getBaseType(property)
           val tpe = getCompleteType(property)
 
-          // TODO refactor so we don't need to wrap the property in a separate Property instance, only to unwrap it later
           getHigherType(property) match {
             case HigherValueType.None =>
-              s"""def $name(): $tpe = property("${property.name}").value.asInstanceOf[$tpe]"""
+              s"""def $name: $tpe = property("${property.name}").asInstanceOf[$tpe]"""
             case HigherValueType.Option =>
-              s"""def $name(): $tpe = {
-                 |  val tp = property("${property.name}")
-                 |  if (tp.isPresent) Option(tp.value.asInstanceOf[$baseType])
-                 |  else None
-                 |}""".stripMargin
+              s"""def $name: $tpe = Option(property("${property.name}")).asInstanceOf[$tpe]""".stripMargin
             case HigherValueType.List =>
               s"""private var _$name: $tpe = Nil
-                 |def $name(): $tpe = {
-                 |  val tp = property("${property.name}")
-                 |  if (tp.isPresent) tp.value.asInstanceOf[JList].asScala
+                 |def $name: $tpe = {
+                 |  val p = property("${property.name}")
+                 |  if (p != null) p.asInstanceOf[JList].asScala
                  |  else Nil
                  |}""".stripMargin
           }
@@ -257,20 +251,18 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |/* a node that stored inside an Graph (rather than e.g. DiffGraph) */
            |trait StoredNode extends Node with CpgNode with Product {
-           |  /* underlying vertex in the graph database.
+           |  /* underlying Node in the graph.
            |   * since this is a StoredNode, this is always set */
-           |  def underlying: Vertex = this
+           |  def underlying: Node = this
            |
            |  /** labels of product elements, used e.g. for pretty-printing */
            |  def productElementLabel(n: Int): String
-           |
-           |  override def id: Long = underlying.id.asInstanceOf[Long]
            |
            |  /* all properties plus label and id */
            |  def toMap: Map[String, Any] = {
            |    val map = valueMap
            |    map.put("_label", label)
-           |    map.put("_id", id)
+           |    map.put("_id", id: java.lang.Long)
            |    map.asScala.toMap
            |  }
            |
@@ -717,7 +709,8 @@ def writeConstants(outputDir: JFile): JFile = {
                  |      }""".stripMargin
             case Cardinality.List =>
               s"""value match {
-                 |        case null | None => Nil
+                 |        case singleValue: $baseType => List(singleValue)
+                 |        case null | None | Nil => Nil
                  |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
                  |        case lst: List[_] => value.asInstanceOf[List[$baseType]]
                  |      }""".stripMargin
