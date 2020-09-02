@@ -42,6 +42,8 @@ def writeConstants(outputDir: JFile): JFile = {
     baseDir.createChild(s"$className.java").write(
       s"""package io.shiftleft.codepropertygraph.generated;
          |
+         |import overflowdb.*;
+         |
          |public class $className {
          |
          |$src
@@ -52,19 +54,6 @@ def writeConstants(outputDir: JFile): JFile = {
   def writeStringConstants(className: String, constants: List[Constant]): Unit = {
     writeConstantsFile(className, constants) { constant =>
       s"""public static final String ${constant.name} = "${constant.value}";"""
-    }
-  }
-
-  // TODO phase out once we're not using gremlin any more
-  def writeKeyConstants(className: String, constants: List[Constant]): Unit = {
-    writeConstantsFile(className, constants) { constant =>
-      val tpe = constant.valueType.getOrElse(throw new AssertionError(s"`tpe` must be defined for Key constant - not the case for $constant"))
-      val javaType = tpe match {
-        case "string"  => "String"
-        case "int"     => "Integer"
-        case "boolean" => "Boolean"
-      }
-      s"""public static final gremlin.scala.Key<$javaType> ${constant.name} = new gremlin.scala.Key<>("${constant.value}");"""
     }
   }
 
@@ -82,7 +71,7 @@ def writeConstants(outputDir: JFile): JFile = {
         case Cardinality.ZeroOrOne => baseType
         case Cardinality.List      => s"scala.collection.Seq<$baseType>"
       }
-      s"""public static final overflowdb.PropertyKey<$completeType> ${constant.name} = new overflowdb.PropertyKey<>("${constant.value}");"""
+      s"""public static final PropertyKey<$completeType> ${constant.name} = new PropertyKey<>("${constant.value}");"""
     }
   }
 
@@ -95,8 +84,7 @@ def writeConstants(outputDir: JFile): JFile = {
     writeStringConstants(element.capitalize, schema.constantsFromElement(element))
   }
   List("edgeKeys", "nodeKeys").foreach { element =>
-    writeKeyConstants(element.capitalize, schema.constantsFromElement(element))
-    writePropertyKeyConstants(s"${element.capitalize}Odb", schema.constantsFromElement(element))
+    writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
   }
   writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
 
@@ -110,9 +98,7 @@ def writeConstants(outputDir: JFile): JFile = {
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Set => JSet}
          |import java.util.{List => JList}
-         |import org.apache.tinkerpop.gremlin.structure.Property
-         |import org.apache.tinkerpop.gremlin.structure.{Vertex, VertexProperty}
-         |import overflowdb.{EdgeLayoutInformation, EdgeFactory, NodeFactory, OdbEdge, OdbNode, OdbGraph, NodeRef}
+         |import overflowdb._
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
@@ -135,26 +121,33 @@ def writeConstants(outputDir: JFile): JFile = {
     def generateEdgeSource(edgeType: EdgeType, keys: List[Property]) = {
       val edgeClassName = edgeType.className
 
-      val keysQuoted = quoted(keys.map(_.name))
-      val keyToValueMap = keys
-        .map { key =>
-          s""" "${key.name}" -> { instance: $edgeClassName => instance.${camelCase(key.name)}()}"""
+      val keyNames = keys.map(p => camelCaseCaps(p.name))
+
+      val propertyNameDefs = keys.map { p =>
+        s"""val ${camelCaseCaps(p.name)} = "${p.name}" """
+      }.mkString("\n|    ")
+
+      val propertyDefs = keys.map { p =>
+        val baseType = p.valueType match {
+          case "string"  => "String"
+          case "int"     => "Integer"
+          case "boolean" => "Boolean"
         }
-        .mkString(",\n")
+        propertyKeyDef(p.name, baseType, p.cardinality)
+      }.mkString("\n|    ")
 
       val companionObject =
         s"""object $edgeClassName {
            |  val Label = "${edgeType.name}"
            |
            |  object PropertyNames {
-           |    val all: Set[String] = Set(${keysQuoted.mkString(", ")})
+           |    $propertyNameDefs
+           |    val all: Set[String] = Set(${keyNames.mkString(", ")})
            |    val allAsJava: JSet[String] = all.asJava
            |  }
            |
            |  object Properties {
-           |    val keyToValue: Map[String, $edgeClassName => AnyRef] = Map(
-           |      $keyToValueMap
-           |    )
+           |    $propertyDefs
            |  }
            |
            |  val layoutInformation = new EdgeLayoutInformation(Label, PropertyNames.allAsJava)
@@ -162,7 +155,7 @@ def writeConstants(outputDir: JFile): JFile = {
            |  val factory = new EdgeFactory[$edgeClassName] {
            |    override val forLabel = $edgeClassName.Label
            |
-           |    override def createEdge(graph: OdbGraph, outNode: NodeRef[OdbNode], inNode: NodeRef[OdbNode]) =
+           |    override def createEdge(graph: Graph, outNode: NodeRef[NodeDb], inNode: NodeRef[NodeDb]) =
            |      new $edgeClassName(graph, outNode, inNode)
            |  }
            |}
@@ -171,32 +164,26 @@ def writeConstants(outputDir: JFile): JFile = {
       def propertyBasedFieldAccessors(properties: List[Property]): String =
         properties.map { property =>
           val name = camelCase(property.name)
-          val baseType = getBaseType(property)
           val tpe = getCompleteType(property)
 
-          // TODO refactor so we don't need to wrap the property in a separate Property instance, only to unwrap it later
           getHigherType(property) match {
             case HigherValueType.None =>
-              s"""def $name(): $tpe = property("${property.name}").value.asInstanceOf[$tpe]"""
+              s"""def $name: $tpe = property("${property.name}").asInstanceOf[$tpe]"""
             case HigherValueType.Option =>
-              s"""def $name(): $tpe = {
-                 |  val tp = property("${property.name}")
-                 |  if (tp.isPresent) Option(tp.value.asInstanceOf[$baseType])
-                 |  else None
-                 |}""".stripMargin
+              s"""def $name: $tpe = Option(property("${property.name}")).asInstanceOf[$tpe]""".stripMargin
             case HigherValueType.List =>
               s"""private var _$name: $tpe = Nil
-                 |def $name(): $tpe = {
-                 |  val tp = property("${property.name}")
-                 |  if (tp.isPresent) tp.value.asInstanceOf[JList].asScala
+                 |def $name: $tpe = {
+                 |  val p = property("${property.name}")
+                 |  if (p != null) p.asInstanceOf[JList].asScala
                  |  else Nil
                  |}""".stripMargin
           }
         }.mkString("\n\n")
 
       val classImpl =
-        s"""class $edgeClassName(_graph: OdbGraph, _outNode: NodeRef[OdbNode], _inNode: NodeRef[OdbNode])
-           |extends OdbEdge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
+        s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
+           |extends Edge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
            |${propertyBasedFieldAccessors(keys)}
            |}
            |""".stripMargin
@@ -227,15 +214,12 @@ def writeConstants(outputDir: JFile): JFile = {
     val staticHeader =
       s"""package $nodesPackage
          |
-         |import gremlin.scala._
          |import $basePackage.EdgeKeys
          |import $edgesPackage
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
-         |import org.apache.tinkerpop.gremlin.structure.{Direction, Vertex, VertexProperty}
-         |import overflowdb.{EdgeFactory, NodeFactory, NodeLayoutInformation, OdbElement, OdbNode, OdbGraph, OdbNodeProperty, NodeRef, PropertyKey}
+         |import overflowdb._
          |import overflowdb.traversal.Traversal
-         |import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
@@ -257,22 +241,20 @@ def writeConstants(outputDir: JFile): JFile = {
            |  def label: String
            |}
            |
-           |/* a node that stored inside an OdbGraph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Vertex with CpgNode with overflowdb.Node with Product {
-           |  /* underlying vertex in the graph database.
+           |/* a node that stored inside an Graph (rather than e.g. DiffGraph) */
+           |trait StoredNode extends Node with CpgNode with Product {
+           |  /* underlying Node in the graph.
            |   * since this is a StoredNode, this is always set */
-           |  def underlying: Vertex = this
+           |  def underlying: Node = this
            |
            |  /** labels of product elements, used e.g. for pretty-printing */
            |  def productElementLabel(n: Int): String
-           |
-           |  override def id2: Long = underlying.id.asInstanceOf[Long]
            |
            |  /* all properties plus label and id */
            |  def toMap: Map[String, Any] = {
            |    val map = valueMap
            |    map.put("_label", label)
-           |    map.put("_id", id2: JLong)
+           |    map.put("_id", id: java.lang.Long)
            |    map.asScala.toMap
            |  }
            |
@@ -337,6 +319,24 @@ def writeConstants(outputDir: JFile): JFile = {
     }
 
     def generateNodeSource(nodeType: NodeType, keys: List[Property]) = {
+      val keyNames = keys.map(_.name) ++ nodeType.containedNodesList.map(_.localName)
+      val propertyNameDefs = keyNames.map { name =>
+        s"""val ${camelCaseCaps(name)} = "$name" """
+      }.mkString("\n|    ")
+
+      val propertyDefs = keys.map { p =>
+        val baseType = p.valueType match {
+          case "string"  => "String"
+          case "int"     => "Integer"
+          case "boolean" => "Boolean"
+        }
+        propertyKeyDef(p.name, baseType, p.cardinality)
+      }.mkString("\n|    ")
+
+      val propertyDefsForContainedNodes = nodeType.containedNodesList.map { containedNode =>
+        propertyKeyDef(containedNode.localName, containedNode.nodeTypeClassName, containedNode.cardinality)
+      }.mkString("\n|    ")
+
       val outEdgeNames: Seq[String] = nodeType.outEdges.map(_.edgeName)
       val inEdgeNames:  Seq[String] = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Seq.empty).map(_.edgeName)
 
@@ -346,26 +346,29 @@ def writeConstants(outputDir: JFile): JFile = {
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
 
-      val keyStrings = (keys.map { key => "\"" + key.name + "\""}
-        ++ nodeType.containedNodesList.map{containedNode => "\"" + containedNode.localName + "\""}).mkString(", ")
-
       val companionObject =
         s"""object $className {
-           |  def apply(graph: OdbGraph, id: Long) = new $className(graph, id)
+           |  def apply(graph: Graph, id: Long) = new $className(graph, id)
            |
            |  val Label = "${nodeType.name}"
            |  val LabelId: Int = ${nodeType.id}
+           |
+           |  object PropertyNames {
+           |    $propertyNameDefs
+           |    val all: Set[String] = Set(${keyNames.map(camelCaseCaps).mkString(", ")})
+           |    val allAsJava: JSet[String] = all.asJava
+           |  }
+           |
+           |  object Properties {
+           |    $propertyDefs
+           |    $propertyDefsForContainedNodes
+           |  }
            |
            |  val layoutInformation = new NodeLayoutInformation(
            |    LabelId,
            |    PropertyNames.allAsJava,
            |    List($outEdgeLayouts).asJava,
            |    List($inEdgeLayouts).asJava)
-           |
-           |  object PropertyNames {
-           |    val all: Set[String] = Set(${keyStrings})
-           |    val allAsJava: JSet[String] = all.asJava
-           |  }
            |
            |  object Edges {
            |    val In: Array[String] = Array(${quoted(inEdgeNames).mkString(",")})
@@ -377,9 +380,9 @@ def writeConstants(outputDir: JFile): JFile = {
            |    override val forLabelId = $className.LabelId
            |
            |    override def createNode(ref: NodeRef[$classNameDb]) =
-           |      new $classNameDb(ref.asInstanceOf[NodeRef[OdbNode]])
+           |      new $classNameDb(ref.asInstanceOf[NodeRef[NodeDb]])
            |
-           |    override def createNodeRef(graph: OdbGraph, id: Long) = $className(graph, id)
+           |    override def createNodeRef(graph: Graph, id: Long) = $className(graph, id)
            |  }
            |}
            |""".stripMargin
@@ -486,7 +489,7 @@ def writeConstants(outputDir: JFile): JFile = {
         }.mkString("\n")
 
         val registerFullName = if(!keys.map{_.name}.contains("FULL_NAME")) "" else {
-          s"""  graph2().indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
+          s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
         }
 
         s"""override def fromNewNode(someNewNode: NewNode, mapping: NewNode => StoredNode):Unit = {
@@ -526,7 +529,7 @@ def writeConstants(outputDir: JFile): JFile = {
       val productElements: List[ProductElement] = {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
-        val forId = ProductElement("id", "id2", nextIdx)
+        val forId = ProductElement("id", "id", nextIdx)
         val forKeys = keys.map { key =>
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
@@ -637,7 +640,7 @@ def writeConstants(outputDir: JFile): JFile = {
           s"""  override def $name: ${getCompleteType(key)} = get().$name"""
         }.mkString("\n")
 
-        s"""class $className(graph: OdbGraph, id: Long) extends NodeRef[$classNameDb](graph, id)
+        s"""class $className(graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
            |  with ${className}Base
            |  with StoredNode
            |  $mixinTraits {
@@ -685,138 +688,71 @@ def writeConstants(outputDir: JFile): JFile = {
         specificNodeBasedAccessors + genericEdgeBasedAccessor
       }.mkString("\n")
 
-      val setPropertyBody: String = {
-        val vanillaKeys = keys
-          .map { key =>
-            val s = Cardinality.fromName(key.cardinality) match {
-              case Cardinality.One =>
-                s"value.asInstanceOf[${getCompleteType(key)}]"
-              case Cardinality.ZeroOrOne =>
-                s"""value match {
-                   |    case null | None => None
-                   |    case someVal:${getBaseType(key)} => Some(someVal)
-                   |  }""".stripMargin
-              case Cardinality.List =>
-                s"""value match {
-                   |    case null | None => Nil
-                   |    case someVal:${getBaseType(key)} => this._${camelCase(key.name)} :+ someVal // todo: deprecate
-                   |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${getBaseType(key)}]].iterator.asScala.toList
-                   |    case lst: List[_] => value.asInstanceOf[List[${getBaseType(key)}]]
-                   |  }""".stripMargin
-            }
-            s"""  case "${key.name}" => this._${camelCase(key.name)} = $s"""
+      val updateSpecificPropertyImpl: String = {
+        def caseEntry(name: String, accessorName: String, cardinality: String, baseType: String) = {
+          val setter = Cardinality.fromName(cardinality) match {
+            case Cardinality.One =>
+              s"value.asInstanceOf[$baseType]"
+            case Cardinality.ZeroOrOne =>
+              s"""value match {
+                 |        case null | None => None
+                 |        case someVal: $baseType => Some(someVal)
+                 |      }""".stripMargin
+            case Cardinality.List =>
+              s"""value match {
+                 |        case singleValue: $baseType => List(singleValue)
+                 |        case null | None | Nil => Nil
+                 |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
+                 |        case lst: List[_] => value.asInstanceOf[List[$baseType]]
+                 |      }""".stripMargin
           }
-          .mkString("\n")
+          s"""|      case "$name" => this._$accessorName = $setter"""
+        }
 
-        val containedKeys = nodeType.containedNodesList
-          .map { containedNode =>
-            val s = Cardinality.fromName(containedNode.cardinality) match {
-              case Cardinality.One =>
-                s"    value.asInstanceOf[${containedNode.nodeTypeClassName}]"
-              case Cardinality.ZeroOrOne =>
-                s"""value match {
-                   |    case null | None => None
-                   |    case someVal:${containedNode.nodeTypeClassName} => Some(someVal)
-                   |  }""".stripMargin
-              case Cardinality.List =>
-                s"""value match {
-                   |    case null | None => Nil
-                   |    case someVal:${containedNode.nodeTypeClassName} => this._${containedNode.localName} :+ someVal // todo: deprecate
-                   |    case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[${containedNode.nodeTypeClassName}]].iterator.asScala.toList
-                   |    case lst: List[_] => value.asInstanceOf[List[${containedNode.nodeTypeClassName}]]
-                   |  }""".stripMargin
-            }
-            s"""  case "${containedNode.localName}" => this._${containedNode.localName} = $s"""
-          }
-          .mkString("\n")
+        val forKeys = keys.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
 
-        s"""private def internalSetProperty[A](key:String, value: A):Unit = {
-           |  key match {
-           |$vanillaKeys
-           |$containedKeys
-           |  case _ => PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)
-           |  }
-           |}""".stripMargin
+        val forContaintedNodes = nodeType.containedNodesList.map(containedNode =>
+          caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
+        ).mkString("\n")
+
+        s"""  override protected def updateSpecificProperty(key:String, value: Object): Unit = {
+           |    key match {
+           |    $forKeys
+           |    $forContaintedNodes
+           |      case _ => PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)
+           |    }
+           |  }""".stripMargin
       }
 
-      val specificProperty2body: String = {
-        val vanillaKeys = keys
-          .map { key =>
-            Cardinality.fromName(key.cardinality) match {
-              case Cardinality.One | Cardinality.List =>
-                s"""  case "${key.name}" => this._${camelCase(key.name)}"""
-              case Cardinality.ZeroOrOne =>
-                s"""  case "${key.name}" => this._${camelCase(key.name)}.orNull""".stripMargin
-            }
+      val propertyImpl: String = {
+        def caseEntry(name: String, accessorName: String, cardinality: String) = {
+          Cardinality.fromName(cardinality) match {
+            case Cardinality.One | Cardinality.List =>
+              s"""|      case "$name" => this._$accessorName"""
+            case Cardinality.ZeroOrOne =>
+              s"""|      case "$name" => this._$accessorName.orNull"""
           }
-          .mkString("\n")
+        }
 
-        val containedKeys = nodeType.containedNodesList
-          .map { containedNode =>
-            Cardinality.fromName(containedNode.cardinality) match {
-              case Cardinality.One | Cardinality.List =>
-                s"""  case "${containedNode.localName}" => this._${containedNode.localName}"""
-              case Cardinality.ZeroOrOne =>
-                s"""  case "${containedNode.localName}" => this._${containedNode.localName}.orNull""".stripMargin
-            }
-          }
-          .mkString("\n")
+        val forKeys = keys.map(key =>
+          caseEntry(key.name, camelCase(key.name), key.cardinality)
+        ).mkString("\n")
 
-        s"""override def specificProperty2(key:String): AnyRef = {
-           |  key match {
-           |$vanillaKeys
-           |$containedKeys
-           |  case _ => null
-           |  }
-           |}""".stripMargin
-      }
+        val forContainedKeys = nodeType.containedNodesList.map(containedNode =>
+          caseEntry(containedNode.localName ,containedNode.localName, containedNode.cardinality)
+        ).mkString("\n")
 
-      val specificProperty1body: String = {
-        val vanillaKeys = keys
-          .map { key =>
-            Cardinality.fromName(key.cardinality) match {
-              case Cardinality.One =>
-                s"""  case "${key.name}" => if(this._${camelCase(key.name)} == null) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(key.name)}.asInstanceOf[A])""".stripMargin
-              case Cardinality.ZeroOrOne =>
-                s"""  case "${key.name}" => if(this._${camelCase(key.name)}.isEmpty) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${camelCase(key.name)}.get.asInstanceOf[A])""".stripMargin
-              case Cardinality.List =>
-                s"""  case "${key.name}" => throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)""".stripMargin
-            }
-          }
-          .mkString("\n")
-
-        val containedKeys = nodeType.containedNodesList
-          .map { containedNode =>
-            Cardinality.fromName(containedNode.cardinality) match {
-              case Cardinality.One =>
-                s"""  case "${containedNode.localName}" => if(this._${containedNode.localName} == null) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${containedNode.localName}.asInstanceOf[A])""".stripMargin
-              case Cardinality.ZeroOrOne =>
-                s"""  case "${containedNode.localName}" => if(this._${containedNode.localName}.isEmpty) VertexProperty.empty[A]
-                   |      else new OdbNodeProperty(-1, this, key, this._${containedNode.localName}.get.asInstanceOf[A])""".stripMargin
-              case Cardinality.List =>
-                s"""  case "${containedNode.localName}" => throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)""".stripMargin
-            }
-          }
-          .mkString("\n")
-
-        s"""override protected def specificProperty[A](key: String): VertexProperty[A] = {
-           |  key match {
-           |$vanillaKeys
-           |$containedKeys
-           |  case _ => VertexProperty.empty[A]
-           |  }
-           |}""".stripMargin
-      }
-
-      val removePropertyBody: String = {
-        """override def removeSpecificProperty(key: String): Unit = this.internalSetProperty(key, null)"""
+        s"""override def property(key:String): AnyRef = {
+           |    key match {
+           |      $forKeys
+           |      $forContainedKeys
+           |      case _ => null
+           |    }
+           |  }""".stripMargin
       }
 
       val classImpl =
-        s"""class $classNameDb(ref: NodeRef[OdbNode]) extends OdbNode(ref) with StoredNode
+        s"""class $classNameDb(ref: NodeRef[NodeDb]) extends NodeDb(ref) with StoredNode
            |  $mixinTraits with ${className}Base {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
@@ -848,18 +784,12 @@ def writeConstants(outputDir: JFile): JFile = {
            |
            |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameDb]
            |
-           |  /* performance optimisation to save instantiating an iterator for each property lookup */
-           |$specificProperty1body
+           |  $propertyImpl
            |
-           |  override protected def updateSpecificProperty[A](cardinality: VertexProperty.Cardinality, key: String, value: A): VertexProperty[A] = {
-           |    this.internalSetProperty(key, value)
-           |    new OdbNodeProperty(-1, this, key, value)
-           |  }
-           |$specificProperty2body
+           |$updateSpecificPropertyImpl
            |
-           |$setPropertyBody
-           |
-           |$removePropertyBody
+           |override def removeSpecificProperty(key: String): Unit =
+           |  this.updateSpecificProperty(key, null)
            |
            |$fromNew
            |
