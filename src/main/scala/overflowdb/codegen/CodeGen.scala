@@ -224,10 +224,6 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
 
     lazy val packageObject = {
-      /* generic accessors for all potential neighbors. specific nodes override them, in case they really allow that edge type
-       * TODO: resolve debate between Michael/Bernhard/Markus - these may not be needed. in the meantime, we also have
-       * specific neighbor accessors driven by the schema, i.e. those are only available on the types that really allow the given edge type
-       */
       val genericNeighborAccessors = for {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
@@ -310,11 +306,27 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |""".stripMargin
       }
 
-      s"""$staticHeader
-         |$rootTypes
-         |$nodeBaseTraits
-         |$keyBasedTraits
-         |$factories
+      val implicitsForTraversals =
+        schema.nodeTypes.map(_.className).sorted.map { name =>
+          val traversalName = s"${name}Traversal"
+          s"implicit def to$traversalName(trav: Traversal[$name]): $traversalName = new $traversalName(trav)"
+        }.mkString("\n")
+
+      s"""package $basePackage
+         |
+         |import java.lang.{Boolean => JBoolean, Long => JLong}
+         |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
+         |import overflowdb.{Node, NodeFactory}
+         |import overflowdb.traversal.Traversal
+         |import scala.jdk.CollectionConverters._
+         |
+         |package object nodes {
+         |  $rootTypes
+         |  $nodeBaseTraits
+         |  $keyBasedTraits
+         |  $factories
+         |  $implicitsForTraversals
+         |}
          |""".stripMargin
     }
 
@@ -795,11 +807,37 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |}""".stripMargin
 
+      val nodeTraversal = {
+        val propertyTraversals = keys.map { property =>
+          val name = camelCase(property.name)
+          val baseType = getBaseType(property)
+
+          val mapOrFlatMap =  Cardinality.fromName(property.cardinality) match {
+            case Cardinality.One => "map"
+            case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
+          }
+
+          s"""/** traverse to $name property */
+             |def $name: Traversal[$baseType] =
+             |  traversal.$mapOrFlatMap(_.$name)
+             |""".stripMargin
+        }.mkString("\n")
+
+        s"""
+           |/** Traversal steps for $className */
+           |class ${className}Traversal(val traversal: Traversal[$className]) extends AnyVal {
+           |
+           |$propertyTraversals
+           |
+           |}""".stripMargin
+      }
+
       s"""$staticHeader
          |$companionObject
          |$nodeBaseImpl
          |$nodeRefImpl
          |$classImpl
+         |$nodeTraversal
          |""".stripMargin
     }
 
