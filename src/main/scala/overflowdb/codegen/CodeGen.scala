@@ -212,7 +212,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
   def writeNodeFiles(outputDir: JFile): JFile = {
     val staticHeader =
-      s"""package $basePackage
+      s"""package $nodesPackage
          |
          |import $basePackage.EdgeKeys
          |import $edgesPackage
@@ -312,7 +312,14 @@ class CodeGen(schemaFile: String, basePackage: String) {
           s"implicit def to$traversalName(trav: Traversal[$name]): $traversalName = new $traversalName(trav)"
         }.mkString("\n")
 
-      s"""$staticHeader
+      s"""package $basePackage
+         |
+         |import java.lang.{Boolean => JBoolean, Long => JLong}
+         |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
+         |import overflowdb.{Node, NodeFactory}
+         |import overflowdb.traversal.Traversal
+         |import scala.jdk.CollectionConverters._
+         |
          |package object nodes {
          |  $rootTypes
          |  $nodeBaseTraits
