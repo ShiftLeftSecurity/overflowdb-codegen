@@ -306,12 +306,19 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |""".stripMargin
       }
 
+      val implicitsForTraversals =
+        schema.nodeTypes.map(_.className).sorted.map { name =>
+          val traversalName = s"${name}Traversal"
+          s"implicit def to$traversalName(trav: Traversal[$name]): $traversalName = new $traversalName(trav)"
+        }.mkString("\n")
+
       s"""$staticHeader
          |package object nodes {
          |  $rootTypes
          |  $nodeBaseTraits
          |  $keyBasedTraits
          |  $factories
+         |  $implicitsForTraversals
          |}
          |""".stripMargin
     }
@@ -811,7 +818,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
         s"""
            |/** Traversal steps for $className */
-           |class $className(val traversal: Traversal[$className]) extends AnyVal {
+           |class ${className}Traversal(val traversal: Traversal[$className]) extends AnyVal {
            |
            |$propertyTraversals
            |
