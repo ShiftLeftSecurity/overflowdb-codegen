@@ -212,7 +212,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
   def writeNodeFiles(outputDir: JFile): JFile = {
     val staticHeader =
-      s"""package $nodesPackage
+      s"""package $basePackage
          |
          |import $basePackage.EdgeKeys
          |import $edgesPackage
@@ -307,10 +307,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }
 
       s"""$staticHeader
-         |$rootTypes
-         |$nodeBaseTraits
-         |$keyBasedTraits
-         |$factories
+         |package object nodes {
+         |  $rootTypes
+         |  $nodeBaseTraits
+         |  $keyBasedTraits
+         |  $factories
+         |}
          |""".stripMargin
     }
 
