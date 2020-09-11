@@ -28,68 +28,68 @@ class CodeGen(schemaFile: String, basePackage: String) {
       writeNodeFiles(outputDir),
       writeNewNodeFiles(outputDir))
 
-def writeConstants(outputDir: JFile): JFile = {
-  val baseDir = File(outputDir.getPath + "/" + basePackage.replaceAll("\\.", "/")).createDirectories
+  def writeConstants(outputDir: JFile): JFile = {
+    val baseDir = File(outputDir.getPath + "/" + basePackage.replaceAll("\\.", "/")).createDirectories
 
-  def writeConstantsFile(className: String, constants: List[Constant])(mkSrc: Constant => String): Unit = {
-    val src = constants.map { constant =>
-      val documentation = constant.comment.filter(_.nonEmpty).map(comment => s"""/** $comment */""").getOrElse("")
-      s""" $documentation
-         | ${mkSrc(constant)}
-         |""".stripMargin
-    }.mkString("\n")
+    def writeConstantsFile(className: String, constants: List[Constant])(mkSrc: Constant => String): Unit = {
+      val src = constants.map { constant =>
+        val documentation = constant.comment.filter(_.nonEmpty).map(comment => s"""/** $comment */""").getOrElse("")
+        s""" $documentation
+           | ${mkSrc(constant)}
+           |""".stripMargin
+      }.mkString("\n")
 
-    baseDir.createChild(s"$className.java").write(
-      s"""package io.shiftleft.codepropertygraph.generated;
-         |
-         |import overflowdb.*;
-         |
-         |public class $className {
-         |
-         |$src
-         |}""".stripMargin
-    )
-  }
-
-  def writeStringConstants(className: String, constants: List[Constant]): Unit = {
-    writeConstantsFile(className, constants) { constant =>
-      s"""public static final String ${constant.name} = "${constant.value}";"""
+      baseDir.createChild(s"$className.java").write(
+        s"""package io.shiftleft.codepropertygraph.generated;
+           |
+           |import overflowdb.*;
+           |
+           |public class $className {
+           |
+           |$src
+           |}""".stripMargin
+      )
     }
-  }
 
-  def writePropertyKeyConstants(className: String, constants: List[Constant]): Unit = {
-    writeConstantsFile(className, constants) { constant =>
-      val valueType = constant.valueType.getOrElse(throw new AssertionError(s"`valueType` must be defined for Key constant - not the case for $constant"))
-      val cardinality = constant.cardinality.getOrElse(throw new AssertionError(s"`cardinality` must be defined for Key constant - not the case for $constant"))
-      val baseType = valueType match {
-        case "string"  => "String"
-        case "int"     => "Integer"
-        case "boolean" => "Boolean"
+    def writeStringConstants(className: String, constants: List[Constant]): Unit = {
+      writeConstantsFile(className, constants) { constant =>
+        s"""public static final String ${constant.name} = "${constant.value}";"""
       }
-      val completeType = Cardinality.fromName(cardinality) match {
-        case Cardinality.One       => baseType
-        case Cardinality.ZeroOrOne => baseType
-        case Cardinality.List      => s"scala.collection.Seq<$baseType>"
-      }
-      s"""public static final PropertyKey<$completeType> ${constant.name} = new PropertyKey<>("${constant.value}");"""
     }
-  }
 
-  writeStringConstants("NodeKeyNames", schema.nodeKeys.map(Constant.fromProperty))
-  writeStringConstants("EdgeKeyNames", schema.edgeKeys.map(Constant.fromProperty))
-  writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
-  writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
+    def writePropertyKeyConstants(className: String, constants: List[Constant]): Unit = {
+      writeConstantsFile(className, constants) { constant =>
+        val valueType = constant.valueType.getOrElse(throw new AssertionError(s"`valueType` must be defined for Key constant - not the case for $constant"))
+        val cardinality = constant.cardinality.getOrElse(throw new AssertionError(s"`cardinality` must be defined for Key constant - not the case for $constant"))
+        val baseType = valueType match {
+          case "string"  => "String"
+          case "int"     => "Integer"
+          case "boolean" => "Boolean"
+        }
+        val completeType = Cardinality.fromName(cardinality) match {
+          case Cardinality.One       => baseType
+          case Cardinality.ZeroOrOne => baseType
+          case Cardinality.List      => s"scala.collection.Seq<$baseType>"
+        }
+        s"""public static final PropertyKey<$completeType> ${constant.name} = new PropertyKey<>("${constant.value}");"""
+      }
+    }
 
-  List("dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
-    writeStringConstants(element.capitalize, schema.constantsFromElement(element))
-  }
-  List("edgeKeys", "nodeKeys").foreach { element =>
-    writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
-  }
-  writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
+    writeStringConstants("NodeKeyNames", schema.nodeKeys.map(Constant.fromProperty))
+    writeStringConstants("EdgeKeyNames", schema.edgeKeys.map(Constant.fromProperty))
+    writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
+    writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
 
-  outputDir
-}
+    List("dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
+      writeStringConstants(element.capitalize, schema.constantsFromElement(element))
+    }
+    List("edgeKeys", "nodeKeys").foreach { element =>
+      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
+    }
+    writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
+
+    outputDir
+  }
 
   def writeEdgeFiles(outputDir: JFile): JFile = {
     val staticHeader =
