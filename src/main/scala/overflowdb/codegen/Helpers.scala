@@ -1,5 +1,7 @@
 package overflowdb.codegen
 
+import overflowdb.schema._
+
 object Helpers {
 
   def isNodeBaseTrait(baseTraits: List[NodeBaseTrait], nodeName: String): Boolean =
@@ -19,8 +21,8 @@ object Helpers {
     elements.mkString
   }
 
-  def getHigherType(property: Property): HigherValueType.Value =
-    Cardinality.fromName(property.cardinality) match {
+  def getHigherType(cardinality: Cardinality): HigherValueType.Value =
+    cardinality match {
       case Cardinality.One       => HigherValueType.None
       case Cardinality.ZeroOrOne => HigherValueType.Option
       case Cardinality.List      => HigherValueType.List
@@ -39,8 +41,8 @@ object Helpers {
   def getBaseType(property: Property): String =
     getBaseType(property.valueType)
 
-  def getCompleteType(property: Property): String =
-    getHigherType(property) match {
+  def getCompleteType(property: Property, cardinality: Cardinality): String =
+    getHigherType(cardinality) match {
       case HigherValueType.None   => getBaseType(property)
       case HigherValueType.Option => s"Option[${getBaseType(property)}]"
       case HigherValueType.List   => s"List[${getBaseType(property)}]"
@@ -61,18 +63,18 @@ object Helpers {
     }
   }
 
-  def propertyBasedFields(properties: List[Property]): String =
-    properties.map { property =>
+  def propertyBasedFields(properties: Seq[(Property, Cardinality)]): String =
+    properties.map { case (property, cardinality) =>
       val name = camelCase(property.name)
-      val tpe = getCompleteType(property)
-      val unsetValue = propertyUnsetValue(property)
+      val tpe = getCompleteType(property, cardinality)
+      val unsetValue = propertyUnsetValue(cardinality)
 
       s"""private var _$name: $tpe = $unsetValue
          |def $name(): $tpe = _$name""".stripMargin
     }.mkString("\n\n")
 
-  def propertyUnsetValue(property: Property): String =
-    getHigherType(property) match {
+  def propertyUnsetValue(cardinality: Cardinality): String =
+    getHigherType(cardinality) match {
       case HigherValueType.None => "null"
       case HigherValueType.Option => "None"
       case HigherValueType.List => "Nil"
