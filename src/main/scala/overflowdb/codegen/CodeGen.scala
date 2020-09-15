@@ -3,25 +3,48 @@ package overflowdb.codegen
 import better.files._
 import java.io.{File => JFile}
 
-object CodeGen extends App {
-  assert(args.size == 2, s"expected two arguments (path to schema json file, basePackage), but got ${args.length}")
-  val schemaFile :: basePackage :: Nil = args.toList
-  val outputDir = new java.io.File("target")
-  new CodeGen(schemaFile, basePackage).run(outputDir)
+import overflowdb.schema._
+
+// TODO move elsewhere, or drop
+object TestSchema extends App {
+  val schema = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
+
+  // properties
+  val name = schema.addNodePropertyKey("NAME", "string", "Name of represented object, e.g., method name (e.g. \"run\")", Cardinality.One)
+  val order = schema.addNodePropertyKey("ORDER", "int",
+    "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code",
+    Cardinality.One)
+
+  // edge keys
+  val localName = schema.addEdgePropertyKey("LOCAL_NAME", "string", "Local name of referenced CONTAINED node. This key is deprecated.", Cardinality.ZeroOrOne)
+
+  // node base types
+  val astNode = schema.addNodeBaseType("AST_NODE", "Any node that can exist in an abstract syntax tree", Seq(order))
+
+  // edge types
+  val ast = schema.addEdgeType("AST", "Syntax tree edge")
+
+  // node types
+  val namespaceBlock = schema.addNodeType("NAMESPACE_BLOCK", "A reference to a namespace", 41, Seq(astNode))
+    // .addProperties(???) TODO
+  val file = schema.addNodeType("FILE", "Node representing a source file. Often also the AST root", 38, Seq(astNode))
+                   .addProperties(name, order)
+                   .addOutEdge(ast, InNode(namespaceBlock, "0-1:n"))
+
+
+//  val outputDir = new java.io.File("target")
+//  val schema = new Schema(schemaFile, "com.mydomain.generated")
+//  new CodeGen(schema).run(outputDir)
 }
 
-/** Generates a domain model for OverflowDb traversals based on your domain-specific json schema.
-  *
-  * @param schemaFile: path to the schema (json file)
-  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
-  */
-class CodeGen(schemaFile: String, basePackage: String) {
+/** Generates a domain model for OverflowDb traversals based on your domain-specific schema. */
+class CodeGen(schema: Schema) {
   import Helpers._
+  val basePackage = schema.basePackage
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
-  val schema = new Schema(schemaFile)
 
-  def run(outputDir: JFile): List[JFile] =
+  def run(outputDir: JFile): Seq[JFile] =
     List(
       writeConstants(outputDir),
       writeEdgeFiles(outputDir),
@@ -31,16 +54,18 @@ class CodeGen(schemaFile: String, basePackage: String) {
   def writeConstants(outputDir: JFile): JFile = {
     val baseDir = File(outputDir.getPath + "/" + basePackage.replaceAll("\\.", "/")).createDirectories
 
-    def writeConstantsFile(className: String, constants: List[Constant])(mkSrc: Constant => String): Unit = {
+    def writeConstantsFile(className: String, constants: Seq[Constant])(mkSrc: Constant => String): Unit = {
       val src = constants.map { constant =>
-        val documentation = constant.comment.filter(_.nonEmpty).map(comment => s"""/** $comment */""").getOrElse("")
+        val documentation =
+          if (constant.comment.nonEmpty) s"""/** ${constant.comment} */"""
+          else ""
         s""" $documentation
            | ${mkSrc(constant)}
            |""".stripMargin
       }.mkString("\n")
 
       baseDir.createChild(s"$className.java").write(
-        s"""package io.shiftleft.codepropertygraph.generated;
+        s"""package $basePackage;
            |
            |import overflowdb.*;
            |
@@ -51,22 +76,22 @@ class CodeGen(schemaFile: String, basePackage: String) {
       )
     }
 
-    def writeStringConstants(className: String, constants: List[Constant]): Unit = {
+    def writeStringConstants(className: String, constants: Seq[Constant]): Unit = {
       writeConstantsFile(className, constants) { constant =>
         s"""public static final String ${constant.name} = "${constant.value}";"""
       }
     }
 
-    def writePropertyKeyConstants(className: String, constants: List[Constant]): Unit = {
+    def writePropertyKeyConstants(className: String, constants: Seq[Constant]): Unit = {
       writeConstantsFile(className, constants) { constant =>
-        val valueType = constant.valueType.getOrElse(throw new AssertionError(s"`valueType` must be defined for Key constant - not the case for $constant"))
-        val cardinality = constant.cardinality.getOrElse(throw new AssertionError(s"`cardinality` must be defined for Key constant - not the case for $constant"))
+        val valueType = constant.valueType
+        val cardinality = constant.cardinality
         val baseType = valueType match {
           case "string"  => "String"
           case "int"     => "Integer"
           case "boolean" => "Boolean"
         }
-        val completeType = Cardinality.fromName(cardinality) match {
+        val completeType = cardinality match {
           case Cardinality.One       => baseType
           case Cardinality.ZeroOrOne => baseType
           case Cardinality.List      => s"scala.collection.Seq<$baseType>"
@@ -75,8 +100,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }
     }
 
-    writeStringConstants("NodeKeyNames", schema.nodeKeys.map(Constant.fromProperty))
-    writeStringConstants("EdgeKeyNames", schema.edgeKeys.map(Constant.fromProperty))
+    writeStringConstants("NodeKeyNames", schema.nodePropertyKeys.map(Constant.fromProperty))
+    writeStringConstants("EdgeKeyNames", schema.edgePropertyKeys.map(Constant.fromProperty))
     writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
     writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
 
@@ -104,9 +129,9 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
     val packageObject = {
       val factories = {
-        val edgeFactories: List[String] = schema.edgeTypes.map(edgeType => edgeType.className + ".factory")
+        val edgeFactories: Seq[String] = schema.edgeTypes.map(edgeType => edgeType.className + ".factory")
         s"""object Factories {
-           |  lazy val all: List[EdgeFactory[_]] = $edgeFactories
+           |  lazy val all: Seq[EdgeFactory[_]] = $edgeFactories
            |  lazy val allAsJava: java.util.List[EdgeFactory[_]] = all.asJava
            |}
            |""".stripMargin
@@ -118,7 +143,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
-    def generateEdgeSource(edgeType: EdgeType, keys: List[Property]) = {
+    def generateEdgeSource(edgeType: EdgeType, keys: Seq[Property]) = {
       val edgeClassName = edgeType.className
 
       val keyNames = keys.map(p => camelCaseCaps(p.name))
@@ -161,7 +186,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}
            |""".stripMargin
 
-      def propertyBasedFieldAccessors(properties: List[Property]): String =
+      def propertyBasedFieldAccessors(properties: Seq[Property]): String =
         properties.map { property =>
           val name = camelCase(property.name)
           val tpe = getCompleteType(property)
@@ -265,7 +290,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |""".stripMargin
 
       val nodeBaseTraits = schema.nodeBaseTraits.map { nodeBaseTrait =>
-        val mixins = nodeBaseTrait.hasKeys.map { key =>
+        val mixins = nodeBaseTrait.properties.map { key =>
           s"with Has${camelCaseCaps(key)}"
         }.mkString(" ")
 
@@ -289,7 +314,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }.mkString("\n")
 
       val keyBasedTraits =
-        schema.nodeKeys.map { property =>
+        schema.nodePropertyKeys.map { property =>
           val camelCaseName = camelCase(property.name)
           val camelCaseCapitalized = camelCaseName.capitalize
           val tpe = getCompleteType(property)
@@ -297,10 +322,10 @@ class CodeGen(schemaFile: String, basePackage: String) {
         }.mkString("\n") + "\n"
 
       val factories = {
-        val nodeFactories: List[String] =
+        val nodeFactories: Seq[String] =
           schema.nodeTypes.map(nodeType => nodeType.className + ".factory")
         s"""object Factories {
-           |  lazy val all: List[NodeFactory[_]] = $nodeFactories
+           |  lazy val all: Seq[NodeFactory[_]] = $nodeFactories
            |  lazy val allAsJava: java.util.List[NodeFactory[_]] = all.asJava
            |}
            |""".stripMargin
@@ -330,7 +355,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
-    def generateNodeSource(nodeType: NodeType, keys: List[Property]) = {
+    def generateNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
       val keyNames = keys.map(_.name) ++ nodeType.containedNodesList.map(_.localName)
       val propertyNameDefs = keyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
@@ -531,14 +556,14 @@ class CodeGen(schemaFile: String, basePackage: String) {
                    |""".stripMargin
               case Cardinality.List =>
                 s"""
-                   |private var _${containedNode.localName}: List[$containedNodeType] = Nil
-                   |def ${containedNode.localName}: List[$containedNodeType] = this._${containedNode.localName}
+                   |private var _${containedNode.localName}: Seq[$containedNodeType] = Nil
+                   |def ${containedNode.localName}: Seq[$containedNodeType] = this._${containedNode.localName}
                    |""".stripMargin
             }
           }
           .mkString("\n")
 
-      val productElements: List[ProductElement] = {
+      val productElements: Seq[ProductElement] = {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
         val forId = ProductElement("id", "id", nextIdx)
@@ -581,7 +606,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}
            |""".stripMargin
 
-      val neighborInfos: List[NeighborInfo] = {
+      val neighborInfos: Seq[NeighborInfo] = {
         /** the offsetPos determines the index into the adjacent nodes array of a given node type
          * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
          * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
@@ -715,7 +740,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
                  |        case singleValue: $baseType => List(singleValue)
                  |        case null | None | Nil => Nil
                  |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
-                 |        case lst: List[_] => value.asInstanceOf[List[$baseType]]
+                 |        case lst: Seq[_] => value.asInstanceOf[Seq[$baseType]]
                  |      }""".stripMargin
           }
           s"""|      case "$name" => this._$accessorName = $setter"""
@@ -846,7 +871,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
     baseDir.createDirectories()
     baseDir.createChild("package.scala").write(packageObject)
     schema.nodeTypes.foreach { nodeType =>
-      val src = generateNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
+      val src = generateNodeSource(nodeType, nodeType.properties.map(schema.nodePropertyByName))
       val srcFile = nodeType.className + ".scala"
       baseDir.createChild(srcFile).write(src)
     }
@@ -870,8 +895,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |}
          |""".stripMargin
 
-    def generateNewNodeSource(nodeType: NodeType, keys: List[Property]) = {
-      var fieldDescriptions = List[(String, String, Option[String])]() // fieldName, type, default
+    def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
+      var fieldDescriptions = Seq[(String, String, Option[String])]() // fieldName, type, default
       for (key <- keys) {
         val optionalDefault =
           if (getHigherType(key) == HigherValueType.Option) Some("None")
@@ -967,7 +992,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
+      generateNewNodeSource(nodeType, nodeType.properties.map(schema.nodePropertyByName))
     }.mkString("\n")
     outfile.write(s"""$staticHeader
                      |$src
