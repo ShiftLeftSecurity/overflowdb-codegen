@@ -230,30 +230,6 @@ class CodeGen(schemaFile: String, basePackage: String) {
         accessor = neighborAccessorNameForEdge(edgeType.name, direction)
       } yield s"def $accessor(): JIterator[StoredNode] = { JCollections.emptyIterator() }"
 
-      val nodeBaseTraits = schema.nodeBaseTraits.map { nodeBaseTrait =>
-        val mixins = nodeBaseTrait.hasKeys.map { key =>
-          s"with Has${camelCaseCaps(key)}"
-        }.mkString(" ")
-
-        val mixinTraits = nodeBaseTrait
-          .extendz
-          .getOrElse(Nil)
-          .map { traitName =>
-            s"with ${camelCaseCaps(traitName)}"
-          }.mkString(" ")
-
-        val mixinTraitsForBase = nodeBaseTrait
-          .extendz
-          .getOrElse(List())
-          .map { traitName =>
-            s"with ${camelCaseCaps(traitName)}Base"
-          }.mkString(" ")
-
-        s"""trait ${nodeBaseTrait.className}Base extends CpgNode $mixins $mixinTraitsForBase
-           |trait ${nodeBaseTrait.className} extends StoredNode with ${nodeBaseTrait.className}Base $mixinTraits
-           |""".stripMargin
-      }.mkString("\n")
-
       val keyBasedTraits =
         schema.nodeKeys.map { property =>
           val camelCaseName = camelCase(property.name)
@@ -305,7 +281,6 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |  ${genericNeighborAccessors.mkString("\n")}
          |}
          |
-         |  $nodeBaseTraits
          |  $keyBasedTraits
          |  $factories
          |""".stripMargin
@@ -325,6 +300,32 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |package object nodes {
          |  $implicitsForTraversals
          |}
+         |""".stripMargin
+    }
+
+    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseTrait): String = {
+      val mixins = nodeBaseTrait.hasKeys.map { key =>
+        s"with Has${camelCaseCaps(key)}"
+      }.mkString(" ")
+
+      val mixinTraits = nodeBaseTrait
+        .extendz
+        .getOrElse(Nil)
+        .map { traitName =>
+          s"with ${camelCaseCaps(traitName)}"
+        }.mkString(" ")
+
+      val mixinTraitsForBase = nodeBaseTrait
+        .extendz
+        .getOrElse(List())
+        .map { traitName =>
+          s"with ${camelCaseCaps(traitName)}Base"
+        }.mkString(" ")
+
+      s"""$staticHeader
+         |
+         |trait ${nodeBaseTrait.className}Base extends CpgNode $mixins $mixinTraitsForBase
+         |trait ${nodeBaseTrait.className} extends StoredNode with ${nodeBaseTrait.className}Base $mixinTraits
          |""".stripMargin
     }
 
@@ -881,6 +882,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
     baseDir.createDirectories()
     baseDir.createChild("package.scala").write(packageObject)
     baseDir.createChild("RootTypes.scala").write(rootTypeImpl)
+    schema.nodeBaseTraits.foreach { nodeBaseTrait =>
+      val src = generateNodeBaseTypeSource(nodeBaseTrait)
+      val srcFile = nodeBaseTrait.className + ".scala"
+      baseDir.createChild(srcFile).write(src)
+    }
     schema.nodeTypes.foreach { nodeType =>
       val src = generateNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
       val srcFile = nodeType.className + ".scala"
