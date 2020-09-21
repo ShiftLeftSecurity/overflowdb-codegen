@@ -287,10 +287,17 @@ class CodeGen(schemaFile: String, basePackage: String) {
     }
 
     lazy val packageObject = {
-      val implicitsForTraversals =
+
+      val implicitsForNodeTraversals =
         schema.nodeTypes.map(_.className).sorted.map { name =>
           val traversalName = s"${name}Traversal"
           s"implicit def to$traversalName(trav: Traversal[$name]): $traversalName = new $traversalName(trav)"
+        }.mkString("\n")
+
+      val implicitsForNodeBaseTypeTraversals =
+        schema.nodeBaseTraits.map(_.className).sorted.map { name =>
+          val traversalName = s"${name}Traversal"
+          s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
         }.mkString("\n")
 
       s"""package $basePackage
@@ -298,7 +305,13 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |import overflowdb.traversal.Traversal
          |
          |package object nodes {
-         |  $implicitsForTraversals
+         |  /* implicits for node types START */
+         |  $implicitsForNodeTraversals
+         |  /* implicits for node types END */
+         |
+         |  /* implicits for node base types START */
+         |  $implicitsForNodeBaseTypeTraversals
+         |  /* implicits for node base types END */
          |}
          |""".stripMargin
     }
