@@ -303,7 +303,10 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
-    def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
+    def generatePropertyTraversals(className: String, properties: Seq[Property], maintainTypeForChildNodes: Boolean = false): String = {
+      val newTraversalElementType =
+        if (maintainTypeForChildNodes) "NodeType"
+        else className
       val propertyTraversals = properties.map { property =>
         val name = camelCase(property.name)
         val baseType = getBaseType(property)
@@ -320,45 +323,51 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |  /**
            |    * Traverse to nodes where the $name matches the regular expression `value`
            |    * */
-           |  def $name(value: $baseType): Traversal[$className] =
+           |  def $name(value: $baseType): Traversal[$newTraversalElementType] =
            |    ??? //StringPropertyAccessors.filter(traversal, NodeKeys.NAME, value)
            |
            |  /**
            |    * Traverse to nodes where the $name matches at least one of the regular expressions in `values`
            |    * */
-           |  def $name(value: $baseType*): Traversal[$className] =
+           |  def $name(value: $baseType*): Traversal[$newTraversalElementType] =
            |    ??? //StringPropertyAccessors.filterMultiple(traversal, NodeKeys.NAME, value: _*)
            |
            |  /**
            |    * Traverse to nodes where $name matches `value` exactly.
            |    * */
-           |  def ${name}Exact(value: $baseType): Traversal[$className] =
+           |  def ${name}Exact(value: $baseType): Traversal[$newTraversalElementType] =
            |    ??? //StringPropertyAccessors.filterExact(traversal, NodeKeys.NAME, value)
            |
            |  /**
            |    * Traverse to nodes where $name matches one of the elements in `values` exactly.
            |    * */
-           |  def ${name}Exact(values: $baseType*): Traversal[$className] =
+           |  def ${name}Exact(values: $baseType*): Traversal[$newTraversalElementType] =
            |    ??? //StringPropertyAccessors.filterExactMultiple(traversal, NodeKeys.NAME, values: _*)
            |
            |  /**
            |    * Traverse to nodes where $name does not match the regular expression `value`.
            |    * */
-           |  def ${name}Not(value: $baseType): Traversal[$className] =
+           |  def ${name}Not(value: $baseType): Traversal[$newTraversalElementType] =
            |    ??? //StringPropertyAccessors.filterNot(traversal, NodeKeys.NAME, value)
            |
            |  /**
            |    * Traverse to nodes where $name does not match any of the regular expressions in `values`.
            |    * */
-           |  def ${name}Not(values: $baseType*): Traversal[$className] =
+           |  def ${name}Not(values: $baseType*): Traversal[$newTraversalElementType] =
            |    ??? //StringPropertyAccessors.filterNotMultiple(traversal, NodeKeys.NAME, values: _*)
            |
            |""".stripMargin
       }.mkString("\n")
 
+      val classDeclaration =
+        if (maintainTypeForChildNodes)
+          s"class ${className}Traversal[NodeType <: $className](val traversal: Traversal[NodeType])"
+        else
+          s"class ${className}Traversal(val traversal: Traversal[$className])"
+
       s"""
          |/** Traversal steps for $className */
-         |class ${className}Traversal(val traversal: Traversal[$className]) extends AnyVal {
+         |$classDeclaration extends AnyVal {
          |
          |$propertyTraversals
          |
@@ -398,7 +407,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |trait $className extends StoredNode with ${className}Base 
          |$mixinTraits
          |
-         |${generatePropertyTraversals(className, properties)}
+         |${generatePropertyTraversals(className, properties, maintainTypeForChildNodes = true)}
          |
          |""".stripMargin
     }
