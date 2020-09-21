@@ -313,8 +313,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
         }
 
-        s"""
-           |  /** Traverse to $name property */
+        s"""  /** Traverse to $name property */
            |  def $name: Traversal[$baseType] =
            |    traversal.$mapOrFlatMap(_.$name)
            |
@@ -388,11 +387,16 @@ class CodeGen(schemaFile: String, basePackage: String) {
           s"with ${camelCaseCaps(traitName)}Base"
         }.mkString(" ")
 
-      s"""$staticHeader
+      s"""package $nodesPackage
          |
-         |trait ${className}Base extends CpgNode $mixins $mixinTraitsForBase
+         |import overflowdb.traversal.Traversal
          |
-         |trait $className extends StoredNode with ${className}Base $mixinTraits
+         |trait ${className}Base extends CpgNode 
+         |$mixins 
+         |$mixinTraitsForBase
+         |
+         |trait $className extends StoredNode with ${className}Base 
+         |$mixinTraits
          |
          |${generatePropertyTraversals(className, properties)}
          |
