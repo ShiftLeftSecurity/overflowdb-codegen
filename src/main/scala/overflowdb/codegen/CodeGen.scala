@@ -303,7 +303,73 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
+    def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
+      val propertyTraversals = properties.map { property =>
+        val name = camelCase(property.name)
+        val baseType = getBaseType(property)
+
+        val mapOrFlatMap =  Cardinality.fromName(property.cardinality) match {
+          case Cardinality.One => "map"
+          case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
+        }
+
+        s"""
+           |  /** Traverse to $name property */
+           |  def $name: Traversal[$baseType] =
+           |    traversal.$mapOrFlatMap(_.$name)
+           |
+           |  /**
+           |    * Traverse to nodes where the $name matches the regular expression `value`
+           |    * */
+           |  def $name(value: $baseType): Traversal[$className] =
+           |    ??? //StringPropertyAccessors.filter(traversal, NodeKeys.NAME, value)
+           |
+           |  /**
+           |    * Traverse to nodes where the $name matches at least one of the regular expressions in `values`
+           |    * */
+           |  def $name(value: $baseType*): Traversal[$className] =
+           |    ??? //StringPropertyAccessors.filterMultiple(traversal, NodeKeys.NAME, value: _*)
+           |
+           |  /**
+           |    * Traverse to nodes where $name matches `value` exactly.
+           |    * */
+           |  def ${name}Exact(value: $baseType): Traversal[$className] =
+           |    ??? //StringPropertyAccessors.filterExact(traversal, NodeKeys.NAME, value)
+           |
+           |  /**
+           |    * Traverse to nodes where $name matches one of the elements in `values` exactly.
+           |    * */
+           |  def ${name}Exact(values: $baseType*): Traversal[$className] =
+           |    ??? //StringPropertyAccessors.filterExactMultiple(traversal, NodeKeys.NAME, values: _*)
+           |
+           |  /**
+           |    * Traverse to nodes where $name does not match the regular expression `value`.
+           |    * */
+           |  def ${name}Not(value: $baseType): Traversal[$className] =
+           |    ??? //StringPropertyAccessors.filterNot(traversal, NodeKeys.NAME, value)
+           |
+           |  /**
+           |    * Traverse to nodes where $name does not match any of the regular expressions in `values`.
+           |    * */
+           |  def ${name}Not(values: $baseType*): Traversal[$className] =
+           |    ??? //StringPropertyAccessors.filterNotMultiple(traversal, NodeKeys.NAME, values: _*)
+           |
+           |""".stripMargin
+      }.mkString("\n")
+
+      s"""
+         |/** Traversal steps for $className */
+         |class ${className}Traversal(val traversal: Traversal[$className]) extends AnyVal {
+         |
+         |$propertyTraversals
+         |
+         |}""".stripMargin
+    }
+
     def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseTrait): String = {
+      val className = nodeBaseTrait.className
+      val properties = nodeBaseTrait.hasKeys.map(schema.nodePropertyByName)
+
       val mixins = nodeBaseTrait.hasKeys.map { key =>
         s"with Has${camelCaseCaps(key)}"
       }.mkString(" ")
@@ -324,8 +390,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
       s"""$staticHeader
          |
-         |trait ${nodeBaseTrait.className}Base extends CpgNode $mixins $mixinTraitsForBase
-         |trait ${nodeBaseTrait.className} extends StoredNode with ${nodeBaseTrait.className}Base $mixinTraits
+         |trait ${className}Base extends CpgNode $mixins $mixinTraitsForBase
+         |
+         |trait $className extends StoredNode with ${className}Base $mixinTraits
+         |
+         |${generatePropertyTraversals(className, properties)}
+         |
          |""".stripMargin
     }
 
@@ -806,74 +876,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |}""".stripMargin
 
-      val nodeTraversal = {
-        val propertyTraversals = keys.map { property =>
-          val name = camelCase(property.name)
-          val baseType = getBaseType(property)
-
-          val mapOrFlatMap =  Cardinality.fromName(property.cardinality) match {
-            case Cardinality.One => "map"
-            case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
-          }
-
-          s"""  /** Traverse to $name property */
-             |  def $name: Traversal[$baseType] =
-             |    traversal.$mapOrFlatMap(_.$name)
-             |
-             |  /**
-             |    * Traverse to nodes where the $name matches the regular expression `value`
-             |    * */
-             |  def $name(value: $baseType): Traversal[$className] =
-             |    ??? //StringPropertyAccessors.filter(traversal, NodeKeys.NAME, value)
-             |
-             |  /**
-             |    * Traverse to nodes where the $name matches at least one of the regular expressions in `values`
-             |    * */
-             |  def $name(value: $baseType*): Traversal[$className] =
-             |    ??? //StringPropertyAccessors.filterMultiple(traversal, NodeKeys.NAME, value: _*)
-             |
-             |  /**
-             |    * Traverse to nodes where $name matches `value` exactly.
-             |    * */
-             |  def ${name}Exact(value: $baseType): Traversal[$className] =
-             |    ??? //StringPropertyAccessors.filterExact(traversal, NodeKeys.NAME, value)
-             |
-             |  /**
-             |    * Traverse to nodes where $name matches one of the elements in `values` exactly.
-             |    * */
-             |  def ${name}Exact(values: $baseType*): Traversal[$className] =
-             |    ??? //StringPropertyAccessors.filterExactMultiple(traversal, NodeKeys.NAME, values: _*)
-             |
-             |  /**
-             |    * Traverse to nodes where $name does not match the regular expression `value`.
-             |    * */
-             |  def ${name}Not(value: $baseType): Traversal[$className] =
-             |    ??? //StringPropertyAccessors.filterNot(traversal, NodeKeys.NAME, value)
-             |
-             |  /**
-             |    * Traverse to nodes where $name does not match any of the regular expressions in `values`.
-             |    * */
-             |  def ${name}Not(values: $baseType*): Traversal[$className] =
-             |    ??? //StringPropertyAccessors.filterNotMultiple(traversal, NodeKeys.NAME, values: _*)
-             |
-             |""".stripMargin
-        }.mkString("\n")
-
-        s"""
-           |/** Traversal steps for $className */
-           |class ${className}Traversal(val traversal: Traversal[$className]) extends AnyVal {
-           |
-           |$propertyTraversals
-           |
-           |}""".stripMargin
-      }
-
       s"""$staticHeader
          |$companionObject
          |$nodeBaseImpl
          |$nodeRefImpl
          |$classImpl
-         |$nodeTraversal
+         |${generatePropertyTraversals(className, keys)}
          |""".stripMargin
     }
 
