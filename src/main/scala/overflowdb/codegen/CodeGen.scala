@@ -223,46 +223,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
-    lazy val packageObject = {
+    val rootTypeImpl = {
       val genericNeighborAccessors = for {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType.name, direction)
       } yield s"def $accessor(): JIterator[StoredNode] = { JCollections.emptyIterator() }"
-
-      val rootTypes =
-        s"""$propertyErrorRegisterImpl
-           |
-           |trait CpgNode {
-           |  def label: String
-           |}
-           |
-           |/* a node that stored inside an Graph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Node with CpgNode with Product {
-           |  /* underlying Node in the graph.
-           |   * since this is a StoredNode, this is always set */
-           |  def underlying: Node = this
-           |
-           |  /** labels of product elements, used e.g. for pretty-printing */
-           |  def productElementLabel(n: Int): String
-           |
-           |  /* all properties plus label and id */
-           |  def toMap: Map[String, Any] = {
-           |    val map = valueMap
-           |    map.put("_label", label)
-           |    map.put("_id", id: java.lang.Long)
-           |    map.asScala.toMap
-           |  }
-           |
-           |  /*Sets fields from newNode*/
-           |  def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = ???
-           |
-           |  /* all properties */
-           |  def valueMap: JMap[String, AnyRef]
-           |
-           |  ${genericNeighborAccessors.mkString("\n")}
-           |}
-           |""".stripMargin
 
       val nodeBaseTraits = schema.nodeBaseTraits.map { nodeBaseTrait =>
         val mixins = nodeBaseTrait.hasKeys.map { key =>
@@ -306,6 +272,46 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |""".stripMargin
       }
 
+      s"""$staticHeader
+         |$propertyErrorRegisterImpl
+         |
+         |trait CpgNode {
+         |  def label: String
+         |}
+         |
+         |/* a node that stored inside an Graph (rather than e.g. DiffGraph) */
+         |trait StoredNode extends Node with CpgNode with Product {
+         |  /* underlying Node in the graph.
+         |   * since this is a StoredNode, this is always set */
+         |  def underlying: Node = this
+         |
+         |  /** labels of product elements, used e.g. for pretty-printing */
+         |  def productElementLabel(n: Int): String
+         |
+         |  /* all properties plus label and id */
+         |  def toMap: Map[String, Any] = {
+         |    val map = valueMap
+         |    map.put("_label", label)
+         |    map.put("_id", id: java.lang.Long)
+         |    map.asScala.toMap
+         |  }
+         |
+         |  /*Sets fields from newNode*/
+         |  def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = ???
+         |
+         |  /* all properties */
+         |  def valueMap: JMap[String, AnyRef]
+         |
+         |  ${genericNeighborAccessors.mkString("\n")}
+         |}
+         |
+         |  $nodeBaseTraits
+         |  $keyBasedTraits
+         |  $factories
+         |""".stripMargin
+    }
+
+    lazy val packageObject = {
       val implicitsForTraversals =
         schema.nodeTypes.map(_.className).sorted.map { name =>
           val traversalName = s"${name}Traversal"
@@ -314,17 +320,9 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
       s"""package $basePackage
          |
-         |import java.lang.{Boolean => JBoolean, Long => JLong}
-         |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
-         |import overflowdb.{Node, NodeFactory}
          |import overflowdb.traversal.Traversal
-         |import scala.jdk.CollectionConverters._
          |
          |package object nodes {
-         |  $rootTypes
-         |  $nodeBaseTraits
-         |  $keyBasedTraits
-         |  $factories
          |  $implicitsForTraversals
          |}
          |""".stripMargin
@@ -817,9 +815,46 @@ class CodeGen(schemaFile: String, basePackage: String) {
             case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
           }
 
-          s"""/** traverse to $name property */
-             |def $name: Traversal[$baseType] =
-             |  traversal.$mapOrFlatMap(_.$name)
+          s"""  /** Traverse to $name property */
+             |  def $name: Traversal[$baseType] =
+             |    traversal.$mapOrFlatMap(_.$name)
+             |
+             |  /**
+             |    * Traverse to nodes where the $name matches the regular expression `value`
+             |    * */
+             |  def $name(value: $baseType): Traversal[$className] =
+             |    ??? //StringPropertyAccessors.filter(traversal, NodeKeys.NAME, value)
+             |
+             |  /**
+             |    * Traverse to nodes where the $name matches at least one of the regular expressions in `values`
+             |    * */
+             |  def $name(value: $baseType*): Traversal[$className] =
+             |    ??? //StringPropertyAccessors.filterMultiple(traversal, NodeKeys.NAME, value: _*)
+             |
+             |  /**
+             |    * Traverse to nodes where $name matches `value` exactly.
+             |    * */
+             |  def ${name}Exact(value: $baseType): Traversal[$className] =
+             |    ??? //StringPropertyAccessors.filterExact(traversal, NodeKeys.NAME, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $name matches one of the elements in `values` exactly.
+             |    * */
+             |  def ${name}Exact(values: $baseType*): Traversal[$className] =
+             |    ??? //StringPropertyAccessors.filterExactMultiple(traversal, NodeKeys.NAME, values: _*)
+             |
+             |  /**
+             |    * Traverse to nodes where $name does not match the regular expression `value`.
+             |    * */
+             |  def ${name}Not(value: $baseType): Traversal[$className] =
+             |    ??? //StringPropertyAccessors.filterNot(traversal, NodeKeys.NAME, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $name does not match any of the regular expressions in `values`.
+             |    * */
+             |  def ${name}Not(values: $baseType*): Traversal[$className] =
+             |    ??? //StringPropertyAccessors.filterNotMultiple(traversal, NodeKeys.NAME, values: _*)
+             |
              |""".stripMargin
         }.mkString("\n")
 
@@ -845,6 +880,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
     baseDir.createChild("package.scala").write(packageObject)
+    baseDir.createChild("RootTypes.scala").write(rootTypeImpl)
     schema.nodeTypes.foreach { nodeType =>
       val src = generateNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
       val srcFile = nodeType.className + ".scala"
