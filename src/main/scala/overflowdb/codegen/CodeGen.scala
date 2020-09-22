@@ -325,74 +325,142 @@ class CodeGen(schemaFile: String, basePackage: String) {
           case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
         }
 
-        val filterSteps = 
-          if (cardinality == Cardinality.List) ""
-          else {
-            if (baseType == "String") {
-              s"""  /**
-                |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
-                |    * */
-                |  def $nameCamelCase(regex: $baseType): Traversal[NodeType] =
-                |    traversal.has(NodeKeys.${property.name}.where(P.matches(regex)))
-                |
-                |  /**
-                |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
-                |    * */
-                |  def $nameCamelCase(regexes: $baseType*): Traversal[NodeType] =
-                |    traversal.has(NodeKeys.${property.name}.where(P.matches(regexes: _*)))
-                |
-                |  /**
-                |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
-                |    * */
-                |  def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
-                |    traversal.has(NodeKeys.${property.name}, value)
-                |
-                |  /**
-                |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
-                |    * */
-                |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] =
-                |    traversal.has(NodeKeys.${property.name}.where(P.within(values.to(Set))))
-                |
-                |  /**
-                |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
-                |    * */
-                |  def ${nameCamelCase}Not(regex: $baseType): Traversal[NodeType] =
-                |    traversal.hasNot(NodeKeys.${property.name}.where(P.matches(regex)))
-                |
-                |  /**
-                |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
-                |    * */
-                |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] =
-                |    traversal.hasNot(NodeKeys.${property.name}.where(P.within(values.to(Set))))
-                |
-                |""".stripMargin
-            } else { //filters for non-string
-              s"""  /**
-                |    * Traverse to nodes where the $nameCamelCase equals the given `value`
-                |    * */
-                |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
-                |    traversal.has(NodeKeys.${property.name}, value)
-                |
-                |  /**
-                |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
-                |    * */
-                |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] =
-                |    traversal.has(NodeKeys.${property.name}.where(P.within(values.toSet)))
-                |
-                |  /**
-                |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
-                |    * */
-                |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
-                |    traversal.hasNot(NodeKeys.${property.name}, value)
-                |
-                |  /**
-                |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
-                |    * */
-                |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] =
-                |    traversal.hasNot(NodeKeys.${property.name}.where(P.within(values.toSet)))
-                |""".stripMargin
-            }
-          }
+        def filterStepsForSingleString(propertyName: String) =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
+             |    * */
+             |  def $nameCamelCase(regex: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.matches(regex)))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
+             |    * */
+             |  def $nameCamelCase(regexes: $baseType*): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.matches(regexes: _*)))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
+             |    * */
+             |  def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
+             |    * */
+             |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.within(values.to(Set))))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(regex: $baseType): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName.where(P.matches(regex)))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName.where(P.within(values.to(Set))))
+             |
+             |""".stripMargin
+
+        def filterStepsForSingleBoolean(propertyName: String) =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName, value)
+             |""".stripMargin
+
+        def filterStepsForSingleInt(propertyName: String) =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+             |    * */
+             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.within(values.toSet)))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is greater than the given `value`
+             |    * */
+             |  def ${nameCamelCase}Gt(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(_ > value))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is greater than or equal the given `value`
+             |    * */
+             |  def ${nameCamelCase}Gte(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(_ >= value))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is less than the given `value`
+             |    * */
+             |  def ${nameCamelCase}Lt(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(_ < value))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is less than or equal the given `value`
+             |    * */
+             |  def ${nameCamelCase}Lte(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(_ <= value))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName.where(P.within(values.toSet)))
+             |""".stripMargin
+
+        def filterStepsGeneric(propertyName: String) =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+             |    * */
+             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.within(values.toSet)))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName.where(P.within(values.toSet)))
+             |""".stripMargin
+
+        val filterSteps = (cardinality, property.valueType) match {
+          case (Cardinality.List, _) => ""
+          case (_, "string") => filterStepsForSingleString(property.name)
+          case (_, "boolean") => filterStepsForSingleBoolean(property.name)
+          case (_, "int") => filterStepsForSingleInt(property.name)
+          case _ => filterStepsGeneric(property.name)
+        }
 
         s"""  /** Traverse to $nameCamelCase property */
            |  def $nameCamelCase: Traversal[$baseType] =
