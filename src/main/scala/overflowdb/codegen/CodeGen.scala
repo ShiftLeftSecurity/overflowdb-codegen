@@ -256,7 +256,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |  def label: String
          |}
          |
-         |/* a node that stored inside an Graph (rather than e.g. DiffGraph) */
+         |/* A node that is stored inside an Graph (rather than e.g. DiffGraph) */
          |trait StoredNode extends Node with CpgNode with Product {
          |  /* underlying Node in the graph.
          |   * since this is a StoredNode, this is always set */
