@@ -214,11 +214,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
     val staticHeader =
       s"""package $nodesPackage
          |
-         |import $basePackage.EdgeKeys
+         |import $basePackage.{EdgeKeys, NodeKeys}
          |import $edgesPackage
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import overflowdb._
+         |import overflowdb.traversal.filter.P
          |import overflowdb.traversal.Traversal
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
@@ -321,7 +322,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
         if (maintainTypeForChildNodes) "NodeType"
         else className
       val propertyTraversals = properties.map { property =>
-        val name = camelCase(property.name)
+        val nameCamelCase = camelCase(property.name)
         val baseType = getBaseType(property)
 
         val mapOrFlatMap =  Cardinality.fromName(property.cardinality) match {
@@ -329,46 +330,77 @@ class CodeGen(schemaFile: String, basePackage: String) {
           case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
         }
 
-        s"""  /** Traverse to $name property */
-           |  def $name: Traversal[$baseType] =
-           |    traversal.$mapOrFlatMap(_.$name)
+        val filterSteps = 
+          if (baseType == "String") {
+            s"""  /**
+              |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
+              |    * */
+              |  def $nameCamelCase(regex: $baseType): Traversal[$newTraversalElementType] =
+              |    traversal.has(NodeKeys.${property.name}.where(P.matches(regex)))
+              |
+              |  /**
+              |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
+              |    * */
+              |  def $nameCamelCase(regexes: $baseType*): Traversal[$newTraversalElementType] =
+              |    traversal.has(NodeKeys.${property.name}.where(P.matches(regexes: _*)))
+              |
+              |  /**
+              |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
+              |    * */
+              |  def ${nameCamelCase}Exact(value: $baseType): Traversal[$newTraversalElementType] =
+              |    traversal.has(NodeKeys.${property.name}, value)
+              |
+              |  /**
+              |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
+              |    * */
+              |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[$newTraversalElementType] =
+              |    traversal.has(NodeKeys.${property.name}.where(P.within(values.to(Set))))
+              |
+              |  /**
+              |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
+              |    * */
+              |  def ${nameCamelCase}Not(regex: $baseType): Traversal[$newTraversalElementType] =
+              |    traversal.hasNot(NodeKeys.${property.name}.where(P.matches(regex)))
+              |
+              |  /**
+              |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
+              |    * */
+              |  def ${nameCamelCase}Not(values: $baseType*): Traversal[$newTraversalElementType] =
+              |    traversal.hasNot(NodeKeys.${property.name}.where(P.within(values.to(Set))))
+              |
+              |""".stripMargin
+          } else { //filters for non-string
+            s"""  /**
+              |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+              |    * */
+              |  def $nameCamelCase(value: $baseType): Traversal[$newTraversalElementType] =
+              |    traversal.has(NodeKeys.${property.name}, value)
+              |
+              |  /**
+              |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+              |    * */
+              |  def $nameCamelCase(values: $baseType*): Traversal[$newTraversalElementType] =
+              |    traversal.has(NodeKeys.${property.name}.where(P.within(values.toSet)))
+              |
+              |  /**
+              |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+              |    * */
+              |  def ${nameCamelCase}Not(value: $baseType): Traversal[$newTraversalElementType] =
+              |    traversal.hasNot(NodeKeys.${property.name}, value)
+              |
+              |  /**
+              |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+              |    * */
+              |  def ${nameCamelCase}Not(values: $baseType*): Traversal[$newTraversalElementType] =
+              |    traversal.hasNot(NodeKeys.${property.name}.where(P.within(values.toSet)))
+              |""".stripMargin
+            }
+
+        s"""  /** Traverse to $nameCamelCase property */
+           |  def $nameCamelCase: Traversal[$baseType] =
+           |    traversal.$mapOrFlatMap(_.$nameCamelCase)
            |
-           |  /**
-           |    * Traverse to nodes where the $name matches the regular expression `value`
-           |    * */
-           |  def $name(value: $baseType): Traversal[$newTraversalElementType] =
-           |    ??? //StringPropertyAccessors.filter(traversal, NodeKeys.NAME, value)
-           |
-           |  /**
-           |    * Traverse to nodes where the $name matches at least one of the regular expressions in `values`
-           |    * */
-           |  def $name(value: $baseType*): Traversal[$newTraversalElementType] =
-           |    ??? //StringPropertyAccessors.filterMultiple(traversal, NodeKeys.NAME, value: _*)
-           |
-           |  /**
-           |    * Traverse to nodes where $name matches `value` exactly.
-           |    * */
-           |  def ${name}Exact(value: $baseType): Traversal[$newTraversalElementType] =
-           |    ??? //StringPropertyAccessors.filterExact(traversal, NodeKeys.NAME, value)
-           |
-           |  /**
-           |    * Traverse to nodes where $name matches one of the elements in `values` exactly.
-           |    * */
-           |  def ${name}Exact(values: $baseType*): Traversal[$newTraversalElementType] =
-           |    ??? //StringPropertyAccessors.filterExactMultiple(traversal, NodeKeys.NAME, values: _*)
-           |
-           |  /**
-           |    * Traverse to nodes where $name does not match the regular expression `value`.
-           |    * */
-           |  def ${name}Not(value: $baseType): Traversal[$newTraversalElementType] =
-           |    ??? //StringPropertyAccessors.filterNot(traversal, NodeKeys.NAME, value)
-           |
-           |  /**
-           |    * Traverse to nodes where $name does not match any of the regular expressions in `values`.
-           |    * */
-           |  def ${name}Not(values: $baseType*): Traversal[$newTraversalElementType] =
-           |    ??? //StringPropertyAccessors.filterNotMultiple(traversal, NodeKeys.NAME, values: _*)
-           |
+           |  $filterSteps
            |""".stripMargin
       }.mkString("\n")
 
@@ -411,6 +443,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
       s"""package $nodesPackage
          |
+         |import io.shiftleft.codepropertygraph.generated.NodeKeys
+         |import overflowdb.traversal.filter.P
          |import overflowdb.traversal.Traversal
          |
          |trait ${className}Base extends CpgNode 
