@@ -462,15 +462,14 @@ class CodeGen(schemaFile: String, basePackage: String) {
     }
 
     def generateNodeSource(nodeType: NodeType) = {
-      val allPropertyNames = nodeType.keys.distinct
-      val allProperties = allPropertyNames.map(schema.nodePropertyByName)
+      val properties = nodeType.keys.distinct.map(schema.nodePropertyByName)
 
       val keyNames = nodeType.keys ++ nodeType.containedNodesList.map(_.localName)
       val propertyNameDefs = keyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
 
-      val propertyDefs = allProperties.map { p =>
+      val propertyDefs = properties.map { p =>
         val baseType = p.valueType match {
           case "string"  => "String"
           case "int"     => "Integer"
@@ -549,10 +548,10 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
           .mkString(" ")
 
-      val propertyBasedTraits = allProperties.map(key => s"with Has${camelCaseCaps(key.name)}").mkString(" ")
+      val propertyBasedTraits = properties.map(key => s"with Has${camelCaseCaps(key.name)}").mkString(" ")
 
       val valueMapImpl = {
-        val putKeysImpl = allProperties
+        val putKeysImpl = properties
           .map { key: Property =>
             val memberName = camelCase(key.name)
             Cardinality.fromName(key.cardinality) match {
@@ -588,7 +587,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }
 
       val fromNew = {
-        val initKeysImpl = allProperties
+        val initKeysImpl = properties
           .map { key: Property =>
             val memberName = camelCase(key.name)
             Cardinality.fromName(key.cardinality) match {
@@ -634,7 +633,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
         }.mkString("\n")
 
-        val registerFullName = if(!allProperties.map{_.name}.contains("FULL_NAME")) "" else {
+        val registerFullName = if(!properties.map{_.name}.contains("FULL_NAME")) "" else {
           s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
         }
 
@@ -676,7 +675,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
         val forId = ProductElement("id", "id", nextIdx)
-        val forKeys = allProperties.map { key =>
+        val forKeys = properties.map { key =>
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
         }
@@ -781,7 +780,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }.mkString("\n")
 
       val nodeRefImpl = {
-        val propertyDelegators = allProperties.map { key =>
+        val propertyDelegators = properties.map { key =>
           val name = camelCase(key.name)
           s"""  override def $name: ${getCompleteType(key)} = get().$name"""
         }.mkString("\n")
@@ -855,7 +854,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = allProperties.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
+        val forKeys = properties.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
 
         val forContaintedNodes = nodeType.containedNodesList.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
@@ -880,7 +879,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
         }
 
-        val forKeys = allProperties.map(key =>
+        val forKeys = properties.map(key =>
           caseEntry(key.name, camelCase(key.name), key.cardinality)
         ).mkString("\n")
 
@@ -903,7 +902,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
-           |${propertyBasedFields(allProperties)}
+           |${propertyBasedFields(properties)}
            |$containedNodesAsMembers
            |
            |  /* all properties */
@@ -941,19 +940,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |}""".stripMargin
 
-      val propertiesWithoutInherited: Seq[Property] = {
-        val parentTypes = nodeType.is.getOrElse(Nil).map(schema.nodeBaseTypeByName)
-        val inheritedProperties = parentTypes.flatMap(_.hasKeys)
-        val withoutInherited = allPropertyNames.toSet -- inheritedProperties
-        withoutInherited.map(schema.nodePropertyByName).toSeq
-      }
-
       s"""$staticHeader
          |$companionObject
          |$nodeBaseImpl
          |$nodeRefImpl
          |$classImpl
-         |${generatePropertyTraversals(className, propertiesWithoutInherited)}
+         |${generatePropertyTraversals(className, properties)}
          |""".stripMargin
     }
 
