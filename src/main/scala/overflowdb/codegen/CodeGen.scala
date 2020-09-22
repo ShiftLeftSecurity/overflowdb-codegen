@@ -287,8 +287,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
-    lazy val packageObject = {
-
+    lazy val nodeTraversalImplicits = {
       val implicitsForNodeTraversals =
         schema.nodeTypes.map(_.className).sorted.map { name =>
           val traversalName = s"${name}Traversal"
@@ -301,18 +300,17 @@ class CodeGen(schemaFile: String, basePackage: String) {
           s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
         }.mkString("\n")
 
-      s"""package $basePackage
+      s"""package $nodesPackage
          |
          |import overflowdb.traversal.Traversal
          |
-         |package object nodes {
-         |  /* implicits for node types START */
+         |trait NodeTraversalImplicits extends NodeBaseTypeTraversalImplicits {
          |  $implicitsForNodeTraversals
-         |  /* implicits for node types END */
+         |}
          |
-         |  /* implicits for node base types START */
+         |// lower priority implicits for base types
+         |trait NodeBaseTypeTraversalImplicits {
          |  $implicitsForNodeBaseTypeTraversals
-         |  /* implicits for node base types END */
          |}
          |""".stripMargin
     }
@@ -959,10 +957,16 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
+    val packageObject =
+      s"""package $basePackage
+         |package object nodes extends NodeTraversalImplicits
+         |""".stripMargin
+
     val baseDir = File(outputDir.getPath + "/" + nodesPackage.replaceAll("\\.", "/"))
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
     baseDir.createChild("package.scala").write(packageObject)
+    baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits)
     baseDir.createChild("RootTypes.scala").write(rootTypeImpl)
     schema.nodeBaseTraits.foreach { nodeBaseTrait =>
       val src = generateNodeBaseTypeSource(nodeBaseTrait)
