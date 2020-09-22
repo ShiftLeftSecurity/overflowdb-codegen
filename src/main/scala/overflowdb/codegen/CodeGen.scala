@@ -214,79 +214,22 @@ class CodeGen(schemaFile: String, basePackage: String) {
     val staticHeader =
       s"""package $nodesPackage
          |
-         |import $basePackage.EdgeKeys
+         |import $basePackage.{EdgeKeys, NodeKeys}
          |import $edgesPackage
          |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import overflowdb._
+         |import overflowdb.traversal.filter.P
          |import overflowdb.traversal.Traversal
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
-    lazy val packageObject = {
+    val rootTypeImpl = {
       val genericNeighborAccessors = for {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType.name, direction)
       } yield s"def $accessor(): JIterator[StoredNode] = { JCollections.emptyIterator() }"
-
-      val rootTypes =
-        s"""$propertyErrorRegisterImpl
-           |
-           |trait CpgNode {
-           |  def label: String
-           |}
-           |
-           |/* a node that stored inside an Graph (rather than e.g. DiffGraph) */
-           |trait StoredNode extends Node with CpgNode with Product {
-           |  /* underlying Node in the graph.
-           |   * since this is a StoredNode, this is always set */
-           |  def underlying: Node = this
-           |
-           |  /** labels of product elements, used e.g. for pretty-printing */
-           |  def productElementLabel(n: Int): String
-           |
-           |  /* all properties plus label and id */
-           |  def toMap: Map[String, Any] = {
-           |    val map = valueMap
-           |    map.put("_label", label)
-           |    map.put("_id", id: java.lang.Long)
-           |    map.asScala.toMap
-           |  }
-           |
-           |  /*Sets fields from newNode*/
-           |  def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = ???
-           |
-           |  /* all properties */
-           |  def valueMap: JMap[String, AnyRef]
-           |
-           |  ${genericNeighborAccessors.mkString("\n")}
-           |}
-           |""".stripMargin
-
-      val nodeBaseTraits = schema.nodeBaseTraits.map { nodeBaseTrait =>
-        val mixins = nodeBaseTrait.hasKeys.map { key =>
-          s"with Has${camelCaseCaps(key)}"
-        }.mkString(" ")
-
-        val mixinTraits = nodeBaseTrait
-          .extendz
-          .getOrElse(Nil)
-          .map { traitName =>
-            s"with ${camelCaseCaps(traitName)}"
-          }.mkString(" ")
-
-        val mixinTraitsForBase = nodeBaseTrait
-          .extendz
-          .getOrElse(List())
-          .map { traitName =>
-            s"with ${camelCaseCaps(traitName)}Base"
-          }.mkString(" ")
-
-        s"""trait ${nodeBaseTrait.className}Base extends CpgNode $mixins $mixinTraitsForBase
-           |trait ${nodeBaseTrait.className} extends StoredNode with ${nodeBaseTrait.className}Base $mixinTraits
-           |""".stripMargin
-      }.mkString("\n")
 
       val keyBasedTraits =
         schema.nodeKeys.map { property =>
@@ -306,37 +249,285 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |""".stripMargin
       }
 
-      val implicitsForTraversals =
-        schema.nodeTypes.map(_.className).sorted.map { name =>
-          val traversalName = s"${name}Traversal"
-          s"implicit def to$traversalName(trav: Traversal[$name]): $traversalName = new $traversalName(trav)"
-        }.mkString("\n")
-
-      s"""package $basePackage
+      s"""$staticHeader
+         |$propertyErrorRegisterImpl
          |
-         |import java.lang.{Boolean => JBoolean, Long => JLong}
-         |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
-         |import overflowdb.{Node, NodeFactory}
-         |import overflowdb.traversal.Traversal
-         |import scala.jdk.CollectionConverters._
+         |trait CpgNode {
+         |  def label: String
+         |}
          |
-         |package object nodes {
-         |  $rootTypes
-         |  $nodeBaseTraits
+         |/* A node that is stored inside an Graph (rather than e.g. DiffGraph) */
+         |trait StoredNode extends Node with CpgNode with Product {
+         |  /* underlying Node in the graph.
+         |   * since this is a StoredNode, this is always set */
+         |  def underlying: Node = this
+         |
+         |  /** labels of product elements, used e.g. for pretty-printing */
+         |  def productElementLabel(n: Int): String
+         |
+         |  /* all properties plus label and id */
+         |  def toMap: Map[String, Any] = {
+         |    val map = valueMap
+         |    map.put("_label", label)
+         |    map.put("_id", id: java.lang.Long)
+         |    map.asScala.toMap
+         |  }
+         |
+         |  /*Sets fields from newNode*/
+         |  def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = ???
+         |
+         |  /* all properties */
+         |  def valueMap: JMap[String, AnyRef]
+         |
+         |  ${genericNeighborAccessors.mkString("\n")}
+         |}
+         |
          |  $keyBasedTraits
          |  $factories
-         |  $implicitsForTraversals
+         |""".stripMargin
+    }
+
+    lazy val nodeTraversalImplicits = {
+      def implicitForNodeType(name: String) = {
+        val traversalName = s"${name}Traversal"
+        s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
+      }
+
+      val implicitsForNodeTraversals =
+        schema.nodeTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+
+      val implicitsForNodeBaseTypeTraversals =
+        schema.nodeBaseTraits.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+
+      s"""package $nodesPackage
+         |
+         |import overflowdb.traversal.Traversal
+         |
+         |trait NodeTraversalImplicits extends NodeBaseTypeTraversalImplicits {
+         |  $implicitsForNodeTraversals
+         |}
+         |
+         |// lower priority implicits for base types
+         |trait NodeBaseTypeTraversalImplicits {
+         |  $implicitsForNodeBaseTypeTraversals
          |}
          |""".stripMargin
     }
 
-    def generateNodeSource(nodeType: NodeType, keys: List[Property]) = {
-      val keyNames = keys.map(_.name) ++ nodeType.containedNodesList.map(_.localName)
+    def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
+      val propertyTraversals = properties.map { property =>
+        val nameCamelCase = camelCase(property.name)
+        val baseType = getBaseType(property)
+        val cardinality = Cardinality.fromName(property.cardinality)
+
+        val mapOrFlatMap = cardinality match {
+          case Cardinality.One => "map"
+          case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
+        }
+
+        def filterStepsForSingleString(propertyName: String) =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
+             |    * */
+             |  def $nameCamelCase(regex: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.matches(regex)))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
+             |    * */
+             |  def $nameCamelCase(regexes: $baseType*): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.matches(regexes: _*)))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
+             |    * */
+             |  def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
+             |    * */
+             |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.within(values.to(Set))))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(regex: $baseType): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName.where(P.matches(regex)))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName.where(P.within(values.to(Set))))
+             |
+             |""".stripMargin
+
+        def filterStepsForSingleBoolean(propertyName: String) =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName, value)
+             |""".stripMargin
+
+        def filterStepsForSingleInt(propertyName: String) =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+             |    * */
+             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.within(values.toSet)))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is greater than the given `value`
+             |    * */
+             |  def ${nameCamelCase}Gt(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(_ > value))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is greater than or equal the given `value`
+             |    * */
+             |  def ${nameCamelCase}Gte(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(_ >= value))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is less than the given `value`
+             |    * */
+             |  def ${nameCamelCase}Lt(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(_ < value))
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is less than or equal the given `value`
+             |    * */
+             |  def ${nameCamelCase}Lte(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(_ <= value))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName.where(P.within(values.toSet)))
+             |""".stripMargin
+
+        def filterStepsGeneric(propertyName: String) =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+             |    * */
+             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] =
+             |    traversal.has(NodeKeys.$propertyName.where(P.within(values.toSet)))
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName, value)
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] =
+             |    traversal.hasNot(NodeKeys.$propertyName.where(P.within(values.toSet)))
+             |""".stripMargin
+
+        val filterSteps = (cardinality, property.valueType) match {
+          case (Cardinality.List, _) => ""
+          case (_, "string") => filterStepsForSingleString(property.name)
+          case (_, "boolean") => filterStepsForSingleBoolean(property.name)
+          case (_, "int") => filterStepsForSingleInt(property.name)
+          case _ => filterStepsGeneric(property.name)
+        }
+
+        s"""  /** Traverse to $nameCamelCase property */
+           |  def $nameCamelCase: Traversal[$baseType] =
+           |    traversal.$mapOrFlatMap(_.$nameCamelCase)
+           |
+           |  $filterSteps
+           |""".stripMargin
+      }.mkString("\n")
+
+      s"""
+         |/** Traversal steps for $className */
+         |class ${className}Traversal[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
+         |
+         |$propertyTraversals
+         |
+         |}""".stripMargin
+    }
+
+    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseTrait): String = {
+      val className = nodeBaseTrait.className
+      val properties = nodeBaseTrait.hasKeys.map(schema.nodePropertyByName)
+
+      val mixins = nodeBaseTrait.hasKeys.map { key =>
+        s"with Has${camelCaseCaps(key)}"
+      }.mkString(" ")
+
+      val mixinTraits = nodeBaseTrait
+        .extendz
+        .getOrElse(Nil)
+        .map { traitName =>
+          s"with ${camelCaseCaps(traitName)}"
+        }.mkString(" ")
+
+      val mixinTraitsForBase = nodeBaseTrait
+        .extendz
+        .getOrElse(List())
+        .map { traitName =>
+          s"with ${camelCaseCaps(traitName)}Base"
+        }.mkString(" ")
+
+      s"""package $nodesPackage
+         |
+         |import io.shiftleft.codepropertygraph.generated.NodeKeys
+         |import overflowdb.traversal.filter.P
+         |import overflowdb.traversal.Traversal
+         |
+         |trait ${className}Base extends CpgNode 
+         |$mixins 
+         |$mixinTraitsForBase
+         |
+         |trait $className extends StoredNode with ${className}Base 
+         |$mixinTraits
+         |
+         |${generatePropertyTraversals(className, properties)}
+         |
+         |""".stripMargin
+    }
+
+    def generateNodeSource(nodeType: NodeType) = {
+      val properties = nodeType.keys.distinct.map(schema.nodePropertyByName)
+
+      val keyNames = nodeType.keys ++ nodeType.containedNodesList.map(_.localName)
       val propertyNameDefs = keyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
 
-      val propertyDefs = keys.map { p =>
+      val propertyDefs = properties.map { p =>
         val baseType = p.valueType match {
           case "string"  => "String"
           case "int"     => "Integer"
@@ -415,10 +606,10 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
           .mkString(" ")
 
-      val propertyBasedTraits = keys.map(key => s"with Has${camelCaseCaps(key.name)}").mkString(" ")
+      val propertyBasedTraits = properties.map(key => s"with Has${camelCaseCaps(key.name)}").mkString(" ")
 
       val valueMapImpl = {
-        val putKeysImpl = keys
+        val putKeysImpl = properties
           .map { key: Property =>
             val memberName = camelCase(key.name)
             Cardinality.fromName(key.cardinality) match {
@@ -454,7 +645,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }
 
       val fromNew = {
-        val initKeysImpl = keys
+        val initKeysImpl = properties
           .map { key: Property =>
             val memberName = camelCase(key.name)
             Cardinality.fromName(key.cardinality) match {
@@ -500,7 +691,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
         }.mkString("\n")
 
-        val registerFullName = if(!keys.map{_.name}.contains("FULL_NAME")) "" else {
+        val registerFullName = if(!properties.map{_.name}.contains("FULL_NAME")) "" else {
           s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
         }
 
@@ -542,7 +733,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
         val forId = ProductElement("id", "id", nextIdx)
-        val forKeys = keys.map { key =>
+        val forKeys = properties.map { key =>
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
         }
@@ -647,7 +838,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }.mkString("\n")
 
       val nodeRefImpl = {
-        val propertyDelegators = keys.map { key =>
+        val propertyDelegators = properties.map { key =>
           val name = camelCase(key.name)
           s"""  override def $name: ${getCompleteType(key)} = get().$name"""
         }.mkString("\n")
@@ -721,7 +912,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = keys.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
+        val forKeys = properties.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
 
         val forContaintedNodes = nodeType.containedNodesList.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
@@ -746,7 +937,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
         }
 
-        val forKeys = keys.map(key =>
+        val forKeys = properties.map(key =>
           caseEntry(key.name, camelCase(key.name), key.cardinality)
         ).mkString("\n")
 
@@ -769,7 +960,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
-           |${propertyBasedFields(keys)}
+           |${propertyBasedFields(properties)}
            |$containedNodesAsMembers
            |
            |  /* all properties */
@@ -807,46 +998,33 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |}""".stripMargin
 
-      val nodeTraversal = {
-        val propertyTraversals = keys.map { property =>
-          val name = camelCase(property.name)
-          val baseType = getBaseType(property)
-
-          val mapOrFlatMap =  Cardinality.fromName(property.cardinality) match {
-            case Cardinality.One => "map"
-            case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
-          }
-
-          s"""/** traverse to $name property */
-             |def $name: Traversal[$baseType] =
-             |  traversal.$mapOrFlatMap(_.$name)
-             |""".stripMargin
-        }.mkString("\n")
-
-        s"""
-           |/** Traversal steps for $className */
-           |class ${className}Traversal(val traversal: Traversal[$className]) extends AnyVal {
-           |
-           |$propertyTraversals
-           |
-           |}""".stripMargin
-      }
-
       s"""$staticHeader
          |$companionObject
          |$nodeBaseImpl
          |$nodeRefImpl
          |$classImpl
-         |$nodeTraversal
+         |${generatePropertyTraversals(className, properties)}
          |""".stripMargin
     }
+
+    val packageObject =
+      s"""package $basePackage
+         |package object nodes extends NodeTraversalImplicits
+         |""".stripMargin
 
     val baseDir = File(outputDir.getPath + "/" + nodesPackage.replaceAll("\\.", "/"))
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
     baseDir.createChild("package.scala").write(packageObject)
+    baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits)
+    baseDir.createChild("RootTypes.scala").write(rootTypeImpl)
+    schema.nodeBaseTraits.foreach { nodeBaseTrait =>
+      val src = generateNodeBaseTypeSource(nodeBaseTrait)
+      val srcFile = nodeBaseTrait.className + ".scala"
+      baseDir.createChild(srcFile).write(src)
+    }
     schema.nodeTypes.foreach { nodeType =>
-      val src = generateNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
+      val src = generateNodeSource(nodeType)
       val srcFile = nodeType.className + ".scala"
       baseDir.createChild(srcFile).write(src)
     }

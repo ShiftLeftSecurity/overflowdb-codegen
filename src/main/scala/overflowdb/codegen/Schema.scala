@@ -23,6 +23,9 @@ class Schema(schemaFile: String) {
   lazy val nodeTypeByName: Map[String, NodeType] =
     nodeTypes.map(node => node.name -> node).toMap
 
+  lazy val nodeBaseTypeByName: Map[String, NodeBaseTrait] =
+    nodeBaseTraits.map(node => node.name -> node).toMap
+
   lazy val nodePropertyByName: Map[String, Property] =
     nodeKeys.map(property => property.name -> property).toMap
 
