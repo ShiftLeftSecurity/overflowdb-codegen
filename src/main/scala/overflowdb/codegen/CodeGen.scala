@@ -324,77 +324,81 @@ class CodeGen(schemaFile: String, basePackage: String) {
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
         val baseType = getBaseType(property)
+        val cardinality = Cardinality.fromName(property.cardinality)
 
-        val mapOrFlatMap =  Cardinality.fromName(property.cardinality) match {
+        val mapOrFlatMap = cardinality match {
           case Cardinality.One => "map"
           case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
         }
 
         val filterSteps = 
-          if (baseType == "String") {
-            s"""  /**
-              |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
-              |    * */
-              |  def $nameCamelCase(regex: $baseType): Traversal[$newTraversalElementType] =
-              |    traversal.has(NodeKeys.${property.name}.where(P.matches(regex)))
-              |
-              |  /**
-              |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
-              |    * */
-              |  def $nameCamelCase(regexes: $baseType*): Traversal[$newTraversalElementType] =
-              |    traversal.has(NodeKeys.${property.name}.where(P.matches(regexes: _*)))
-              |
-              |  /**
-              |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
-              |    * */
-              |  def ${nameCamelCase}Exact(value: $baseType): Traversal[$newTraversalElementType] =
-              |    traversal.has(NodeKeys.${property.name}, value)
-              |
-              |  /**
-              |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
-              |    * */
-              |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[$newTraversalElementType] =
-              |    traversal.has(NodeKeys.${property.name}.where(P.within(values.to(Set))))
-              |
-              |  /**
-              |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
-              |    * */
-              |  def ${nameCamelCase}Not(regex: $baseType): Traversal[$newTraversalElementType] =
-              |    traversal.hasNot(NodeKeys.${property.name}.where(P.matches(regex)))
-              |
-              |  /**
-              |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
-              |    * */
-              |  def ${nameCamelCase}Not(values: $baseType*): Traversal[$newTraversalElementType] =
-              |    traversal.hasNot(NodeKeys.${property.name}.where(P.within(values.to(Set))))
-              |
-              |""".stripMargin
-          } else { //filters for non-string
-            s"""  /**
-              |    * Traverse to nodes where the $nameCamelCase equals the given `value`
-              |    * */
-              |  def $nameCamelCase(value: $baseType): Traversal[$newTraversalElementType] =
-              |    traversal.has(NodeKeys.${property.name}, value)
-              |
-              |  /**
-              |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
-              |    * */
-              |  def $nameCamelCase(values: $baseType*): Traversal[$newTraversalElementType] =
-              |    traversal.has(NodeKeys.${property.name}.where(P.within(values.toSet)))
-              |
-              |  /**
-              |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
-              |    * */
-              |  def ${nameCamelCase}Not(value: $baseType): Traversal[$newTraversalElementType] =
-              |    traversal.hasNot(NodeKeys.${property.name}, value)
-              |
-              |  /**
-              |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
-              |    * */
-              |  def ${nameCamelCase}Not(values: $baseType*): Traversal[$newTraversalElementType] =
-              |    traversal.hasNot(NodeKeys.${property.name}.where(P.within(values.toSet)))
-              |""".stripMargin
+          if (cardinality == Cardinality.List) ""
+          else {
+            if (baseType == "String") {
+              s"""  /**
+                |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
+                |    * */
+                |  def $nameCamelCase(regex: $baseType): Traversal[$newTraversalElementType] =
+                |    traversal.has(NodeKeys.${property.name}.where(P.matches(regex)))
+                |
+                |  /**
+                |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
+                |    * */
+                |  def $nameCamelCase(regexes: $baseType*): Traversal[$newTraversalElementType] =
+                |    traversal.has(NodeKeys.${property.name}.where(P.matches(regexes: _*)))
+                |
+                |  /**
+                |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
+                |    * */
+                |  def ${nameCamelCase}Exact(value: $baseType): Traversal[$newTraversalElementType] =
+                |    traversal.has(NodeKeys.${property.name}, value)
+                |
+                |  /**
+                |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
+                |    * */
+                |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[$newTraversalElementType] =
+                |    traversal.has(NodeKeys.${property.name}.where(P.within(values.to(Set))))
+                |
+                |  /**
+                |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
+                |    * */
+                |  def ${nameCamelCase}Not(regex: $baseType): Traversal[$newTraversalElementType] =
+                |    traversal.hasNot(NodeKeys.${property.name}.where(P.matches(regex)))
+                |
+                |  /**
+                |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
+                |    * */
+                |  def ${nameCamelCase}Not(values: $baseType*): Traversal[$newTraversalElementType] =
+                |    traversal.hasNot(NodeKeys.${property.name}.where(P.within(values.to(Set))))
+                |
+                |""".stripMargin
+            } else { //filters for non-string
+              s"""  /**
+                |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+                |    * */
+                |  def $nameCamelCase(value: $baseType): Traversal[$newTraversalElementType] =
+                |    traversal.has(NodeKeys.${property.name}, value)
+                |
+                |  /**
+                |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+                |    * */
+                |  def $nameCamelCase(values: $baseType*): Traversal[$newTraversalElementType] =
+                |    traversal.has(NodeKeys.${property.name}.where(P.within(values.toSet)))
+                |
+                |  /**
+                |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+                |    * */
+                |  def ${nameCamelCase}Not(value: $baseType): Traversal[$newTraversalElementType] =
+                |    traversal.hasNot(NodeKeys.${property.name}, value)
+                |
+                |  /**
+                |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+                |    * */
+                |  def ${nameCamelCase}Not(values: $baseType*): Traversal[$newTraversalElementType] =
+                |    traversal.hasNot(NodeKeys.${property.name}.where(P.within(values.toSet)))
+                |""".stripMargin
             }
+          }
 
         s"""  /** Traverse to $nameCamelCase property */
            |  def $nameCamelCase: Traversal[$baseType] =
@@ -459,13 +463,16 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
-    def generateNodeSource(nodeType: NodeType, keys: List[Property]) = {
-      val keyNames = keys.map(_.name) ++ nodeType.containedNodesList.map(_.localName)
+    def generateNodeSource(nodeType: NodeType) = {
+      val allPropertyNames = nodeType.keys.distinct
+      val allProperties = allPropertyNames.map(schema.nodePropertyByName)
+
+      val keyNames = nodeType.keys ++ nodeType.containedNodesList.map(_.localName)
       val propertyNameDefs = keyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
 
-      val propertyDefs = keys.map { p =>
+      val propertyDefs = allProperties.map { p =>
         val baseType = p.valueType match {
           case "string"  => "String"
           case "int"     => "Integer"
@@ -544,10 +551,10 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
           .mkString(" ")
 
-      val propertyBasedTraits = keys.map(key => s"with Has${camelCaseCaps(key.name)}").mkString(" ")
+      val propertyBasedTraits = allProperties.map(key => s"with Has${camelCaseCaps(key.name)}").mkString(" ")
 
       val valueMapImpl = {
-        val putKeysImpl = keys
+        val putKeysImpl = allProperties
           .map { key: Property =>
             val memberName = camelCase(key.name)
             Cardinality.fromName(key.cardinality) match {
@@ -583,7 +590,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }
 
       val fromNew = {
-        val initKeysImpl = keys
+        val initKeysImpl = allProperties
           .map { key: Property =>
             val memberName = camelCase(key.name)
             Cardinality.fromName(key.cardinality) match {
@@ -629,7 +636,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
         }.mkString("\n")
 
-        val registerFullName = if(!keys.map{_.name}.contains("FULL_NAME")) "" else {
+        val registerFullName = if(!allProperties.map{_.name}.contains("FULL_NAME")) "" else {
           s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
         }
 
@@ -671,7 +678,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
         val forId = ProductElement("id", "id", nextIdx)
-        val forKeys = keys.map { key =>
+        val forKeys = allProperties.map { key =>
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
         }
@@ -776,7 +783,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }.mkString("\n")
 
       val nodeRefImpl = {
-        val propertyDelegators = keys.map { key =>
+        val propertyDelegators = allProperties.map { key =>
           val name = camelCase(key.name)
           s"""  override def $name: ${getCompleteType(key)} = get().$name"""
         }.mkString("\n")
@@ -850,7 +857,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = keys.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
+        val forKeys = allProperties.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
 
         val forContaintedNodes = nodeType.containedNodesList.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
@@ -875,7 +882,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
         }
 
-        val forKeys = keys.map(key =>
+        val forKeys = allProperties.map(key =>
           caseEntry(key.name, camelCase(key.name), key.cardinality)
         ).mkString("\n")
 
@@ -898,7 +905,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
-           |${propertyBasedFields(keys)}
+           |${propertyBasedFields(allProperties)}
            |$containedNodesAsMembers
            |
            |  /* all properties */
@@ -936,12 +943,19 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |}""".stripMargin
 
+      val propertiesWithoutInherited: Seq[Property] = {
+        val parentTypes = nodeType.is.getOrElse(Nil).map(schema.nodeBaseTypeByName)
+        val inheritedProperties = parentTypes.flatMap(_.hasKeys)
+        val withoutInherited = allPropertyNames.toSet -- inheritedProperties
+        withoutInherited.map(schema.nodePropertyByName).toSeq
+      }
+
       s"""$staticHeader
          |$companionObject
          |$nodeBaseImpl
          |$nodeRefImpl
          |$classImpl
-         |${generatePropertyTraversals(className, keys)}
+         |${generatePropertyTraversals(className, propertiesWithoutInherited)}
          |""".stripMargin
     }
 
@@ -956,7 +970,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       baseDir.createChild(srcFile).write(src)
     }
     schema.nodeTypes.foreach { nodeType =>
-      val src = generateNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
+      val src = generateNodeSource(nodeType)
       val srcFile = nodeType.className + ".scala"
       baseDir.createChild(srcFile).write(src)
     }
