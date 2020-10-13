@@ -102,7 +102,7 @@ object Cardinality {
   case object ZeroOrOne extends Cardinality("zeroOrOne")
   case object One extends Cardinality("one")
   case object List extends Cardinality("list")
-  case object ISeq extends Cardinality("iseq")
+  case object ISeq extends Cardinality("array")
 
   def fromName(name: String): Cardinality =
     Seq(ZeroOrOne, One, List, ISeq)

@@ -24,7 +24,7 @@ object Helpers {
       case Cardinality.One       => HigherValueType.None
       case Cardinality.ZeroOrOne => HigherValueType.Option
       case Cardinality.List      => HigherValueType.List
-      case _=> ???
+      case  Cardinality.ISeq => ???
     }
 
   def getBaseType(schemaType: String): String = {
@@ -57,7 +57,7 @@ object Helpers {
       case Cardinality.ZeroOrOne => s"Option[$tpe]"
       case Cardinality.One       => tpe
       case Cardinality.List      => s"List[$tpe]"
-      case Cardinality.ISeq => s"scala.collection.immutable.IndexedSeq[$tpe]"
+      case Cardinality.ISeq => s"IndexedSeq[$tpe]"
     }
   }
 
