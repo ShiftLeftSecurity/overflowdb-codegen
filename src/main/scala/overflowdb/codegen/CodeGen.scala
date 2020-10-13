@@ -456,7 +456,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
              |""".stripMargin
 
         val filterSteps = (cardinality, property.valueType) match {
-          case (Cardinality.List, _) | (Cardinality.ISeq, _) => ""
+          case (Cardinality.List | Cardinality.ISeq, _) => ""
           case (_, "string") => filterStepsForSingleString(property.name)
           case (_, "boolean") => filterStepsForSingleBoolean(property.name)
           case (_, "int") => filterStepsForSingleInt(property.name)
