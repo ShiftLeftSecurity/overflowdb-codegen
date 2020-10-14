@@ -24,6 +24,7 @@ object Helpers {
       case Cardinality.One       => HigherValueType.None
       case Cardinality.ZeroOrOne => HigherValueType.Option
       case Cardinality.List      => HigherValueType.List
+      case  Cardinality.ISeq => ???
     }
 
   def getBaseType(schemaType: String): String = {
@@ -56,6 +57,7 @@ object Helpers {
       case Cardinality.ZeroOrOne => s"Option[$tpe]"
       case Cardinality.One       => tpe
       case Cardinality.List      => s"List[$tpe]"
+      case Cardinality.ISeq => s"IndexedSeq[$tpe]"
     }
   }
 
@@ -81,6 +83,7 @@ object Helpers {
       case Cardinality.One       => baseType
       case Cardinality.ZeroOrOne => baseType
       case Cardinality.List      => s"Seq[$baseType]"
+      case Cardinality.ISeq=> s"IndexedSeq[${baseType}]"
     }
     s"""val ${camelCaseCaps(name)} = new PropertyKey[$completeType]("$name") """
   }
