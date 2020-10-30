@@ -78,7 +78,6 @@ class Schema(schemaFile: String) {
 case class NodeType(
     name: String,
     comment: Option[String],
-    id: Int,
     keys: List[String],
     outEdges: List[OutEdgeEntry],
     is: Option[List[String]],
