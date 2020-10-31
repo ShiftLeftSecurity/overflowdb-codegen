@@ -557,7 +557,6 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |  def apply(graph: Graph, id: Long) = new $className(graph, id)
            |
            |  val Label = "${nodeType.name}"
-           |  val LabelId: Int = ${nodeType.id}
            |
            |  object PropertyNames {
            |    $propertyNameDefs
@@ -571,7 +570,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |  }
            |
            |  val layoutInformation = new NodeLayoutInformation(
-           |    LabelId,
+           |    Label,
            |    PropertyNames.allAsJava,
            |    List($outEdgeLayouts).asJava,
            |    List($inEdgeLayouts).asJava)
@@ -584,7 +583,6 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |  val factory = new NodeFactory[$classNameDb] {
            |    override val forLabel = $className.Label
-           |    override val forLabelId = $className.LabelId
            |
            |    override def createNode(ref: NodeRef[$classNameDb]) =
            |      new $classNameDb(ref.asInstanceOf[NodeRef[NodeDb]])
