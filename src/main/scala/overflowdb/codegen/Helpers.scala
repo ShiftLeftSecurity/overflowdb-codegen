@@ -41,8 +41,8 @@ object Helpers {
   def getBaseType(property: Property): String =
     getBaseType(property.valueType)
 
-  def getCompleteType(property: Property, cardinality: Cardinality): String =
-    getHigherType(cardinality) match {
+  def getCompleteType(property: Property): String =
+    getHigherType(property.cardinality) match {
       case HigherValueType.None   => getBaseType(property)
       case HigherValueType.Option => s"Option[${getBaseType(property)}]"
       case HigherValueType.List   => s"List[${getBaseType(property)}]"
@@ -55,7 +55,7 @@ object Helpers {
       containedNode.nodeTypeClassName
     }
 
-    Cardinality.fromName(containedNode.cardinality) match {
+    containedNode.cardinality match {
       case Cardinality.ZeroOrOne => s"Option[$tpe]"
       case Cardinality.One       => tpe
       case Cardinality.List      => s"List[$tpe]"
@@ -66,7 +66,7 @@ object Helpers {
   def propertyBasedFields(properties: Seq[(Property, Cardinality)]): String =
     properties.map { case (property, cardinality) =>
       val name = camelCase(property.name)
-      val tpe = getCompleteType(property, cardinality)
+      val tpe = getCompleteType(property)
       val unsetValue = propertyUnsetValue(cardinality)
 
       s"""private var _$name: $tpe = $unsetValue
@@ -80,8 +80,8 @@ object Helpers {
       case HigherValueType.List => "Nil"
     }
 
-  def propertyKeyDef(name: String, baseType: String, cardinality: String) = {
-    val completeType = Cardinality.fromName(cardinality) match {
+  def propertyKeyDef(name: String, baseType: String, cardinality: Cardinality) = {
+    val completeType = cardinality match {
       case Cardinality.One       => baseType
       case Cardinality.ZeroOrOne => baseType
       case Cardinality.List      => s"Seq[$baseType]"

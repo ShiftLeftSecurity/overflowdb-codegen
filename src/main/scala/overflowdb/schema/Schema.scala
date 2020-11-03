@@ -119,7 +119,7 @@ case class OutEdgeEntry(edgeName: String, inNodes: Seq[InNode])
 case class InNode(node: NodeType, cardinality: String = "n:n")
 case class OutNode(name: String, cardinality: String = "n:n")
 
-case class ContainedNode(nodeType: String, localName: String, cardinality: String) {
+case class ContainedNode(nodeType: String, localName: String, cardinality: Cardinality) {
   lazy val nodeTypeClassName = Helpers.camelCaseCaps(nodeType)
 }
 

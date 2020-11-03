@@ -192,7 +192,7 @@ class CodeGen(schema: Schema) {
           val name = camelCase(property.name)
           val tpe = getCompleteType(property)
 
-          getHigherType(property) match {
+          getHigherType(property.cardinality) match {
             case HigherValueType.None =>
               s"""def $name: $tpe = property("${property.name}").asInstanceOf[$tpe]"""
             case HigherValueType.Option =>
@@ -225,7 +225,7 @@ class CodeGen(schema: Schema) {
     baseDir.createDirectories()
     baseDir.createChild("package.scala").write(packageObject)
     schema.edgeTypes.foreach { edge =>
-      val src = generateEdgeSource(edge, edge.keys.map(schema.edgePropertyByName))
+      val src = generateEdgeSource(edge, edge.properties)
       val srcFile = edge.className + ".scala"
       baseDir.createChild(srcFile).write(src)
     }
@@ -345,7 +345,7 @@ class CodeGen(schema: Schema) {
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
         val baseType = getBaseType(property)
-        val cardinality = Cardinality.fromName(property.cardinality)
+        val cardinality = property.cardinality
 
         val mapOrFlatMap = cardinality match {
           case Cardinality.One => "map"
@@ -508,10 +508,10 @@ class CodeGen(schema: Schema) {
 
     def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseTrait): String = {
       val className = nodeBaseTrait.className
-      val properties = nodeBaseTrait.hasKeys.map(schema.nodePropertyByName)
+      val properties = nodeBaseTrait.properties
 
-      val mixins = nodeBaseTrait.properties.map { key =>
-        s"with Has${camelCaseCaps(key)}"
+      val mixins = nodeBaseTrait.properties.map { property =>
+        s"with Has${camelCaseCaps(property.name)}"
       }.mkString(" ")
 
       val mixinTraits = nodeBaseTrait
@@ -548,9 +548,9 @@ class CodeGen(schema: Schema) {
     }
 
     def generateNodeSource(nodeType: NodeType) = {
-      val properties = nodeType.keys.distinct.map(schema.nodePropertyByName)
+      val properties = nodeType.properties
 
-      val keyNames = nodeType.keys ++ nodeType.containedNodesList.map(_.localName)
+      val keyNames = nodeType.properties.map(_.name) ++ nodeType.containedNodesList.map(_.localName)
       val propertyNameDefs = keyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
@@ -618,16 +618,14 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
 
       val mixinTraits: String =
-        nodeType.is
-          .getOrElse(List())
+        nodeType.extendz
           .map { traitName =>
             s"with ${camelCaseCaps(traitName)}"
           }
           .mkString(" ")
 
       val mixinTraitsForBase: String =
-        nodeType.is
-          .getOrElse(List())
+        nodeType.extendz
           .map { traitName =>
             s"with ${camelCaseCaps(traitName)}Base"
           }
@@ -639,7 +637,7 @@ class CodeGen(schema: Schema) {
         val putKeysImpl = properties
           .map { key: Property =>
             val memberName = camelCase(key.name)
-            Cardinality.fromName(key.cardinality) match {
+            key.cardinality match {
               case Cardinality.One =>
                 s"""if ($memberName != null) { properties.put("${key.name}", $memberName) }"""
               case Cardinality.ZeroOrOne =>
@@ -652,7 +650,7 @@ class CodeGen(schema: Schema) {
         val putRefsImpl = {
           nodeType.containedNodesList.map { cnt =>
             val memberName = cnt.localName
-            Cardinality.fromName(cnt.cardinality) match {
+            cnt.cardinality match {
               case Cardinality.One =>
                 s"""   if (this._$memberName != null) { properties.put("${memberName}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
@@ -675,7 +673,7 @@ class CodeGen(schema: Schema) {
         val initKeysImpl = properties
           .map { key: Property =>
             val memberName = camelCase(key.name)
-            Cardinality.fromName(key.cardinality) match {
+            key.cardinality match {
               case Cardinality.One =>
                 s"""   this._$memberName = other.$memberName""".stripMargin
               case Cardinality.ZeroOrOne =>
@@ -692,7 +690,7 @@ class CodeGen(schema: Schema) {
             val memberName = containedNode.localName
             val containedNodeType = containedNode.nodeTypeClassName
 
-            Cardinality.fromName(containedNode.cardinality) match {
+            containedNode.cardinality match {
               case Cardinality.One =>
                 s"""  this._$memberName = other.$memberName match {
                    |    case null => null
@@ -747,8 +745,7 @@ class CodeGen(schema: Schema) {
         nodeType.containedNodesList
           .map { containedNode =>
             val containedNodeType = containedNode.nodeTypeClassName
-            val cardinality = Cardinality.fromName(containedNode.cardinality)
-            cardinality match {
+            containedNode.cardinality match {
               case Cardinality.One =>
                 s"""
                    |private var _${containedNode.localName}: $containedNodeType = null
@@ -805,7 +802,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
 
       val delegatingContainedNodeAccessors = nodeType.containedNodesList.map { containedNode =>
-        Cardinality.fromName(containedNode.cardinality) match {
+        containedNode.cardinality match {
           case Cardinality.One =>
             s"""  def ${containedNode.localName}: ${containedNode.nodeTypeClassName} = get().${containedNode.localName}"""
           case Cardinality.ZeroOrOne =>
@@ -947,8 +944,8 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
-        def caseEntry(name: String, accessorName: String, cardinality: String, baseType: String) = {
-          val setter = Cardinality.fromName(cardinality) match {
+        def caseEntry(name: String, accessorName: String, cardinality: Cardinality, baseType: String) = {
+          val setter = cardinality match {
             case Cardinality.One =>
               s"value.asInstanceOf[$baseType]"
             case Cardinality.ZeroOrOne =>
@@ -991,8 +988,8 @@ class CodeGen(schema: Schema) {
       }
 
       val propertyImpl: String = {
-        def caseEntry(name: String, accessorName: String, cardinality: String) = {
-          Cardinality.fromName(cardinality) match {
+        def caseEntry(name: String, accessorName: String, cardinality: Cardinality) = {
+          cardinality match {
             case Cardinality.One | Cardinality.List =>
               s"""|      case "$name" => this._$accessorName"""
             case Cardinality.ZeroOrOne =>
@@ -1131,13 +1128,12 @@ class CodeGen(schema: Schema) {
         fieldDescriptions = (camelCase(key.name), typ, optionalDefault) :: fieldDescriptions
       }
       for (containedNode <- nodeType.containedNodesList) {
-        val optionalDefault =
-          Cardinality.fromName(containedNode.cardinality) match {
-            case Cardinality.List      => Some("List()")
-            case Cardinality.ZeroOrOne => Some("None")
-            case Cardinality.ISeq => Some("IndexedSeq.empty")
-            case _                     => None
-          }
+        val optionalDefault = containedNode.cardinality match {
+          case Cardinality.List      => Some("List()")
+          case Cardinality.ZeroOrOne => Some("None")
+          case Cardinality.ISeq => Some("IndexedSeq.empty")
+          case _                     => None
+        }
         val typ = getCompleteType(containedNode)
         fieldDescriptions = (containedNode.localName, typ, optionalDefault) :: fieldDescriptions
       }
@@ -1160,7 +1156,7 @@ class CodeGen(schema: Schema) {
         val putKeysImpl = keys
           .map { key: Property =>
             val memberName = camelCase(key.name)
-            Cardinality.fromName(key.cardinality) match {
+            key.cardinality match {
               case Cardinality.One =>
                 s"""  if ($memberName != null) { res += "${key.name}" -> $memberName }"""
               case Cardinality.ZeroOrOne =>
@@ -1172,7 +1168,7 @@ class CodeGen(schema: Schema) {
           .mkString("\n")
       val putRefsImpl = nodeType.containedNodesList.map { key =>
           val memberName = key.localName
-          Cardinality.fromName(key.cardinality) match {
+          key.cardinality match {
             case Cardinality.One =>
               s"""  if ($memberName != null) { res += "$memberName" -> $memberName }"""
             case Cardinality.ZeroOrOne =>
