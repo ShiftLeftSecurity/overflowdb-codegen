@@ -128,11 +128,12 @@ object Cardinality {
   case object ZeroOrOne extends Cardinality("zeroOrOne")
   case object One extends Cardinality("one")
   case object List extends Cardinality("list")
+  case object ISeq extends Cardinality("array")
 
   def fromName(name: String): Cardinality =
-    Seq(ZeroOrOne, One, List)
+    Seq(ZeroOrOne, One, List, ISeq)
       .find(_.name == name)
-      .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, but was $name"))
+      .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq`, but was $name"))
 }
 
 case class EdgeType(name: String, comment: String, properties: Seq[Property] = Nil) {
@@ -156,7 +157,7 @@ case class NeighborInfo(accessorNameForEdge: String, nodeInfos: Set[NeighborNode
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
-  val None, Option, List = Value
+  val None, Option, List, ISeq = Value
 }
 
 object Direction extends Enumeration {
