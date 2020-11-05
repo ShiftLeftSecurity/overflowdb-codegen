@@ -111,7 +111,8 @@ case class NodeType(name: String,
   def addProperties(additional: Property*): NodeType =
     copy(properties = properties ++ additional)
 
-  def addOutEdge(outEdge: EdgeType, inNodes: InNode*)
+  def addOutEdge(outEdge: EdgeType, inNodes: InNode*) =
+    ???
 }
 
 case class OutEdgeEntry(edgeName: String, inNodes: Seq[InNode])

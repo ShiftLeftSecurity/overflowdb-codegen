@@ -1116,13 +1116,13 @@ class CodeGen(schema: Schema) {
       var fieldDescriptions = Seq[(String, String, Option[String])]() // fieldName, type, default
       for (key <- keys) {
         val optionalDefault =
-          if (getHigherType(key) == HigherValueType.Option) Some("None")
+          if (getHigherType(key.cardinality) == HigherValueType.Option) Some("None")
           else if (key.valueType == "int") Some("-1")
-          else if (getHigherType(key) == HigherValueType.None && key.valueType == "string")
+          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == "string")
             Some("\"\"")
-          else if (getHigherType(key) == HigherValueType.None && key.valueType == "boolean")
+          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == "boolean")
             Some("false")
-          else if (getHigherType(key) == HigherValueType.List) Some("List()")
+          else if (getHigherType(key.cardinality) == HigherValueType.List) Some("List()")
           else None
         val typ = getCompleteType(key)
         fieldDescriptions = (camelCase(key.name), typ, optionalDefault) :: fieldDescriptions
@@ -1209,7 +1209,7 @@ class CodeGen(schema: Schema) {
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.properties.map(schema.nodePropertyByName))
+      generateNewNodeSource(nodeType, nodeType.properties)
     }.mkString("\n")
     outfile.write(s"""$staticHeader
                      |$src
