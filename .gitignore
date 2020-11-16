@@ -3,3 +3,5 @@ target/
 private-key.pem
 
 private-key.pem
+/.bsp
+/gnupg-*
