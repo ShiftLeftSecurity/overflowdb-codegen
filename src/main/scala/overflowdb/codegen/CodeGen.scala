@@ -1361,7 +1361,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }
 
       val builderSetters = fieldDescriptions
-        .map {case (name, typ, _) => s"def ${camelCase(name)}(x : $typ) : Unit = { result.copy($name = x) }" }
+        .map {case (name, typ, _) => s"def ${camelCase(name)}(x : $typ) : New${nodeType.className}Builder = { result = result.copy($name = x); this }" }
         .mkString("\n")
 
       s"""
