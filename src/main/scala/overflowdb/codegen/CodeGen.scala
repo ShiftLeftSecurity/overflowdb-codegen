@@ -1292,6 +1292,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           else if (getHigherType(key) == HigherValueType.None && key.valueType == "boolean")
             Some("false")
           else if (getHigherType(key) == HigherValueType.List) Some("List()")
+          else if (getHigherType(key) == HigherValueType.None) Some("null")
           else None
         val typ = getCompleteType(key)
         fieldDescriptions = (camelCase(key.name), typ, optionalDefault) :: fieldDescriptions
@@ -1302,6 +1303,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
             case Cardinality.List      => Some("List()")
             case Cardinality.ZeroOrOne => Some("None")
             case Cardinality.ISeq => Some("IndexedSeq.empty")
+            case Cardinality.One => Some("null")
             case _                     => None
           }
         val typ = getCompleteType(containedNode)
