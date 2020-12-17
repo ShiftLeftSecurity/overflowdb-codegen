@@ -1358,14 +1358,24 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}""".stripMargin
       }
 
+      val builderSetters = fieldDescriptions
+        .map {case (name, typ, _) => s"def ${camelCase(name)}(x : $typ) : Unit = { result.copy($name = x) }" }
+        .mkString("\n")
 
-
-      s"""object New${nodeType.className}{
+      s"""
+         |class New${nodeType.className}Builder {
+         |   var result : New${nodeType.className} = New${nodeType.className}()
+         |
+         |   $builderSetters
+         |
+         |   def build : New${nodeType.className} = result
+         | }
+         |
+         |object New${nodeType.className}{
          |  def apply(${defaultsNoVal}): New${nodeType.className} = new New${nodeType.className}($paramId)
          |
          |}
          |
-         |// fixme: This should never have been a case class. Softly deprecate that.
          |case class New${nodeType.className}($defaultsVal) extends NewNode with ${nodeType.className}Base {
          |  override def label:String = "${nodeType.name}"
          |
