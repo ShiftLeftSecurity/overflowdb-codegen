@@ -1292,6 +1292,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           else if (getHigherType(key) == HigherValueType.None && key.valueType == "boolean")
             Some("false")
           else if (getHigherType(key) == HigherValueType.List) Some("List()")
+          else if (getHigherType(key) == HigherValueType.None) Some("null")
           else None
         val typ = getCompleteType(key)
         fieldDescriptions = (camelCase(key.name), typ, optionalDefault) :: fieldDescriptions
@@ -1302,6 +1303,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
             case Cardinality.List      => Some("List()")
             case Cardinality.ZeroOrOne => Some("None")
             case Cardinality.ISeq => Some("IndexedSeq.empty")
+            case Cardinality.One => Some("null")
             case _                     => None
           }
         val typ = getCompleteType(containedNode)
@@ -1358,14 +1360,24 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}""".stripMargin
       }
 
+      val builderSetters = fieldDescriptions
+        .map {case (name, typ, _) => s"def ${camelCase(name)}(x : $typ) : New${nodeType.className}Builder = { result = result.copy($name = x); this }" }
+        .mkString("\n")
 
-
-      s"""object New${nodeType.className}{
+      s"""
+         |class New${nodeType.className}Builder {
+         |   var result : New${nodeType.className} = New${nodeType.className}()
+         |
+         |   $builderSetters
+         |
+         |   def build : New${nodeType.className} = result
+         | }
+         |
+         |object New${nodeType.className}{
          |  def apply(${defaultsNoVal}): New${nodeType.className} = new New${nodeType.className}($paramId)
          |
          |}
          |
-         |// fixme: This should never have been a case class. Softly deprecate that.
          |case class New${nodeType.className}($defaultsVal) extends NewNode with ${nodeType.className}Base {
          |  override def label:String = "${nodeType.name}"
          |
