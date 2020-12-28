@@ -17,23 +17,23 @@ class SchemaBuilder(basePackage: String) {
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constants  = mutable.ListBuffer.empty[Constant]
 
-  def addNodePropertyKey(name: String, valueType: String, comment: String, cardinality: Cardinality): Property =
-    addAndReturn(nodePropertyKeys, Property(name, comment, valueType, cardinality))
+  def addNodePropertyKey(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
+    addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
 
-  def addEdgePropertyKey(name: String, valueType: String, comment: String, cardinality: Cardinality): Property =
-    addAndReturn(edgePropertyKeys, Property(name, comment, valueType, cardinality))
+  def addEdgePropertyKey(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
+    addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
 
-  def addNodeBaseType(name: String, comment: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait] = Nil): NodeBaseTrait =
-    addAndReturn(nodeBaseTypes, NodeBaseTrait(name, properties, extendz))
+  def addNodeBaseType(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeBaseTrait =
+    addAndReturn(nodeBaseTypes, NodeBaseTrait(name, properties, extendz, stringToOption(comment)))
 
-  def addEdgeType(name: String, comment: String): EdgeType =
-    addAndReturn(edgeTypes, EdgeType(name, comment))
+  def addEdgeType(name: String, comment: String = ""): EdgeType =
+    addAndReturn(edgeTypes, EdgeType(name, stringToOption(comment)))
 
-  def addNodeType(name: String, comment: String, id: Int, extendz: Seq[NodeBaseTrait] = Nil): NodeType =
-    addAndReturn(nodeTypes, NodeType(name, comment, id, extendz))
+  def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeType =
+    addAndReturn(nodeTypes, NodeType(name, stringToOption(comment), id, extendz, containedNodes = Nil))
 
-  def addConstant(name: String, value: String, comment: String, valueType: String, cardinality: Cardinality): Constant =
-    addAndReturn(constants, Constant(name, value, comment, valueType, cardinality))
+  def addConstant(name: String, value: String, valueType: String, cardinality: Cardinality, comment: String = ""): Constant =
+    addAndReturn(constants, Constant(name, value, stringToOption(comment), valueType, cardinality))
 
   def build: Schema = {
     new Schema(basePackage, nodePropertyKeys, edgePropertyKeys, nodeBaseTypes, nodeTypes, edgeTypes, constants)
@@ -42,6 +42,11 @@ class SchemaBuilder(basePackage: String) {
   private def addAndReturn[A](buffer: mutable.Buffer[A], a: A): A = {
     buffer.append(a)
     a
+  }
+
+  private def stringToOption(s: String): Option[String] = s.trim match {
+    case "" => None
+    case nonEmptyString => Some(nonEmptyString)
   }
 }
 
@@ -101,7 +106,7 @@ class Schema(val basePackage: String,
 case class NodeType(name: String,
                     comment: Option[String],
                     id: Int,
-                    extendz: Seq[String],
+                    extendz: Seq[NodeBaseTrait],
                     properties: Seq[Property] = Nil,
                     outEdges: Seq[OutEdgeEntry] = Nil,
                     containedNodes: Seq[ContainedNode]) {
@@ -151,7 +156,7 @@ case class EdgeType(name: String, comment: Option[String], properties: Seq[Prope
 
 case class Property(name: String, comment: Option[String], valueType: String, cardinality: Cardinality)
 
-case class NodeBaseTrait(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait]) {
+case class NodeBaseTrait(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait], comment: Option[String]) {
   lazy val className = Helpers.camelCaseCaps(name)
 }
 
@@ -171,7 +176,7 @@ object Direction extends Enumeration {
 }
 
 object DefaultEdgeTypes {
-  val ContainsNode = EdgeType("CONTAINS_NODE", "")
+  val ContainsNode = EdgeType("CONTAINS_NODE", None)
 }
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)

@@ -12,24 +12,24 @@ object TestSchema extends App {
   val schema = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
 
   // properties
-  val name = schema.addNodePropertyKey("NAME", "string", "Name of represented object, e.g., method name (e.g. \"run\")", Cardinality.One)
+  val name = schema.addNodePropertyKey("NAME", "string", Cardinality.One, "Name of represented object, e.g., method name (e.g. \"run\")")
   val order = schema.addNodePropertyKey("ORDER", "int",
-    "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code",
-    Cardinality.One)
+    Cardinality.One,
+    "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code")
 
   // edge keys
-  val localName = schema.addEdgePropertyKey("LOCAL_NAME", "string", "Local name of referenced CONTAINED node. This key is deprecated.", Cardinality.ZeroOrOne)
+  val localName = schema.addEdgePropertyKey("LOCAL_NAME", "string", Cardinality.ZeroOrOne, "Local name of referenced CONTAINED node. This key is deprecated.")
 
   // node base types
-  val astNode = schema.addNodeBaseType("AST_NODE", "Any node that can exist in an abstract syntax tree", Seq(order))
+  val astNode = schema.addNodeBaseType("AST_NODE", Seq(order), extendz = Nil, "Any node that can exist in an abstract syntax tree")
 
   // edge types
   val ast = schema.addEdgeType("AST", "Syntax tree edge")
 
   // node types
-  val namespaceBlock = schema.addNodeType("NAMESPACE_BLOCK", "A reference to a namespace", 41, Seq(astNode))
+  val namespaceBlock = schema.addNodeType("NAMESPACE_BLOCK", 41, Seq(astNode), "A reference to a namespace")
     // .addProperties(???) TODO
-  val file = schema.addNodeType("FILE", "Node representing a source file. Often also the AST root", 38, Seq(astNode))
+  val file = schema.addNodeType("FILE", 38, Seq(astNode), "Node representing a source file. Often also the AST root")
                    .addProperties(name, order)
                    .addOutEdge(ast, InNode(namespaceBlock, "0-1:n"))
 
