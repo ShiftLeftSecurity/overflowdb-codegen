@@ -814,8 +814,8 @@ class CodeGen(schema: Schema) {
            |
            |
            |  object Edges {
-           |    val In: Array[String] = Array(${quoted(inEdges).mkString(",")})
-           |    val Out: Array[String] = Array(${quoted(outEdges).mkString(",")})
+           |    val In: Array[String] = Array(${quoted(inEdges.map(_.edge.className)).mkString(",")})
+           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.className)).mkString(",")})
            |  }
            |
            |  val factory = new NodeFactory[$classNameDb] {
@@ -1052,7 +1052,7 @@ class CodeGen(schema: Schema) {
           nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
             val viaEdgeAndDirection = camelCase(edgeName) + "Out"
             val neighborNodeInfos = inNodes.map { inNode =>
-              val nodeName = inNode.name
+              val nodeName = inNode.node.name
               val cardinality = inNode.cardinality match {
                 case Some(c) if c.endsWith(":1") => Cardinality.One
                 case Some(c) if c.endsWith(":0-1") => Cardinality.ZeroOrOne
