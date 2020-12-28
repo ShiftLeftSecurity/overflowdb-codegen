@@ -120,13 +120,14 @@ class CodeGen(schema: Schema) {
     writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
     writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
 
-    List("controlStructureTypes", "dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
-      writeStringConstants(element.capitalize, schema.constantsFromElement(element))
-    }
-    List("edgeKeys", "nodeKeys").foreach { element =>
-      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
-    }
-    writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
+    // TODO implement differently: this is how it worked with generic json
+//    List("controlStructureTypes", "dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
+//      writeStringConstants(element.capitalize, schema.constantsFromElement(element))
+//    }
+//    List("edgeKeys", "nodeKeys").foreach { element =>
+//      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
+//    }
+//    writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
 
     outputDir
   }
@@ -731,19 +732,13 @@ class CodeGen(schema: Schema) {
         s"with Has${camelCaseCaps(property.name)}"
       }.mkString(" ")
 
-      val mixinTraits = nodeBaseTrait
-        .extendz
-        .getOrElse(Nil)
-        .map { traitName =>
-          s"with ${camelCaseCaps(traitName)}"
-        }.mkString(" ")
+      val mixinTraits = nodeBaseTrait.extendz.map { baseTrait =>
+        s"with ${baseTrait.className}"
+      }.mkString(" ")
 
-      val mixinTraitsForBase = nodeBaseTrait
-        .extendz
-        .getOrElse(List())
-        .map { traitName =>
-          s"with ${camelCaseCaps(traitName)}Base"
-        }.mkString(" ")
+      val mixinTraitsForBase = nodeBaseTrait.extendz.map { baseTrait =>
+        s"with ${baseTrait.className}Base"
+      }.mkString(" ")
 
       s"""package $nodesPackage
          |
@@ -767,7 +762,7 @@ class CodeGen(schema: Schema) {
     def generateNodeSource(nodeType: NodeType) = {
       val properties = nodeType.properties
 
-      val keyNames = nodeType.properties.map(_.name) ++ nodeType.containedNodesList.map(_.localName)
+      val keyNames = nodeType.properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
       val propertyNameDefs = keyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
@@ -781,7 +776,7 @@ class CodeGen(schema: Schema) {
         propertyKeyDef(p.name, baseType, p.cardinality)
       }.mkString("\n|    ")
 
-      val propertyDefsForContainedNodes = nodeType.containedNodesList.map { containedNode =>
+      val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
         propertyKeyDef(containedNode.localName, containedNode.nodeTypeClassName, containedNode.cardinality)
       }.mkString("\n|    ")
 
@@ -865,7 +860,7 @@ class CodeGen(schema: Schema) {
           }
           .mkString("\n")
         val putRefsImpl = {
-          nodeType.containedNodesList.map { cnt =>
+          nodeType.containedNodes.map { cnt =>
             val memberName = cnt.localName
             cnt.cardinality match {
               case Cardinality.One =>
@@ -903,7 +898,7 @@ class CodeGen(schema: Schema) {
           .mkString("\n")
 
         val initRefsImpl = {
-          nodeType.containedNodesList.map { containedNode =>
+          nodeType.containedNodes.map { containedNode =>
             val memberName = containedNode.localName
             val containedNodeType = containedNode.nodeTypeClassName
 
@@ -959,7 +954,7 @@ class CodeGen(schema: Schema) {
       }
 
       val containedNodesAsMembers =
-        nodeType.containedNodesList
+        nodeType.containedNodes
           .map { containedNode =>
             val containedNodeType = containedNode.nodeTypeClassName
             containedNode.cardinality match {
@@ -995,7 +990,7 @@ class CodeGen(schema: Schema) {
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
         }
-        val forContainedNodes = nodeType.containedNodesList.map { containedNode =>
+        val forContainedNodes = nodeType.containedNodes.map { containedNode =>
           ProductElement(
             containedNode.localName,
             containedNode.localName,
@@ -1014,11 +1009,11 @@ class CodeGen(schema: Schema) {
           s"case $index => $accessorSrc"
         }.mkString("\n")
 
-      val abstractContainedNodeAccessors = nodeType.containedNodesList.map { containedNode =>
+      val abstractContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         s"""def ${containedNode.localName}: ${getCompleteType(containedNode)}"""
       }.mkString("\n")
 
-      val delegatingContainedNodeAccessors = nodeType.containedNodesList.map { containedNode =>
+      val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         containedNode.cardinality match {
           case Cardinality.One =>
             s"""  def ${containedNode.localName}: ${containedNode.nodeTypeClassName} = get().${containedNode.localName}"""
@@ -1191,7 +1186,7 @@ class CodeGen(schema: Schema) {
 
         val forKeys = properties.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
 
-        val forContaintedNodes = nodeType.containedNodesList.map(containedNode =>
+        val forContaintedNodes = nodeType.containedNodes.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
         ).mkString("\n")
 
@@ -1221,7 +1216,7 @@ class CodeGen(schema: Schema) {
           caseEntry(key.name, camelCase(key.name), key.cardinality)
         ).mkString("\n")
 
-        val forContainedKeys = nodeType.containedNodesList.map(containedNode =>
+        val forContainedKeys = nodeType.containedNodes.map(containedNode =>
           caseEntry(containedNode.localName ,containedNode.localName, containedNode.cardinality)
         ).mkString("\n")
 
@@ -1353,7 +1348,7 @@ class CodeGen(schema: Schema) {
         val typ = getCompleteType(key)
         fieldDescriptions = (camelCase(key.name), typ, optionalDefault) :: fieldDescriptions
       }
-      for (containedNode <- nodeType.containedNodesList) {
+      for (containedNode <- nodeType.containedNodes) {
         val optionalDefault = containedNode.cardinality match {
           case Cardinality.List      => Some("List()")
           case Cardinality.ZeroOrOne => Some("None")
@@ -1393,7 +1388,7 @@ class CodeGen(schema: Schema) {
             }
           }
           .mkString("\n")
-      val putRefsImpl = nodeType.containedNodesList.map { key =>
+      val putRefsImpl = nodeType.containedNodes.map { key =>
           val memberName = key.localName
           key.cardinality match {
             case Cardinality.One =>

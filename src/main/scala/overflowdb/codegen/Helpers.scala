@@ -2,6 +2,18 @@ package overflowdb.codegen
 
 import overflowdb.schema._
 
+// TODO drop
+object DefaultNodeTypes {
+  /** root type for all nodes */
+  val Node = "CPG_NODE"
+  val NodeClassname = "CpgNode"
+}
+
+// TODO drop
+object DefaultEdgeTypes {
+  val ContainsNode = "CONTAINS_NODE"
+}
+
 object Helpers {
 
   def isNodeBaseTrait(baseTraits: List[NodeBaseTrait], nodeName: String): Boolean =

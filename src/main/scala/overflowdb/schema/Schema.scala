@@ -137,7 +137,7 @@ object Cardinality {
       .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq`, but was $name"))
 }
 
-case class EdgeType(name: String, comment: String, properties: Seq[Property] = Nil) {
+case class EdgeType(name: String, comment: Option[String], properties: Seq[Property] = Nil) {
   lazy val className = Helpers.camelCaseCaps(name)
 
   def addProperties(additionalProperties: Property*): EdgeType =
@@ -145,7 +145,7 @@ case class EdgeType(name: String, comment: String, properties: Seq[Property] = N
 
 }
 
-case class Property(name: String, comment: String, valueType: String, cardinality: Cardinality)
+case class Property(name: String, comment: Option[String], valueType: String, cardinality: Cardinality)
 
 case class NodeBaseTrait(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait]) {
   lazy val className = Helpers.camelCaseCaps(name)
@@ -172,9 +172,9 @@ object DefaultEdgeTypes {
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)
 
-case class Constant(name: String, value: String, comment: String, valueType: String, cardinality: Cardinality)
+case class Constant(name: String, value: String, comment: Option[String], valueType: String, cardinality: Cardinality)
 object Constant {
-  def fromProperty(property: Property) = Constant(property.name, property.name, property.comment)
-  def fromNodeType(tpe: NodeType) = Constant(tpe.name, tpe.name, tpe.comment)
-  def fromEdgeType(tpe: EdgeType) = Constant(tpe.name, tpe.name, tpe.comment)
+  def fromProperty(property: Property) = Constant(property.name, property.name, property.comment, property.valueType, property.cardinality)
+  def fromNodeType(tpe: NodeType) = Constant(tpe.name, tpe.name, tpe.comment, tpe.className, Cardinality.One) //TODO really cardinality one?
+  def fromEdgeType(tpe: EdgeType) = Constant(tpe.name, tpe.name, tpe.comment, tpe.className, Cardinality.One) //TODO really cardinality one?
 }
