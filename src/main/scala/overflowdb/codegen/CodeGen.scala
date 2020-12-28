@@ -780,11 +780,11 @@ class CodeGen(schema: Schema) {
         propertyKeyDef(containedNode.localName, containedNode.nodeTypeClassName, containedNode.cardinality)
       }.mkString("\n|    ")
 
-      val outEdgeNames: Seq[String] = nodeType.outEdges.map(_.edgeName)
-      val inEdgeNames:  Seq[String] = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Seq.empty).map(_.edgeName)
+      val outEdges: Seq[OutEdgeEntry] = nodeType.outEdges
+      val inEdges: Seq[InEdgeContext] = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Seq.empty)
 
-      val outEdgeLayouts = outEdgeNames.map(edge => s"edges.${camelCaseCaps(edge)}.layoutInformation").mkString(", ")
-      val inEdgeLayouts = inEdgeNames.map(edge => s"edges.${camelCaseCaps(edge)}.layoutInformation").mkString(", ")
+      val outEdgeLayouts = outEdges.map(edge => s"edges.${edge.className}.layoutInformation").mkString(", ")
+      val inEdgeLayouts = inEdges.map(edgeContext => s"edges.${edgeContext.edge.className}.layoutInformation").mkString(", ")
 
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
@@ -814,8 +814,8 @@ class CodeGen(schema: Schema) {
            |
            |
            |  object Edges {
-           |    val In: Array[String] = Array(${quoted(inEdgeNames).mkString(",")})
-           |    val Out: Array[String] = Array(${quoted(outEdgeNames).mkString(",")})
+           |    val In: Array[String] = Array(${quoted(inEdges).mkString(",")})
+           |    val Out: Array[String] = Array(${quoted(outEdges).mkString(",")})
            |  }
            |
            |  val factory = new NodeFactory[$classNameDb] {
