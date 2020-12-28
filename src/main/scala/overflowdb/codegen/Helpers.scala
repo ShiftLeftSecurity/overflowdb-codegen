@@ -75,11 +75,11 @@ object Helpers {
     }
   }
 
-  def propertyBasedFields(properties: Seq[(Property, Cardinality)]): String =
-    properties.map { case (property, cardinality) =>
+  def propertyBasedFields(properties: Seq[Property]): String =
+    properties.map { property =>
       val name = camelCase(property.name)
       val tpe = getCompleteType(property)
-      val unsetValue = propertyUnsetValue(cardinality)
+      val unsetValue = propertyUnsetValue(property.cardinality)
 
       s"""private var _$name: $tpe = $unsetValue
          |def $name: $tpe = _$name""".stripMargin

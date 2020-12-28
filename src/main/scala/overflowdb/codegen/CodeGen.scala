@@ -1,9 +1,11 @@
 package overflowdb.codegen
 
 import better.files._
-import java.io.{File => JFile}
 
+import java.io.{File => JFile}
 import overflowdb.schema._
+
+import scala.collection.mutable
 
 // TODO move elsewhere, or drop
 object TestSchema extends App {
@@ -1054,8 +1056,9 @@ class CodeGen(schema: Schema) {
             val neighborNodeInfos = inNodes.map { inNode =>
               val nodeName = inNode.node.name
               val cardinality = inNode.cardinality match {
-                case Some(c) if c.endsWith(":1") => Cardinality.One
-                case Some(c) if c.endsWith(":0-1") => Cardinality.ZeroOrOne
+                  // TODO
+//                case Some(c) if c.endsWith(":1") => Cardinality.One
+//                case Some(c) if c.endsWith(":0-1") => Cardinality.ZeroOrOne
                 case _ => Cardinality.List
               }
               createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection, cardinality)
@@ -1064,20 +1067,21 @@ class CodeGen(schema: Schema) {
           }
 
         val neighborInInfos =
-          inEdges.map { case InEdgeContext(edgeName, neighborNodes) =>
-            val viaEdgeAndDirection = camelCase(edgeName) + "In"
+          inEdges.map { case InEdgeContext(edge, neighborNodes) =>
+            val viaEdgeAndDirection = edge.name + "In"
             val neighborNodeInfos = neighborNodes.map { neighborNode =>
-              val neighborNodeClassName = schema.nodeTypeByName(neighborNode.name).className
+//              val neighborNodeClassName = schema.nodeTypeByName(neighborNode.name).className
               // note: cardinalities are defined on the 'other' side, i.e. on `outEdges.inEdges.cardinality`
               // therefor, here we're interested in the left side of the `:`
               val cardinality = neighborNode.cardinality match {
-                case Some(c) if c.startsWith("1:") => Cardinality.One
-                case Some(c) if c.startsWith("0-1:") => Cardinality.ZeroOrOne
+                // TODO
+//                case Some(c) if c.startsWith("1:") => Cardinality.One
+//                case Some(c) if c.startsWith("0-1:") => Cardinality.ZeroOrOne
                 case _ => Cardinality.List
               }
-              createNeighborNodeInfo(neighborNode.name, neighborNodeClassName, viaEdgeAndDirection, cardinality)
+              createNeighborNodeInfo(neighborNode.name, neighborNode.className, viaEdgeAndDirection, cardinality)
             }
-            NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.IN), neighborNodeInfos, nextOffsetPos)
+            NeighborInfo(neighborAccessorNameForEdge(edge.name, Direction.IN), neighborNodeInfos, nextOffsetPos)
           }
 
         neighborOutInfos ++ neighborInInfos
@@ -1331,7 +1335,7 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
 
     def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
-      var fieldDescriptions = Seq[(String, String, Option[String])]() // fieldName, type, default
+      val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, Option[String])] // fieldName, type, default
       for (key <- keys) {
         val optionalDefault =
           if (getHigherType(key.cardinality) == HigherValueType.Option) Some("None")
@@ -1346,7 +1350,7 @@ class CodeGen(schema: Schema) {
             Some("null")
           else None
         val typ = getCompleteType(key)
-        fieldDescriptions = (camelCase(key.name), typ, optionalDefault) :: fieldDescriptions
+        fieldDescriptions += (camelCase(key.name), typ, optionalDefault)
       }
       for (containedNode <- nodeType.containedNodes) {
         val optionalDefault = containedNode.cardinality match {
@@ -1357,20 +1361,19 @@ class CodeGen(schema: Schema) {
           case _                     => None
         }
         val typ = getCompleteType(containedNode)
-        fieldDescriptions = (containedNode.localName, typ, optionalDefault) :: fieldDescriptions
+        fieldDescriptions += (containedNode.localName, typ, optionalDefault)
       }
-      fieldDescriptions = fieldDescriptions.reverse
-      val defaultsVal = fieldDescriptions
+      val defaultsVal = fieldDescriptions.reverse
         .map {case (name, typ, Some(default)) => s"var $name: $typ = $default"
               case (name, typ, None)          => s"var $name: $typ"}
         .mkString(", ")
 
-      val defaultsNoVal = fieldDescriptions
+      val defaultsNoVal = fieldDescriptions.reverse
         .map {case (name, typ, Some(default)) => s"$name: $typ = $default"
               case (name, typ, None)          => s"$name: $typ"}
         .mkString(", ")
 
-      val paramId = fieldDescriptions
+      val paramId = fieldDescriptions.reverse
         .map {case (name, _, _) => s"$name = $name"}
         .mkString(", ")
 
