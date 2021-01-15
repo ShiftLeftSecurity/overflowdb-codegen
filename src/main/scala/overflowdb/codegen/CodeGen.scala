@@ -1283,6 +1283,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
     def generateNewNodeSource(nodeType: NodeType, keys: List[Property]) = {
       var fieldDescriptions = List[(String, String, Option[String])]() // fieldName, type, default
+      // Add ID as a modifiable field
+      fieldDescriptions = ("id", "Long", Some("null")) :: fieldDescriptions
       for (key <- keys) {
         val optionalDefault =
           if (getHigherType(key) == HigherValueType.Option) Some("None")
