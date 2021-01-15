@@ -1369,6 +1369,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       s"""
          |class New${nodeType.className}Builder {
          |   var result : New${nodeType.className} = New${nodeType.className}()
+         |   var id : Long = Some(-1L)
          |
          |   $builderSetters
          |
