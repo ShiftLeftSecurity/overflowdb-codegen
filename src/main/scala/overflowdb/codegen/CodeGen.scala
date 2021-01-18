@@ -1282,11 +1282,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
 
     def generateNewNodeSource(nodeType: NodeType, keys: List[Property]) = {
-      var fieldDescriptions = List[(String, String, Option[String])]() // fieldName, type, default
+      var fieldDescriptions = List[(String, String, Option[String])]() // fieldName, type, de
       for (key <- keys) {
         val optionalDefault =
           if (getHigherType(key) == HigherValueType.Option) Some("None")
           else if (key.valueType == "int") Some("-1")
+          else if (key.valueType == "long") Some("-1L")
           else if (getHigherType(key) == HigherValueType.None && key.valueType == "string")
             Some("\"\"")
           else if (getHigherType(key) == HigherValueType.None && key.valueType == "boolean")
@@ -1360,7 +1361,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}""".stripMargin
       }
 
-      val builderSetters = (("id", "Long", "-1L") :: fieldDescriptions)
+      val builderSetters = fieldDescriptions
         .map {case (name, typ, _) => s"def ${camelCase(name)}(x : $typ) : New${nodeType.className}Builder = { result = result.copy($name = x); this }" }
         .mkString("\n")
 
@@ -1390,8 +1391,9 @@ class CodeGen(schemaFile: String, basePackage: String) {
     val outfile = File(outputDir.getPath + "/" + nodesPackage.replaceAll("\\.", "/") + "/NewNodes.scala")
     if (outfile.exists) outfile.delete()
     outfile.createFile()
+    val keys: Map[String, Property] = schema.nodePropertyByName + ("ID" -> Property("ID", Option.empty, "long", "one"))
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
+      generateNewNodeSource(nodeType, nodeType.keys.map(keys))
     }.mkString("\n")
     outfile.write(s"""$staticHeader
                      |$src
