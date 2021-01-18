@@ -1279,6 +1279,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |trait NewNode extends CpgNode {
          |  def properties: Map[String, Any]
          |}
+         |
+         |trait NewNodeBuilder {
+         |  def id : Long
+         |  def build : NewNode
+         |}
          |""".stripMargin
 
     def generateNewNodeSource(nodeType: NodeType, keys: List[Property]) = {
@@ -1365,9 +1370,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
         .mkString("\n")
 
       s"""
-         |class New${nodeType.className}Builder {
+         |class New${nodeType.className}Builder extends NewNodeBuilder {
          |   var result : New${nodeType.className} = New${nodeType.className}()
-         |   var id : Long = -1L
+         |   private var _id : Long = -1L
+         |   def id: Long = _id
+         |   def id(x: Long): New${nodeType.className}Builder = { _id = x; this }
          |
          |   $builderSetters
          |
