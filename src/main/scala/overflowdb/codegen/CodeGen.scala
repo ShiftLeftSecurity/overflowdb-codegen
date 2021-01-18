@@ -1360,19 +1360,13 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}""".stripMargin
       }
 
-      val builderSetters = fieldDescriptions
+      val builderSetters = (("id", "Long", "-1L") :: fieldDescriptions)
         .map {case (name, typ, _) => s"def ${camelCase(name)}(x : $typ) : New${nodeType.className}Builder = { result = result.copy($name = x); this }" }
         .mkString("\n")
 
       s"""
          |class New${nodeType.className}Builder {
          |   var result : New${nodeType.className} = New${nodeType.className}()
-         |   private var _id : Long = -1L
-         |   def id = _id
-         |   def id(newId : Long) : New${nodeType.className}Builder {
-         |      _id = newId
-         |      return this
-         |   }
          |
          |   $builderSetters
          |
