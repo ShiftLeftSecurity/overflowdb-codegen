@@ -1292,7 +1292,6 @@ class CodeGen(schemaFile: String, basePackage: String) {
         val optionalDefault =
           if (getHigherType(key) == HigherValueType.Option) Some("None")
           else if (key.valueType == "int") Some("-1")
-          else if (key.valueType == "long") Some("-1L")
           else if (getHigherType(key) == HigherValueType.None && key.valueType == "string")
             Some("\"\"")
           else if (getHigherType(key) == HigherValueType.None && key.valueType == "boolean")
