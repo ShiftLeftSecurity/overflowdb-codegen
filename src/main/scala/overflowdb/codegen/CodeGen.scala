@@ -1282,7 +1282,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
 
     def generateNewNodeSource(nodeType: NodeType, keys: List[Property]) = {
-      var fieldDescriptions = List[(String, String, Option[String])]() // fieldName, type, de
+      var fieldDescriptions = List[(String, String, Option[String])]() // fieldName, type, default
       for (key <- keys) {
         val optionalDefault =
           if (getHigherType(key) == HigherValueType.Option) Some("None")
