@@ -1279,6 +1279,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |trait NewNode extends CpgNode {
          |  def properties: Map[String, Any]
          |}
+         |
+         |trait NewNodeBuilder {
+         |  def id : Long
+         |  def build : NewNode
+         |}
          |""".stripMargin
 
     def generateNewNodeSource(nodeType: NodeType, keys: List[Property]) = {
@@ -1366,8 +1371,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
         .mkString("\n")
 
       s"""
-         |class New${nodeType.className}Builder {
+         |class New${nodeType.className}Builder extends NewNodeBuilder {
          |   var result : New${nodeType.className} = New${nodeType.className}()
+         |   private var _id : Long = -1L
+         |   def id: Long = _id
+         |   def id(x: Long): New${nodeType.className}Builder = { _id = x; this }
          |
          |   $builderSetters
          |
@@ -1391,9 +1399,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
     val outfile = File(outputDir.getPath + "/" + nodesPackage.replaceAll("\\.", "/") + "/NewNodes.scala")
     if (outfile.exists) outfile.delete()
     outfile.createFile()
-    val keys: Map[String, Property] = schema.nodePropertyByName + ("ID" -> Property("ID", Option.empty, "long", "one"))
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.keys.map(keys))
+      generateNewNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
     }.mkString("\n")
     outfile.write(s"""$staticHeader
                      |$src
