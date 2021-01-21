@@ -1282,6 +1282,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |
          |trait NewNodeBuilder {
          |  def id : Long
+         |  def id(x: Long) : NewNodeBuilder
          |  def build : NewNode
          |}
          |""".stripMargin
