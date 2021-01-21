@@ -1282,6 +1282,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |
          |trait NewNodeBuilder {
          |  def id : Long
+         |  def id(x: Long) : NewNodeBuilder
          |  def build : NewNode
          |}
          |""".stripMargin
@@ -1379,7 +1380,21 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |   $builderSetters
          |
          |   def build : New${nodeType.className} = result
-         | }
+         |
+         |   def canEqual(other: Any): Boolean = other.isInstanceOf[New${nodeType.className}Builder]
+         |
+         |   override def equals(other: Any): Boolean = other match {
+         |      case that: New${nodeType.className}Builder => (that canEqual this) && _id == that._id
+         |      case _ => false
+         |   }
+         |
+         |   override def hashCode(): Int = {
+         |      val state = Seq(_id)
+         |      state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
+         |   }
+         |
+         |   override def toString = s"New${nodeType.className}Builder($${_id})"
+         |}
          |
          |object New${nodeType.className}{
          |  def apply(${defaultsNoVal}): New${nodeType.className} = new New${nodeType.className}($paramId)
