@@ -231,7 +231,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType.name, direction)
-      } yield s"def $accessor(): JIterator[StoredNode] = { JCollections.emptyIterator() }"
+      } yield s"def $accessor: JIterator[StoredNode] = { JCollections.emptyIterator() }"
 
       val keyBasedTraits =
         schema.nodeKeys.map { property =>
@@ -1042,7 +1042,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
       val neighborDelegators = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, _) =>
         val genericEdgeBasedDelegators =
-          s"override def $accessorNameForEdge(): JIterator[StoredNode] = get().$accessorNameForEdge"
+          s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
 
         val specificNodeBasedDelegators = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality)  =>
@@ -1103,9 +1103,9 @@ class CodeGen(schemaFile: String, basePackage: String) {
               case Cardinality.List =>
                 s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
               case Cardinality.ZeroOrOne =>
-                s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption"
+                s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption()"
               case Cardinality.One =>
-                s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next"
+                s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next()"
               case Cardinality.ISeq => ???
             }
         }
