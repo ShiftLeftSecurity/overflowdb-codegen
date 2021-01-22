@@ -68,7 +68,7 @@ object Helpers {
       val unsetValue = propertyUnsetValue(property)
 
       s"""private var _$name: $tpe = $unsetValue
-         |def $name(): $tpe = _$name""".stripMargin
+         |def $name: $tpe = _$name""".stripMargin
     }.mkString("\n\n")
 
   def propertyUnsetValue(property: Property): String =
