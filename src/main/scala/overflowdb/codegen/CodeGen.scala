@@ -81,7 +81,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
     writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
     writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
 
-    List("dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
+    List("controlStructureTypes", "dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
       writeStringConstants(element.capitalize, schema.constantsFromElement(element))
     }
     List("edgeKeys", "nodeKeys").foreach { element =>
@@ -701,11 +701,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |import overflowdb.traversal.Traversal
          |import scala.collection.immutable
          |
-         |trait ${className}Base extends CpgNode 
-         |$mixins 
+         |trait ${className}Base extends CpgNode
+         |$mixins
          |$mixinTraitsForBase
          |
-         |trait $className extends StoredNode with ${className}Base 
+         |trait $className extends StoredNode with ${className}Base
          |$mixinTraits
          |
          |${generatePropertyTraversals(className, properties)}
