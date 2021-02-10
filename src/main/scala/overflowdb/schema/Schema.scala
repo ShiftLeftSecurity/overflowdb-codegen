@@ -62,19 +62,18 @@ class Schema(val basePackage: String,
              val constants: Seq[Constant]) {
 
   /* schema only specifies `node.outEdges` - this builds a reverse map (essentially `node.inEdges`) along with the outNodes */
-  lazy val nodeToInEdgeContexts: Map[String, Seq[InEdgeContext]] = {
-    case class NeighborContext(neighborNode: NodeType, edge: String, outNode: OutNode)
+  lazy val nodeToInEdgeContexts: Map[NodeType, Seq[InEdgeContext]] = {
+    case class NeighborContext(neighborNode: NodeType, edge: EdgeType, outNode: OutNode)
     val tuples: Seq[NeighborContext] =
       for {
         nodeType <- nodeTypes
         outEdge <- nodeType.outEdges
         inNode <- outEdge.inNodes
-      } yield NeighborContext(inNode.node, outEdge.edgeName, OutNode(nodeType.name, inNode.cardinality))
+      } yield NeighborContext(inNode.node, outEdge.edge, OutNode(nodeType.name, inNode.cardinality))
 
     /* grouping above tuples by `neighborNodeType` and `inEdgeName`
      * we use this from sbt, so unfortunately we can't yet use scala 2.13's `groupMap` :( */
-    type NeighborNodeLabel = String
-    val grouped: Map[NeighborNodeLabel, Map[EdgeType, Seq[OutNode]]] =
+    val grouped: Map[NodeType, Map[EdgeType, Seq[OutNode]]] =
       tuples.groupBy(_.neighborNode).mapValues(_.groupBy(_.edge).mapValues(_.map(_.outNode)).toMap)
 
     grouped.mapValues { inEdgesWithNeighborNodes =>
@@ -120,8 +119,8 @@ case class NodeType(name: String,
     ???
 }
 
-case class OutEdgeEntry(edgeName: String, inNodes: Seq[InNode]) {
-  lazy val className = Helpers.camelCaseCaps(edgeName)
+case class OutEdgeEntry(edge: EdgeType, inNodes: Seq[InNode]) {
+  lazy val className = Helpers.camelCaseCaps(edge.name)
 }
 
 case class InNode(node: NodeType, cardinality: String = "n:n") // TODO express in proper types
@@ -151,7 +150,6 @@ case class EdgeType(name: String, comment: Option[String], properties: Seq[Prope
 
   def addProperties(additionalProperties: Property*): EdgeType =
     copy(properties = properties ++ additionalProperties)
-
 }
 
 case class Property(name: String, comment: Option[String], valueType: String, cardinality: Cardinality)

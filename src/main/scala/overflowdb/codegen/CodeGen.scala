@@ -250,8 +250,8 @@ class CodeGen(schema: Schema) {
     baseDir.toJava
   }
 
-  def neighborAccessorNameForEdge(edgeTypeName: String, direction: Direction.Value): String =
-    "_" + camelCase(edgeTypeName + "_" + direction)
+  def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
+    "_" + camelCase(edge.className + "_" + direction)
 
   def writeNodeFiles(outputDir: JFile): JFile = {
     val staticHeader =
@@ -272,7 +272,7 @@ class CodeGen(schema: Schema) {
       val genericNeighborAccessors = for {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
-        accessor = neighborAccessorNameForEdge(edgeType.name, direction)
+        accessor = neighborAccessorNameForEdge(edgeType, direction)
       } yield s"def $accessor: JIterator[StoredNode] = { JCollections.emptyIterator() }"
 
       val keyBasedTraits =
@@ -783,7 +783,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val outEdges: Seq[OutEdgeEntry] = nodeType.outEdges
-      val inEdges: Seq[InEdgeContext] = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Seq.empty)
+      val inEdges: Seq[InEdgeContext] = schema.nodeToInEdgeContexts.getOrElse(nodeType, Seq.empty)
 
       val outEdgeLayouts = outEdges.map(edge => s"edges.${edge.className}.layoutInformation").mkString(", ")
       val inEdgeLayouts = inEdges.map(edgeContext => s"edges.${edgeContext.edge.className}.layoutInformation").mkString(", ")
@@ -834,14 +834,14 @@ class CodeGen(schema: Schema) {
       val mixinTraits: String =
         nodeType.extendz
           .map { traitName =>
-            s"with ${camelCaseCaps(traitName)}"
+            s"with ${traitName.className}"
           }
           .mkString(" ")
 
       val mixinTraitsForBase: String =
         nodeType.extendz
           .map { traitName =>
-            s"with ${camelCaseCaps(traitName)}Base"
+            s"with ${traitName.className}Base"
           }
           .mkString(" ")
 
@@ -1043,7 +1043,7 @@ class CodeGen(schema: Schema) {
         var offsetPos = -1
         def nextOffsetPos = { offsetPos += 1; offsetPos }
 
-        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Nil)
+        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil)
 
         def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
           val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
@@ -1051,8 +1051,8 @@ class CodeGen(schema: Schema) {
         }
 
         val neighborOutInfos =
-          nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
-            val viaEdgeAndDirection = camelCase(edgeName) + "Out"
+          nodeType.outEdges.map { case OutEdgeEntry(edge, inNodes) =>
+            val viaEdgeAndDirection = edge.className + "Out"
             val neighborNodeInfos = inNodes.map { inNode =>
               val nodeName = inNode.node.name
               val cardinality = inNode.cardinality match {
@@ -1063,7 +1063,7 @@ class CodeGen(schema: Schema) {
               }
               createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection, cardinality)
             }.toSet
-            NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.OUT), neighborNodeInfos, nextOffsetPos)
+            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.OUT), neighborNodeInfos, nextOffsetPos)
           }
 
         val neighborInInfos =
@@ -1081,7 +1081,7 @@ class CodeGen(schema: Schema) {
               }
               createNeighborNodeInfo(neighborNode.name, neighborNode.className, viaEdgeAndDirection, cardinality)
             }
-            NeighborInfo(neighborAccessorNameForEdge(edge.name, Direction.IN), neighborNodeInfos, nextOffsetPos)
+            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfos, nextOffsetPos)
           }
 
         neighborOutInfos ++ neighborInInfos
