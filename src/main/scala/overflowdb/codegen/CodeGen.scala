@@ -27,8 +27,7 @@ class CodeGen(schema: Schema) {
     def writeConstantsFile(className: String, constants: Seq[Constant])(mkSrc: Constant => String): Unit = {
       val src = constants.map { constant =>
         val documentation =
-          if (constant.comment.nonEmpty) s"""/** ${constant.comment} */"""
-          else ""
+          constant.comment.map(comment => s"""/** $comment */""").getOrElse("")
         s""" $documentation
            | ${mkSrc(constant)}
            |""".stripMargin
@@ -117,7 +116,7 @@ class CodeGen(schema: Schema) {
       val factories = {
         val edgeFactories: Seq[String] = schema.edgeTypes.map(edgeType => edgeType.className + ".factory")
         s"""object Factories {
-           |  lazy val all: Seq[EdgeFactory[_]] = $edgeFactories
+           |  lazy val all: List[EdgeFactory[_]] = $edgeFactories
            |  lazy val allAsJava: java.util.List[EdgeFactory[_]] = all.asJava
            |}
            |""".stripMargin
