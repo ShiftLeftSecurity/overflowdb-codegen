@@ -300,11 +300,21 @@ class CodeGen(schemaFile: String, basePackage: String) {
         s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
       }
 
+      def implicitForNewNodeBuilder(name : String) = {
+        val newNodeName = s"New${name}"
+        val newNodeBuilderName = s"${newNodeName}Builder"
+        s"implicit def ${newNodeBuilderName}To${newNodeName}(x : $newNodeBuilderName) : $newNodeName = x.build"
+      }
+
       val implicitsForNodeTraversals =
         schema.nodeTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
 
       val implicitsForNodeBaseTypeTraversals =
         schema.nodeBaseTraits.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+
+      val nonBaseTypes = (schema.nodeTypes.map(_.className).toSet -- schema.nodeBaseTraits.map(_.className).toSet).toList.sorted
+      val implicitsForNewNodeBuilders =
+        nonBaseTypes.map(implicitForNewNodeBuilder).mkString("\n")
 
       s"""package $nodesPackage
          |
@@ -312,6 +322,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |
          |trait NodeTraversalImplicits extends NodeBaseTypeTraversalImplicits {
          |  $implicitsForNodeTraversals
+         |
+         |  $implicitsForNewNodeBuilders
          |}
          |
          |// lower priority implicits for base types
