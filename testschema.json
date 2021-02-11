@@ -1,0 +1,516 @@
+{
+  "nodeKeys" : [
+    {
+      "id" : 5,
+      "name" : "NAME",
+      "comment" : "Name of represented object, e.g., method name (e.g. \"run\")",
+      "valueType" : "string",
+      "cardinality" : "one"
+    },
+    {
+      "id" : 4,
+      "name" : "ORDER",
+      "comment" : "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code",
+      "valueType" : "int",
+      "cardinality" : "one"
+    }
+  ],
+  "edgeKeys" : [
+    {
+      "id" : 6,
+      "name" : "LOCAL_NAME",
+      "comment" : "Local name of referenced CONTAINED node. This key is deprecated.",
+      "valueType" : "string",
+      "cardinality" : "zeroOrOne"
+    }
+  ],
+  "nodeTypes" : [
+    {
+      "id" : 41,
+      "name" : "NAMESPACE_BLOCK",
+      "keys" : [],
+      "comment" : "A reference to a namespace",
+      "is" : ["AST_NODE"],
+      "outEdges" : []
+    },
+    {
+      "id" : 38,
+      "name" : "FILE",
+      "keys" : [],
+      "comment" : "Node representing a source file - the root of the AST",
+      "outEdges" : [],
+      "is" : ["AST_NODE"]
+    }
+  ],
+  "nodeBaseTraits" : [
+    {
+      "name" : "AST_NODE",
+      "comment" : "Any node that can exist in an abstract syntax tree",
+      "hasKeys" : [
+        "ORDER"
+      ]
+    }
+  ],
+  "edgeTypes" : [
+    {
+      "id" : 3,
+      "name" : "AST",
+      "comment" : "Syntax tree edge",
+      "keys" : []
+    }
+  ],
+  "languages" : [
+    {
+      "id" : 1,
+      "name" : "JAVA",
+      "comment" : ""
+    },
+    {
+      "id" : 2,
+      "name" : "JAVASCRIPT",
+      "comment" : ""
+    },
+    {
+      "id" : 3,
+      "name" : "GOLANG",
+      "comment" : ""
+    },
+    {
+      "id" : 4,
+      "name" : "CSHARP",
+      "comment" : ""
+    },
+    {
+      "id" : 5,
+      "name" : "C",
+      "comment" : ""
+    },
+    {
+      "id" : 6,
+      "name" : "PYTHON",
+      "comment" : ""
+    },
+    {
+      "id" : 7,
+      "name" : "LLVM",
+      "comment" : ""
+    },
+    {
+      "id" : 8,
+      "name" : "PHP",
+      "comment" : ""
+    }
+  ],
+  "modifierTypes" : [
+    {
+      "id" : 1,
+      "name" : "STATIC",
+      "comment" : "The static modifier"
+    },
+    {
+      "id" : 2,
+      "name" : "PUBLIC",
+      "comment" : "The public modifier"
+    },
+    {
+      "id" : 3,
+      "name" : "PROTECTED",
+      "comment" : "The protected modifier"
+    },
+    {
+      "id" : 4,
+      "name" : "PRIVATE",
+      "comment" : "The private modifier"
+    },
+    {
+      "id" : 5,
+      "name" : "ABSTRACT",
+      "comment" : "The abstract modifier"
+    },
+    {
+      "id" : 6,
+      "name" : "NATIVE",
+      "comment" : "The native modifier"
+    },
+    {
+      "id" : 7,
+      "name" : "CONSTRUCTOR",
+      "comment" : "The constructor modifier"
+    },
+    {
+      "id" : 8,
+      "name" : "VIRTUAL",
+      "comment" : "The virtual modifier"
+    }
+  ],
+  "frameworks" : [
+    {
+      "id" : 3,
+      "name" : "SPRING",
+      "comment" : "Java spring framework"
+    },
+    {
+      "id" : 11,
+      "name" : "ASP_NET_MVC",
+      "comment" : "Microsoft ASP.NET MVC"
+    },
+    {
+      "id" : 12,
+      "name" : "JAXWS",
+      "comment" : "JAX-WS"
+    },
+    {
+      "id" : 14,
+      "name" : "JAVA_INTERNAL",
+      "comment" : "Framework facilities directly provided by Java"
+    },
+    {
+      "id" : 13,
+      "name" : "ASP_NET_WEB_UI",
+      "comment" : "Microsoft ASP.NET Web UI"
+    },
+    {
+      "id" : 7,
+      "name" : "JAXRS",
+      "comment" : "JAX-RS"
+    },
+    {
+      "id" : 15,
+      "name" : "DROPWIZARD",
+      "comment" : "Dropwizard framework"
+    },
+    {
+      "id" : 1,
+      "name" : "PLAY",
+      "comment" : "Play framework"
+    },
+    {
+      "id" : 8,
+      "name" : "SPARK",
+      "comment" : "Spark micro web framework"
+    },
+    {
+      "id" : 4,
+      "name" : "VERTX",
+      "comment" : "Polyglot event-driven framework"
+    },
+    {
+      "id" : 5,
+      "name" : "JSF",
+      "comment" : "JavaServer Faces"
+    },
+    {
+      "id" : 10,
+      "name" : "ASP_NET_WEB_API",
+      "comment" : "Microsoft ASP.NET Web API"
+    },
+    {
+      "id" : 16,
+      "name" : "WCF",
+      "comment" : "WCF HTTP and REST"
+    },
+    {
+      "id" : 2,
+      "name" : "GWT",
+      "comment" : "Google web toolkit"
+    },
+    {
+      "id" : 6,
+      "name" : "SERVLET",
+      "comment" : "Java Servlet based frameworks"
+    },
+    {
+      "id" : 9,
+      "name" : "ASP_NET_CORE",
+      "comment" : "Microsoft ASP.NET Core"
+    }
+  ],
+  "operatorNames" : [
+    {
+      "operator" : "indirectFieldAccess",
+      "name" : "<operator>.indirectFieldAccess",
+      "comment" : "Accesses (loads/stores) to a field/member through a pointer to a struct/class. Typically, C/C++ arrow-operator. The field selection works the same way as for fieldAccess. For the sake of data-flow tracking, this is the same as first dereferencing the pointer and then accessing the field. Handling of this operator is special-cased in the back-end"
+    },
+    {
+      "operator" : "addition",
+      "name" : "<operator>.addition"
+    },
+    {
+      "operator" : "assignmentAnd",
+      "name" : "<operators>.assignmentAnd"
+    },
+    {
+      "operator" : "division",
+      "name" : "<operator>.division"
+    },
+    {
+      "operator" : "getElementPtr",
+      "name" : "<operator>.getElementPtr",
+      "comment" : "Derives a pointer to a field of a struct from a pointer to the entire struct. This corresponds to the C idiom &(ptr->field), which does not access memory. The field selection works the same way as for fieldAccess. This operator is currently only used directly by the LLVM language. Handling of this operator is special-cased in the back-end"
+    },
+    {
+      "operator" : "assignmentDivision",
+      "name" : "<operator>.assignmentDivision"
+    },
+    {
+      "operator" : "assignmentPlus",
+      "name" : "<operator>.assignmentPlus"
+    },
+    {
+      "operator" : "assignmentExponentiation",
+      "name" : "<operators>.assignmentExponentiation"
+    },
+    {
+      "operator" : "indirectIndexAccess",
+      "name" : "<operator>.indirectIndexAccess",
+      "comment" : "Accesses an element of an Array through a pointer. The index selection works similar as for fieldAccess: However, the index must be an integer. If the second argument is a FIELD_ACCESS resp. LITERAL then its CANONICAL_NAME resp. CODE field is parsed as an integer; on parsing failure, the access is considered unpredictable and we overtaint. This is equivalent to a pointerShift followed by an indirection. This operator is currently only used by C-style languages. This behavior allows the backend to infer that ptr[0] and *ptr refer to the same object. Handling of this operator is special-cased in the back-end"
+    },
+    {
+      "operator" : "pointerShift",
+      "name" : "<operator>.pointerShift",
+      "comment" : "Shifts a pointer. In terms of CPG, the first argument is the pointer and the second argument is the index. The index selection works the same way as for indirectIndexAccess. This operator is currently only used directly by the LLVM language, but it is also used internally for C. For example, pointerShift(ptr, 7) is equivalent to &(ptr[7]). Handling of this operator is special-cased in the back-end"
+    },
+    {
+      "operator" : "xor",
+      "name" : "<operator>.xor"
+    },
+    {
+      "operator" : "preDecrement",
+      "name" : "<operator>.preDecrement"
+    },
+    {
+      "operator" : "indirectComputedMemberAccess",
+      "name" : "<operator>.indirectComputedMemberAccess",
+      "comment" : "Deprecated. Formerly in C++: `a->*b` and a[b] in Java"
+    },
+    {
+      "operator" : "assignmentModulo",
+      "name" : "<operators>.assignmentModulo"
+    },
+    {
+      "operator" : "conditional",
+      "name" : "<operator>.conditional",
+      "comment" : "E.g. `a ? consequent : alternate`. In future probably also used for if statements"
+    },
+    {
+      "operator" : "memberAccess",
+      "name" : "<operator>.memberAccess",
+      "comment" : "Deprecated. Formerly in C: `a.b` but not! in Java"
+    },
+    {
+      "operator" : "multiplication",
+      "name" : "<operator>.multiplication"
+    },
+    {
+      "operator" : "assignmentShiftLeft",
+      "name" : "<operators>.assignmentShiftLeft"
+    },
+    {
+      "operator" : "assignmentLogicalShiftRight",
+      "name" : "<operators>.assignmentLogicalShiftRight"
+    },
+    {
+      "operator" : "assignmentXor",
+      "name" : "<operators>.assignmentXor"
+    },
+    {
+      "operator" : "logicalAnd",
+      "name" : "<operator>.logicalAnd"
+    },
+    {
+      "operator" : "indirectMemberAccess",
+      "name" : "<operator>.indirectMemberAccess",
+      "comment" : "Deprecated. Formerly in C: `a->b` and `a.b` in Java"
+    },
+    {
+      "operator" : "delete",
+      "name" : "<operator>.delete",
+      "comment" : "Deletes a property from a namespace. E.g. `a=3; delete a; a == undefined;"
+    },
+    {
+      "operator" : "postIncrement",
+      "name" : "<operator>.postIncrement"
+    },
+    {
+      "operator" : "indexAccess",
+      "name" : "<operator>.indexAccess",
+      "comment" : "Accesses a container (e.g. array or associative array / dict / map) at an index. The index selection works the same way as for fieldAccess. Handling of this operator is special-cased in the back-end"
+    },
+    {
+      "operator" : "plus",
+      "name" : "<operator>.plus",
+      "comment" : "E.g. `a = +b`"
+    },
+    {
+      "operator" : "lessEqualsThan",
+      "name" : "<operator>.lessEqualsThan"
+    },
+    {
+      "operator" : "computedMemberAccess",
+      "name" : "<operator>.computedMemberAccess",
+      "comment" : "Deprecated. Formerly in C: `a[b]` but not! in Java"
+    },
+    {
+      "operator" : "logicalNot",
+      "name" : "<operator>.logicalNot"
+    },
+    {
+      "operator" : "assignmentArithmeticShiftRight",
+      "name" : "<operators>.assignmentArithmeticShiftRight"
+    },
+    {
+      "operator" : "logicalOr",
+      "name" : "<operator>.logicalOr"
+    },
+    {
+      "operator" : "arithmeticShiftRight",
+      "name" : "<operator>.arithmeticShiftRight",
+      "comment" : "Shift right preserving the sign"
+    },
+    {
+      "operator" : "lessThan",
+      "name" : "<operator>.lessThan"
+    },
+    {
+      "operator" : "assignmentOr",
+      "name" : "<operators>.assignmentOr"
+    },
+    {
+      "operator" : "postDecrement",
+      "name" : "<operator>.postDecrement"
+    },
+    {
+      "operator" : "assignment",
+      "name" : "<operator>.assignment"
+    },
+    {
+      "operator" : "not",
+      "name" : "<operator>.not"
+    },
+    {
+      "operator" : "assignmentMinus",
+      "name" : "<operator>.assignmentMinus"
+    },
+    {
+      "operator" : "shiftLeft",
+      "name" : "<operator>.shiftLeft"
+    },
+    {
+      "operator" : "cast",
+      "name" : "<operator>.cast",
+      "comment" : "Type casts of any sort"
+    },
+    {
+      "operator" : "subtraction",
+      "name" : "<operator>.subtraction"
+    },
+    {
+      "operator" : "preIncrement",
+      "name" : "<operator>.preIncrement"
+    },
+    {
+      "operator" : "modulo",
+      "name" : "<operator>.modulo"
+    },
+    {
+      "operator" : "minus",
+      "name" : "<operator>.minus",
+      "comment" : "E.g. `a = -b`"
+    },
+    {
+      "operator" : "indirection",
+      "name" : "<operator>.indirection",
+      "comment" : "Accesses through a pointer (load/store), i.e. dereferences it. Typically the star-operator in C/C++. Pairs of addressOf and indirection operators cancel each other. Handling of this operator is special-cased in the back-end"
+    },
+    {
+      "operator" : "exponentiation",
+      "name" : "<operator>.exponentiation"
+    },
+    {
+      "operator" : "assignmentMultiplication",
+      "name" : "<operator>.assignmentMultiplication"
+    },
+    {
+      "operator" : "logicalShiftRight",
+      "name" : "<operator>.logicalShiftRight",
+      "comment" : "Shift right padding with zeros"
+    },
+    {
+      "operator" : "or",
+      "name" : "<operator>.or"
+    },
+    {
+      "operator" : "greaterThan",
+      "name" : "<operator>.greaterThan"
+    },
+    {
+      "operator" : "sizeOf",
+      "name" : "<operator>.sizeOf",
+      "comment" : "Returns the size of a given object"
+    },
+    {
+      "operator" : "equals",
+      "name" : "<operator>.equals"
+    },
+    {
+      "operator" : "notEquals",
+      "name" : "<operator>.notEquals"
+    },
+    {
+      "operator" : "greaterEqualsThan",
+      "name" : "<operator>.greaterEqualsThan"
+    },
+    {
+      "operator" : "instanceOf",
+      "name" : "<operator>.instanceOf"
+    },
+    {
+      "operator" : "compare",
+      "name" : "<operator>.compare",
+      "comment" : "Comparison between two arguments with the results: 0 == equal, negative == left < right, positive == left > right"
+    },
+    {
+      "operator" : "fieldAccess",
+      "name" : "<operator>.fieldAccess",
+      "comment" : "Returns or sets a field/member of a struct/class. Typically, the dot-operator. In terms of CPG, the first argument is the struct/class and the second argument is either a FIELD_IDENTIFIER node, a LITERAL node or an arbitrary expression. If it is a FIELD_IDENTIFIER, then the string contained in the CANONICAL_NAME field of this FIELD_IDENTIFIER node selects which field/member is accessed. If it is a LITERAL node, then its CODE selects which field/member is selected. In any other case the access is considered unpredictable by the backend, and we overtaint. indexAccess and fieldAccess live in the same space, such that e.g. obj.field and obj[\"field\"] refer to the same target (as is correct in e.g. javascript). Handling of this operator is special-cased in the back-end"
+    },
+    {
+      "operator" : "addressOf",
+      "name" : "<operator>.addressOf",
+      "comment" : "Returns the address of a given object. Pairs of addressOf and indirection operators cancel each other. Handling of this operator is special-cased in the back-end"
+    },
+    {
+      "operator" : "and",
+      "name" : "<operator>.and"
+    }
+  ],
+  "dispatchTypes" : [
+    {
+      "id" : 1,
+      "name" : "STATIC_DISPATCH",
+      "comment" : "For statically dispatched calls the call target is known before program execution"
+    },
+    {
+      "id" : 2,
+      "name" : "DYNAMIC_DISPATCH",
+      "comment" : "For dynamically dispatched calls the target is determined during runtime"
+    }
+  ],
+  "evaluationStrategies" : [
+    {
+      "id" : 1,
+      "name" : "BY_REFERENCE",
+      "comment" : "A parameter or return of a function is passed by reference which means an address is used behind the scenes"
+    },
+    {
+      "id" : 2,
+      "name" : "BY_SHARING",
+      "comment" : "Only applicable to object parameter or return values. The pointer to the object is passed by value but the object itself is not copied and changes to it are thus propagated out of the method context"
+    },
+    {
+      "id" : 3,
+      "name" : "BY_VALUE",
+      "comment" : "A parameter or return of a function passed by value which means a flat copy is used"
+    }
+  ]
+}
