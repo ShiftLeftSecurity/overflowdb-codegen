@@ -1413,6 +1413,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |}
          |
          |object New${nodeType.className}{
+         |  def apply() : New${nodeType.className}Builder = New${nodeType.className}Builder()
          |  private def apply(${defaultsNoVal}): New${nodeType.className} = new New${nodeType.className}($paramId)
          |}
          |
