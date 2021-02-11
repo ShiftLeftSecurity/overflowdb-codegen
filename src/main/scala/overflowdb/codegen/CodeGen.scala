@@ -1383,6 +1383,10 @@ class CodeGen(schemaFile: String, basePackage: String) {
         .mkString("\n")
 
       s"""
+         |object New${nodeType.className}Builder {
+         |  def apply() : New${nodeType.className}Builder = new New${nodeType.className}Builder()
+         |}
+         |
          |class New${nodeType.className}Builder extends NewNodeBuilder {
          |   var result : New${nodeType.className} = New${nodeType.className}()
          |   private var _id : Long = -1L
