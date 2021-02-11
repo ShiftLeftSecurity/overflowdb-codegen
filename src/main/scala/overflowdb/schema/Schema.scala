@@ -35,9 +35,8 @@ class SchemaBuilder(basePackage: String) {
   def addConstant(name: String, value: String, valueType: String, cardinality: Cardinality, comment: String = ""): Constant =
     addAndReturn(constants, Constant(name, value, stringToOption(comment), valueType, cardinality))
 
-  def build: Schema = {
+  def build: Schema =
     new Schema(basePackage, nodePropertyKeys, edgePropertyKeys, nodeBaseTypes, nodeTypes, edgeTypes, constants)
-  }
 
   private def addAndReturn[A](buffer: mutable.Buffer[A], a: A): A = {
     buffer.append(a)
@@ -115,8 +114,8 @@ case class NodeType(name: String,
   def addProperties(additional: Property*): NodeType =
     copy(properties = properties ++ additional)
 
-  def addOutEdge(outEdge: EdgeType, inNodes: InNode*) =
-    ???
+  def addOutEdge(outEdge: EdgeType, inNodes: InNode*): NodeType =
+    copy(outEdges = outEdges :+ OutEdgeEntry(outEdge, inNodes))
 }
 
 case class OutEdgeEntry(edge: EdgeType, inNodes: Seq[InNode]) {
