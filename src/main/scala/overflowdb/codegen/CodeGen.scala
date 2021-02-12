@@ -1388,7 +1388,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |}
          |
          |class New${nodeType.className}Builder extends NewNodeBuilder {
-         |   var result : New${nodeType.className} = New${nodeType.className}()
+         |   var result : New${nodeType.className} = new New${nodeType.className}()
          |   private var _id : Long = -1L
          |   def id: Long = _id
          |   def id(x: Long): New${nodeType.className}Builder = { _id = x; this }
@@ -1413,11 +1413,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |}
          |
          |object New${nodeType.className}{
-         |  def apply(${defaultsNoVal}): New${nodeType.className} = new New${nodeType.className}($paramId)
-         |
+         |  def apply() : New${nodeType.className}Builder = New${nodeType.className}Builder()
+         |  private def apply(${defaultsNoVal}): New${nodeType.className} = new New${nodeType.className}($paramId)
          |}
          |
-         |case class New${nodeType.className}($defaultsVal) extends NewNode with ${nodeType.className}Base {
+         |case class New${nodeType.className} private[nodes] ($defaultsVal) extends NewNode with ${nodeType.className}Base {
          |  override def label:String = "${nodeType.name}"
          |
          |  $valueMapImpl
