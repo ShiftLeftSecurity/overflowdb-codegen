@@ -1,9 +1,8 @@
 package overflowdb.schema.testschema1
 
+import java.io.File
 import overflowdb.codegen.CodeGen
 import overflowdb.schema.{Cardinality, Constant, SchemaBuilder}
-
-import java.io.File
 
 // TODO create integration test from this
 object TestSchema1 extends App {
@@ -31,14 +30,14 @@ object TestSchema1 extends App {
   //    .addProperties(name, order)
   //    .addOutEdge(ast, InNode(namespaceBlock, "0-1:n"))
 
-  builder.addConstants(category = "DispatchTypes",
+  val dispatchTypes = builder.addConstants(category = "DispatchTypes",
     Constant(name = "STATIC_DISPATCH", value = "STATIC_DISPATCH", valueType = "String",
       comment = "For statically dispatched calls the call target is known before program execution"),
     Constant(name = "DYNAMIC_DISPATCH", value = "DYNAMIC_DISPATCH", valueType = "String",
       comment = "For dynamically dispatched calls the target is determined during runtime ")
   )
 
-  builder.addConstants(category = "Operators",
+  val operators = builder.addConstants(category = "Operators",
     Constant(name = "addition", value = "<operator>.addition", valueType = "String"),
     Constant(name = "pointerShift", value = "<operator>.pointerShift", valueType = "String",
       comment = "Shifts a pointer. In terms of CPG, the first argument is the pointer and the second argument is the index. The index selection works the same way as for indirectIndexAccess. This operator is currently only used directly by the LLVM language, but it is also used internally for C. For example, pointerShift(ptr, 7) is equivalent to &(ptr[7]). Handling of this operator is special-cased in the back-end")

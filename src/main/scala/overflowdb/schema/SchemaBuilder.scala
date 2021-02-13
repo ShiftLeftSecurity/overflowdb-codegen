@@ -31,10 +31,10 @@ class SchemaBuilder(basePackage: String) {
   def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeType =
     addAndReturn(nodeTypes, NodeType(name, stringToOption(comment), id, extendz, containedNodes = Nil))
 
-  def addConstants(category: String, constants: Constant*): SchemaBuilder = {
+  def addConstants(category: String, constants: Constant*): Seq[Constant] = {
     val previousEntries = constantsByCategory.getOrElse(category, Seq.empty)
     constantsByCategory.put(category, previousEntries ++ constants)
-    this
+    constants
   }
 
   def build: Schema =
