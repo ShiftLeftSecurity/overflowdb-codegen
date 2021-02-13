@@ -45,7 +45,3 @@ class SchemaBuilder(basePackage: String) {
     a
   }
 }
-
-trait PartialSchema {
-  def apply(builder: SchemaBuilder): SchemaBuilder
-}
