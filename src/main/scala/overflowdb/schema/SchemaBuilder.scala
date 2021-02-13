@@ -16,10 +16,10 @@ class SchemaBuilder(basePackage: String) {
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
 
-  def addNodePropertyKey(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
+  def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
 
-  def addEdgePropertyKey(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
+  def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
 
   def addNodeBaseType(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeBaseTrait =
@@ -44,4 +44,8 @@ class SchemaBuilder(basePackage: String) {
     buffer.append(a)
     a
   }
+}
+
+trait PartialSchema {
+  def apply(builder: SchemaBuilder): SchemaBuilder
 }
