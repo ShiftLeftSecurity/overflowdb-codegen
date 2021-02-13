@@ -44,3 +44,7 @@ object TestSchema extends App {
   val outputDir = new java.io.File("target")
   new CodeGen(schema.build).run(outputDir)
 }
+
+
+
+//object BaseSchema // extends

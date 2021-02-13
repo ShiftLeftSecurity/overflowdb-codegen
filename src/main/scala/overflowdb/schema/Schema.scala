@@ -1,52 +1,6 @@
 package overflowdb.schema
 
-import overflowdb.codegen.Helpers
-
-import scala.collection.mutable
-import Helpers.stringToOption
-
-/**
- *  TODO future refactorings:
- *  + move lazy val to Helpers, don't import Helpers here
- *  + use valueType: Class[_] ?
- */
-class SchemaBuilder(basePackage: String) {
-  val nodePropertyKeys = mutable.ListBuffer.empty[Property]
-  val edgePropertyKeys = mutable.ListBuffer.empty[Property]
-  val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseTrait]
-  val nodeTypes = mutable.ListBuffer.empty[NodeType]
-  val edgeTypes = mutable.ListBuffer.empty[EdgeType]
-  val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
-
-  def addNodePropertyKey(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
-
-  def addEdgePropertyKey(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
-
-  def addNodeBaseType(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeBaseTrait =
-    addAndReturn(nodeBaseTypes, NodeBaseTrait(name, properties, extendz, stringToOption(comment)))
-
-  def addEdgeType(name: String, comment: String = ""): EdgeType =
-    addAndReturn(edgeTypes, EdgeType(name, stringToOption(comment)))
-
-  def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeType =
-    addAndReturn(nodeTypes, NodeType(name, stringToOption(comment), id, extendz, containedNodes = Nil))
-
-  def addConstants(category: String, constants: Constant*): SchemaBuilder = {
-    val previousEntries = constantsByCategory.getOrElse(category, Seq.empty)
-    constantsByCategory.put(category, previousEntries ++ constants)
-    this
-  }
-
-  def build: Schema =
-    new Schema(basePackage, nodePropertyKeys, edgePropertyKeys, nodeBaseTypes, nodeTypes, edgeTypes, constantsByCategory.toMap)
-
-  private def addAndReturn[A](buffer: mutable.Buffer[A], a: A): A = {
-    buffer.append(a)
-    a
-  }
-}
+import overflowdb.codegen.Helpers._
 
 /**
 * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
@@ -107,7 +61,7 @@ case class NodeType(name: String,
                     properties: Seq[Property] = Nil,
                     outEdges: Seq[OutEdgeEntry] = Nil,
                     containedNodes: Seq[ContainedNode]) {
-  lazy val className = Helpers.camelCaseCaps(name)
+  lazy val className = camelCaseCaps(name)
   lazy val classNameDb = s"${className}Db"
 
   def addProperties(additional: Property*): NodeType =
@@ -118,16 +72,16 @@ case class NodeType(name: String,
 }
 
 case class OutEdgeEntry(edge: EdgeType, inNodes: Seq[InNode]) {
-  lazy val className = Helpers.camelCaseCaps(edge.name)
+  lazy val className = camelCaseCaps(edge.name)
 }
 
 case class InNode(node: NodeType, cardinality: String = "n:n") // TODO express in proper types
 case class OutNode(name: String, cardinality: String = "n:n") { // TODO express in proper types
-  lazy val className = Helpers.camelCaseCaps(name)
+  lazy val className = camelCaseCaps(name)
 }
 
 case class ContainedNode(nodeType: String, localName: String, cardinality: Cardinality) {
-  lazy val nodeTypeClassName = Helpers.camelCaseCaps(nodeType)
+  lazy val nodeTypeClassName = camelCaseCaps(nodeType)
 }
 
 sealed abstract class Cardinality(val name: String)
@@ -144,7 +98,7 @@ object Cardinality {
 }
 
 case class EdgeType(name: String, comment: Option[String], properties: Seq[Property] = Nil) {
-  lazy val className = Helpers.camelCaseCaps(name)
+  lazy val className = camelCaseCaps(name)
 
   def addProperties(additionalProperties: Property*): EdgeType =
     copy(properties = properties ++ additionalProperties)
@@ -153,7 +107,7 @@ case class EdgeType(name: String, comment: Option[String], properties: Seq[Prope
 case class Property(name: String, comment: Option[String], valueType: String, cardinality: Cardinality)
 
 case class NodeBaseTrait(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait], comment: Option[String]) {
-  lazy val className = Helpers.camelCaseCaps(name)
+  lazy val className = camelCaseCaps(name)
 }
 
 case class InEdgeContext(edge: EdgeType, neighborNodes: Set[OutNode])
