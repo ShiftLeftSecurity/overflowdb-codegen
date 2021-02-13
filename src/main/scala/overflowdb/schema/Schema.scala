@@ -179,7 +179,7 @@ case class ProductElement(name: String, accessorSrc: String, index: Int)
 
 case class Constant(name: String, value: String, comment: Option[String], valueType: String)
 object Constant {
-  def apply(name: String, value: String, comment: String, valueType: String): Constant =
+  def apply(name: String, value: String, valueType: String, comment: String = ""): Constant =
     Constant(name, value, stringToOption(comment), valueType)
 
 //  def fromProperty(property: Property) = Constant(property.name, property.name, property.comment, property.valueType, property.cardinality)

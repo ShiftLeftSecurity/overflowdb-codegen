@@ -35,6 +35,12 @@ object TestSchema extends App {
       comment = "For dynamically dispatched calls the target is determined during runtime ")
   )
 
+  schema.addConstants(category = "Operators",
+    Constant(name = "addition", value = "<operator>.addition", valueType = "String"),
+    Constant(name = "pointerShift", value = "<operator>.pointerShift", valueType = "String",
+      comment = "Shifts a pointer. In terms of CPG, the first argument is the pointer and the second argument is the index. The index selection works the same way as for indirectIndexAccess. This operator is currently only used directly by the LLVM language, but it is also used internally for C. For example, pointerShift(ptr, 7) is equivalent to &(ptr[7]). Handling of this operator is special-cased in the back-end")
+  )
+
   val outputDir = new java.io.File("target")
   new CodeGen(schema.build).run(outputDir)
 }

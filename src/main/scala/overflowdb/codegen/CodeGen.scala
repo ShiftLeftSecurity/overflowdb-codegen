@@ -97,6 +97,7 @@ class CodeGen(schema: Schema) {
         s"""public static final String ${constant.name} = "${constant.value}";"""
       }
     }
+    println(s"generated constants for the categories ${schema.constantsByCategory.keys}")
 
     outputDir
   }
