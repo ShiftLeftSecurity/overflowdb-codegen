@@ -1,8 +1,8 @@
 package overflowdb.codegen
 
-import overflowdb.schema.{Cardinality, InNode, SchemaBuilder}
+import overflowdb.schema.{Cardinality, Constant, InNode, SchemaBuilder}
 
-// TODO move to test, or drop
+// TODO create integration test from this
 object TestSchema extends App {
   val schema = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
 
@@ -28,7 +28,12 @@ object TestSchema extends App {
 //    .addProperties(name, order)
 //    .addOutEdge(ast, InNode(namespaceBlock, "0-1:n"))
 
-  // TODO add constants
+  schema.addConstants(category = "DispatchTypes",
+    Constant(name = "STATIC_DISPATCH", value = "STATIC_DISPATCH", valueType = "String",
+      comment = "For statically dispatched calls the call target is known before program execution"),
+    Constant(name = "DYNAMIC_DISPATCH", value = "DYNAMIC_DISPATCH", valueType = "String",
+      comment = "For dynamically dispatched calls the target is determined during runtime ")
+  )
 
   val outputDir = new java.io.File("target")
   new CodeGen(schema.build).run(outputDir)

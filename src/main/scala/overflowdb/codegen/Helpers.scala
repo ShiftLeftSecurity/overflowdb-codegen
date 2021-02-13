@@ -16,6 +16,11 @@ object DefaultEdgeTypes {
 
 object Helpers {
 
+  def stringToOption(s: String): Option[String] = s.trim match {
+    case "" => None
+    case nonEmptyString => Some(nonEmptyString)
+  }
+
   def isNodeBaseTrait(baseTraits: List[NodeBaseTrait], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.Node || baseTraits.map(_.name).contains(nodeName)
 

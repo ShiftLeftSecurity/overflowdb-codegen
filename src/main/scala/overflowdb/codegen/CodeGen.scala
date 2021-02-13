@@ -59,35 +59,30 @@ class CodeGen(schema: Schema) {
       )
     }
 
-    def writeStringConstants(className: String, constants: Seq[Constant]): Unit = {
-      writeConstantsFile(className, constants) { constant =>
-        s"""public static final String ${constant.name} = "${constant.value}";"""
-      }
-    }
+    // TODO revive - commented due to cardinality in constants
+//    def writePropertyKeyConstants(className: String, constants: Seq[Constant]): Unit = {
+//      writeConstantsFile(className, constants) { constant =>
+//        val valueType = constant.valueType
+//        val cardinality = constant.cardinality
+//        val baseType = valueType match {
+//          case "string"  => "String"
+//          case "int"     => "Integer"
+//          case "boolean" => "Boolean"
+//        }
+//        val completeType = cardinality match {
+//          case Cardinality.One       => baseType
+//          case Cardinality.ZeroOrOne => baseType
+//          case Cardinality.List      => s"scala.collection.Seq<$baseType>"
+//          case Cardinality.ISeq => s"immutable.IndexedSeq<$baseType>"
+//        }
+//        s"""public static final PropertyKey<$completeType> ${constant.name} = new PropertyKey<>("${constant.value}");"""
+//      }
+//    }
 
-    def writePropertyKeyConstants(className: String, constants: Seq[Constant]): Unit = {
-      writeConstantsFile(className, constants) { constant =>
-        val valueType = constant.valueType
-        val cardinality = constant.cardinality
-        val baseType = valueType match {
-          case "string"  => "String"
-          case "int"     => "Integer"
-          case "boolean" => "Boolean"
-        }
-        val completeType = cardinality match {
-          case Cardinality.One       => baseType
-          case Cardinality.ZeroOrOne => baseType
-          case Cardinality.List      => s"scala.collection.Seq<$baseType>"
-          case Cardinality.ISeq => s"immutable.IndexedSeq<$baseType>"
-        }
-        s"""public static final PropertyKey<$completeType> ${constant.name} = new PropertyKey<>("${constant.value}");"""
-      }
-    }
-
-    writeStringConstants("NodeKeyNames", schema.nodePropertyKeys.map(Constant.fromProperty))
-    writeStringConstants("EdgeKeyNames", schema.edgePropertyKeys.map(Constant.fromProperty))
-    writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
-    writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
+//    writeStringConstants("NodeKeyNames", schema.nodePropertyKeys.map(Constant.fromProperty))
+//    writeStringConstants("EdgeKeyNames", schema.edgePropertyKeys.map(Constant.fromProperty))
+//    writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
+//    writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
 
     // TODO implement differently: this is how it worked with generic json
 //    List("controlStructureTypes", "dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
@@ -97,6 +92,11 @@ class CodeGen(schema: Schema) {
 //      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
 //    }
 //    writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
+    schema.constantsByCategory.foreach { case (category, constants) =>
+      writeConstantsFile(category, constants) { constant =>
+        s"""public static final String ${constant.name} = "${constant.value}";"""
+      }
+    }
 
     outputDir
   }

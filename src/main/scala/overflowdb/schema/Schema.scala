@@ -3,6 +3,7 @@ package overflowdb.schema
 import overflowdb.codegen.Helpers
 
 import scala.collection.mutable
+import Helpers.stringToOption
 
 /**
  *  TODO future refactorings:
@@ -15,7 +16,7 @@ class SchemaBuilder(basePackage: String) {
   val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseTrait]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
-  val constants  = mutable.ListBuffer.empty[Constant]
+  val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
 
   def addNodePropertyKey(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
@@ -32,20 +33,18 @@ class SchemaBuilder(basePackage: String) {
   def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeType =
     addAndReturn(nodeTypes, NodeType(name, stringToOption(comment), id, extendz, containedNodes = Nil))
 
-  def addConstant(name: String, value: String, valueType: String, cardinality: Cardinality, comment: String = ""): Constant =
-    addAndReturn(constants, Constant(name, value, stringToOption(comment), valueType, cardinality))
+  def addConstants(category: String, constants: Constant*): SchemaBuilder = {
+    val previousEntries = constantsByCategory.getOrElse(category, Seq.empty)
+    constantsByCategory.put(category, previousEntries ++ constants)
+    this
+  }
 
   def build: Schema =
-    new Schema(basePackage, nodePropertyKeys, edgePropertyKeys, nodeBaseTypes, nodeTypes, edgeTypes, constants)
+    new Schema(basePackage, nodePropertyKeys, edgePropertyKeys, nodeBaseTypes, nodeTypes, edgeTypes, constantsByCategory.toMap)
 
   private def addAndReturn[A](buffer: mutable.Buffer[A], a: A): A = {
     buffer.append(a)
     a
-  }
-
-  private def stringToOption(s: String): Option[String] = s.trim match {
-    case "" => None
-    case nonEmptyString => Some(nonEmptyString)
   }
 }
 
@@ -58,7 +57,7 @@ class Schema(val basePackage: String,
              val nodeBaseTraits: Seq[NodeBaseTrait],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
-             val constants: Seq[Constant]) {
+             val constantsByCategory: Map[String, Seq[Constant]]) {
 
   /* schema only specifies `node.outEdges` - this builds a reverse map (essentially `node.inEdges`) along with the outNodes */
   lazy val nodeToInEdgeContexts: Map[NodeType, Seq[InEdgeContext]] = {
@@ -178,9 +177,12 @@ object DefaultEdgeTypes {
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)
 
-case class Constant(name: String, value: String, comment: Option[String], valueType: String, cardinality: Cardinality)
+case class Constant(name: String, value: String, comment: Option[String], valueType: String)
 object Constant {
-  def fromProperty(property: Property) = Constant(property.name, property.name, property.comment, property.valueType, property.cardinality)
-  def fromNodeType(tpe: NodeType) = Constant(tpe.name, tpe.name, tpe.comment, tpe.className, Cardinality.One) //TODO really cardinality one?
-  def fromEdgeType(tpe: EdgeType) = Constant(tpe.name, tpe.name, tpe.comment, tpe.className, Cardinality.One) //TODO really cardinality one?
+  def apply(name: String, value: String, comment: String, valueType: String): Constant =
+    Constant(name, value, stringToOption(comment), valueType)
+
+//  def fromProperty(property: Property) = Constant(property.name, property.name, property.comment, property.valueType, property.cardinality)
+//  def fromNodeType(tpe: NodeType) = Constant(tpe.name, tpe.name, tpe.comment, tpe.className, Cardinality.One) //TODO really cardinality one?
+//  def fromEdgeType(tpe: EdgeType) = Constant(tpe.name, tpe.name, tpe.comment, tpe.className, Cardinality.One) //TODO really cardinality one?
 }
