@@ -8,13 +8,6 @@
       "cardinality" : "one"
     },
     {
-      "id" : 814,
-      "name" : "CATEGORIES",
-      "valueType" : "string",
-      "cardinality" : "list",
-      "comment" : ""
-    },
-    {
       "id" : 120,
       "name" : "HASH",
       "comment" : "Hash value of the artifact that this CPG is built from.",
@@ -64,11 +57,11 @@
       "cardinality" : "zeroOrOne"
     },
     {
-      "id" : 815,
-      "name" : "EVAL_TYPE",
+      "id" : 27,
+      "name" : "CONTROL_STRUCTURE_TYPE",
+      "comment" : "Indicates the control structure type. See controlStructureTypes",
       "valueType" : "string",
-      "cardinality" : "one",
-      "comment" : ""
+      "cardinality" : "one"
     },
     {
       "id" : 107,
@@ -449,13 +442,6 @@
       "cardinality" : "one"
     },
     {
-      "id" : 813,
-      "name" : "PATTERN",
-      "valueType" : "string",
-      "cardinality" : "one",
-      "comment" : ""
-    },
-    {
       "id" : 58,
       "name" : "DEPENDENCY_GROUP_ID",
       "comment" : "The group ID for a dependency",
@@ -472,18 +458,18 @@
   ],
   "edgeKeys" : [
     {
-      "id" : 6,
-      "name" : "LOCAL_NAME",
-      "comment" : "Local name of referenced CONTAINED node. This key is deprecated.",
-      "valueType" : "string",
-      "cardinality" : "zeroOrOne"
-    },
-    {
       "id" : 1,
       "name" : "ALIAS",
       "comment" : "Defines whether a PROPAGATE edge creates an alias",
       "valueType" : "boolean",
       "cardinality" : "one"
+    },
+    {
+      "id" : 6,
+      "name" : "LOCAL_NAME",
+      "comment" : "Local name of referenced CONTAINED node. This key is deprecated.",
+      "valueType" : "string",
+      "cardinality" : "zeroOrOne"
     },
     {
       "id" : 8,
@@ -1909,50 +1895,6 @@
       ]
     },
     {
-      "id" : 52,
-      "name" : "SENSITIVE_DATA_TYPE",
-      "keys" : [
-        "FULL_NAME"
-      ],
-      "comment" : "",
-      "containedNodes" : [
-        {
-          "localName" : "names",
-          "nodeType" : "MATCH_INFO",
-          "cardinality" : "list"
-        },
-        {
-          "localName" : "members",
-          "nodeType" : "SENSITIVE_MEMBER",
-          "cardinality" : "list"
-        }
-      ],
-      "outEdges" : [
-        {
-          "edgeName" : "IS_SENSITIVE_DATA_DESCR_OF",
-          "inNodes" : [
-            {
-              "name" : "TYPE_DECL"
-            }
-          ]
-        },
-        {
-          "edgeName" : "CONTAINS_NODE",
-          "inNodes" : [
-            {
-              "name" : "MATCH_INFO"
-            },
-            {
-              "name" : "SENSITIVE_MEMBER"
-            },
-            {
-              "name" : "CPG_NODE"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "id" : 9,
       "name" : "MEMBER",
       "keys" : [
@@ -2110,46 +2052,6 @@
       "comment" : "Configuration file contents. Might be in use by a framework",
       "is" : [
         "TRACKING_POINT"
-      ]
-    },
-    {
-      "id" : 55,
-      "name" : "SENSITIVE_REFERENCE",
-      "keys" : [],
-      "comment" : "",
-      "containedNodes" : [
-        {
-          "localName" : "ioflows",
-          "nodeType" : "IOFLOW",
-          "cardinality" : "list"
-        }
-      ],
-      "outEdges" : [
-        {
-          "edgeName" : "IS_SENSITIVE_DATA_DESCR_OF_REF",
-          "inNodes" : [
-            {
-              "name" : "LOCAL"
-            },
-            {
-              "name" : "IDENTIFIER"
-            },
-            {
-              "name" : "METHOD_PARAMETER_IN"
-            }
-          ]
-        },
-        {
-          "edgeName" : "CONTAINS_NODE",
-          "inNodes" : [
-            {
-              "name" : "IOFLOW"
-            },
-            {
-              "name" : "CPG_NODE"
-            }
-          ]
-        }
       ]
     },
     {
@@ -2567,66 +2469,6 @@
           "localName" : "nodeType",
           "nodeType" : "TYPE",
           "cardinality" : "one"
-        }
-      ]
-    },
-    {
-      "id" : 54,
-      "name" : "SENSITIVE_VARIABLE",
-      "keys" : [
-        "NAME",
-        "EVAL_TYPE",
-        "CATEGORIES"
-      ],
-      "comment" : "",
-      "containedNodes" : [
-        {
-          "localName" : "node",
-          "nodeType" : "LOCAL_LIKE",
-          "cardinality" : "one"
-        }
-      ],
-      "outEdges" : [
-        {
-          "edgeName" : "IS_SENSITIVE_DATA_DESCR_OF_REF",
-          "inNodes" : [
-            {
-              "name" : "SENSITIVE_REFERENCE"
-            }
-          ]
-        },
-        {
-          "edgeName" : "IS_SENSITIVE_DATA_DESCR_OF",
-          "inNodes" : [
-            {
-              "name" : "LOCAL"
-            },
-            {
-              "name" : "IDENTIFIER"
-            },
-            {
-              "name" : "METHOD_PARAMETER_IN"
-            }
-          ]
-        },
-        {
-          "edgeName" : "IS_SENSITIVE_DATA_OF_TYPE",
-          "inNodes" : [
-            {
-              "name" : "SENSITIVE_DATA_TYPE"
-            }
-          ]
-        },
-        {
-          "edgeName" : "CONTAINS_NODE",
-          "inNodes" : [
-            {
-              "name" : "LOCAL_LIKE"
-            },
-            {
-              "name" : "CPG_NODE"
-            }
-          ]
         }
       ]
     },
@@ -3235,45 +3077,6 @@
       ]
     },
     {
-      "id" : 53,
-      "name" : "SENSITIVE_MEMBER",
-      "keys" : [
-        "NAME"
-      ],
-      "comment" : "",
-      "containedNodes" : [
-        {
-          "localName" : "names",
-          "nodeType" : "MATCH_INFO",
-          "cardinality" : "list"
-        }
-      ],
-      "outEdges" : [
-        {
-          "edgeName" : "IS_SENSITIVE_DATA_DESCR_OF",
-          "inNodes" : [
-            {
-              "name" : "MEMBER"
-            },
-            {
-              "name" : "TYPE"
-            }
-          ]
-        },
-        {
-          "edgeName" : "CONTAINS_NODE",
-          "inNodes" : [
-            {
-              "name" : "MATCH_INFO"
-            },
-            {
-              "name" : "CPG_NODE"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "id" : 27,
       "name" : "IDENTIFIER",
       "keys" : [
@@ -3673,25 +3476,6 @@
       ]
     },
     {
-      "id" : 51,
-      "name" : "MATCH_INFO",
-      "keys" : [
-        "PATTERN",
-        "CATEGORY"
-      ],
-      "comment" : "",
-      "outEdges" : [
-        {
-          "edgeName" : "CONTAINS_NODE",
-          "inNodes" : [
-            {
-              "name" : "CPG_NODE"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "id" : 340,
       "name" : "JUMP_TARGET",
       "comment" : "A jump target made explicit in the code using a label",
@@ -3932,6 +3716,7 @@
         "LINE_NUMBER",
         "ORDER",
         "PARSER_TYPE_NAME",
+        "CONTROL_STRUCTURE_TYPE",
         "ARGUMENT_INDEX",
         "DEPTH_FIRST_ORDER",
         "INTERNAL_FLAGS"
@@ -6095,24 +5880,12 @@
       "comment" : "Points to dominated node in post DOM tree"
     },
     {
-      "id" : 902,
-      "name" : "IS_SENSITIVE_DATA_OF_TYPE",
-      "keys" : [],
-      "comment" : ""
-    },
-    {
       "id" : 1,
       "name" : "PROPAGATE",
       "keys" : [
         "ALIAS"
       ],
       "comment" : "Encodes propagation of data from on node to another. The ALIAS property is deprecated."
-    },
-    {
-      "id" : 901,
-      "name" : "IS_SENSITIVE_DATA_DESCR_OF_REF",
-      "keys" : [],
-      "comment" : ""
     },
     {
       "id" : 56,
@@ -6200,12 +5973,6 @@
       "name" : "DYNAMIC_TYPE",
       "keys" : [],
       "comment" : "Indicates the dynamic type(s) of an entity. This comes initially from the frontend provided DYNAMIC_TYPE_HINT_FULL_NAME property and is extended by our type resolution"
-    },
-    {
-      "id" : 900,
-      "name" : "IS_SENSITIVE_DATA_DESCR_OF",
-      "keys" : [],
-      "comment" : ""
     },
     {
       "id" : 157,
@@ -6340,6 +6107,58 @@
       "id" : 8,
       "name" : "VIRTUAL",
       "comment" : "The virtual modifier"
+    }
+  ],
+  "controlStructureTypes" : [
+    {
+      "id" : 1,
+      "name" : "BREAK",
+      "comment" : "Represents a break statement"
+    },
+    {
+      "id" : 2,
+      "name" : "CONTINUE",
+      "comment" : "Represents a continue statement"
+    },
+    {
+      "id" : 3,
+      "name" : "WHILE",
+      "comment" : "Represents a while statement"
+    },
+    {
+      "id" : 4,
+      "name" : "DO",
+      "comment" : "Represents a do statement"
+    },
+    {
+      "id" : 5,
+      "name" : "FOR",
+      "comment" : "Represents a for statement"
+    },
+    {
+      "id" : 6,
+      "name" : "GOTO",
+      "comment" : "Represents a goto statement"
+    },
+    {
+      "id" : 7,
+      "name" : "IF",
+      "comment" : "Represents an if statement"
+    },
+    {
+      "id" : 8,
+      "name" : "ELSE",
+      "comment" : "Represents an else statement"
+    },
+    {
+      "id" : 9,
+      "name" : "SWITCH",
+      "comment" : "Represents a switch statement"
+    },
+    {
+      "id" : 10,
+      "name" : "TRY",
+      "comment" : "Represents a try statement"
     }
   ],
   "frameworks" : [
