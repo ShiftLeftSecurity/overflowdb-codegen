@@ -79,7 +79,7 @@ class CodeGen(schema: Schema) {
 //      }
 //    }
 
-//    writeStringConstants("NodeKeyNames", schema.nodePropertyKeys.map(Constant.fromProperty))
+    //    writeStringConstants("NodeKeyNames", schema.nodePropertyKeys.map(Constant.fromProperty))
 //    writeStringConstants("EdgeKeyNames", schema.edgePropertyKeys.map(Constant.fromProperty))
 //    writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
 //    writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
@@ -92,6 +92,10 @@ class CodeGen(schema: Schema) {
 //      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
 //    }
 //    writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
+    writeConstantsFile("NodeKeyNames", schema.nodePropertyKeys.map(toConstant)) { constant =>
+      s"""public static final String ${constant.name} = "${constant.value}";"""
+    }
+
     schema.constantsByCategory.foreach { case (category, constants) =>
       writeConstantsFile(category, constants) { constant =>
         s"""public static final String ${constant.name} = "${constant.value}";"""

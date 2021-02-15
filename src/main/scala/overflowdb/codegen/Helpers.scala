@@ -107,6 +107,9 @@ object Helpers {
     s"""val ${camelCaseCaps(name)} = new PropertyKey[$completeType]("$name") """
   }
 
+  def toConstant(property: Property) =
+    Constant(property.name, property.name, property.valueType, property.comment)
+
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {
        |  private var errorMap = Set[(Class[_], String)]()
