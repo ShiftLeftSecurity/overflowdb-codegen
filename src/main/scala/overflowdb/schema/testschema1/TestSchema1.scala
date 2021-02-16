@@ -9,17 +9,17 @@ object TestSchema1 extends App {
   val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
 
   // node properties
-  val name = builder.addNodeProperty("NAME", "string", Cardinality.One,
+  val name = builder.addNodeProperty("NAME", "String", Cardinality.One,
     "Name of represented object, e.g., method name (e.g. \"run\")")
-  val order = builder.addNodeProperty("ORDER", "int", Cardinality.One,
+  val order = builder.addNodeProperty("ORDER", "Integer", Cardinality.One,
     "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code")
-  val hash = builder.addNodeProperty(name = "HASH", valueType = "string", Cardinality.ZeroOrOne,
+  val hash = builder.addNodeProperty(name = "HASH", valueType = "String", Cardinality.ZeroOrOne,
     "Hash value of the artifact that this CPG is built from.")
-  val inheritsFromTypeFullName = builder.addNodeProperty(name = "INHERITS_FROM_TYPE_FULL_NAME", valueType = "string", Cardinality.List,
+  val inheritsFromTypeFullName = builder.addNodeProperty(name = "INHERITS_FROM_TYPE_FULL_NAME", valueType = "String", Cardinality.List,
       comment = "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME")
 
   // edge properties
-  val localName = builder.addEdgeProperty("LOCAL_NAME", "string", Cardinality.ZeroOrOne, "Local name of referenced CONTAINED node. This key is deprecated.")
+  val localName = builder.addEdgeProperty("LOCAL_NAME", "String", Cardinality.ZeroOrOne, "Local name of referenced CONTAINED node. This key is deprecated.")
 
   //  edge types
   val ast = builder.addEdgeType("AST", "Syntax tree edge")

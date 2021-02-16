@@ -81,16 +81,11 @@ class CodeGen(schema: Schema) {
       val src = {
         val valueType = property.valueType
         val cardinality = property.cardinality
-        val baseType = valueType match {
-          case "string" => "String"
-          case "int" => "Integer"
-          case "boolean" => "Boolean"
-        }
         val completeType = cardinality match {
-          case Cardinality.One => baseType
-          case Cardinality.ZeroOrOne => baseType
-          case Cardinality.List => s"scala.collection.Seq<$baseType>"
-          case Cardinality.ISeq => s"immutable.IndexedSeq<$baseType>"
+          case Cardinality.One => valueType
+          case Cardinality.ZeroOrOne => valueType
+          case Cardinality.List => s"scala.collection.Seq<$valueType>"
+          case Cardinality.ISeq => s"immutable.IndexedSeq<$valueType>"
         }
         s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
       }
@@ -738,12 +733,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefs = properties.map { p =>
-        val baseType = p.valueType match {
-          case "string"  => "String"
-          case "int"     => "Integer"
-          case "boolean" => "Boolean"
-        }
-        propertyKeyDef(p.name, baseType, p.cardinality)
+        propertyKeyDef(p.name, p.valueType, p.cardinality)
       }.mkString("\n|    ")
 
       val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
