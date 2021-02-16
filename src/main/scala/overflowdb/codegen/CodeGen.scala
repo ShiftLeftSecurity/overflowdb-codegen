@@ -83,8 +83,25 @@ class CodeGen(schema: Schema) {
 //    List("edgeKeys", "nodeKeys").foreach { element =>
 //      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
 //    }
-//    schema.nodeProperties.map { property =>
-//    }
+    writeConstantsFile("NodeKeys", schema.nodeProperties) { property =>
+      val src = {
+        val valueType = property.valueType
+        val cardinality = property.cardinality
+        val baseType = valueType match {
+          case "string" => "String"
+          case "int" => "Integer"
+          case "boolean" => "Boolean"
+        }
+        val completeType = cardinality match {
+          case Cardinality.One => baseType
+          case Cardinality.ZeroOrOne => baseType
+          case Cardinality.List => s"scala.collection.Seq<$baseType>"
+          case Cardinality.ISeq => s"immutable.IndexedSeq<$baseType>"
+        }
+        s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
+      }
+      (property.comment, src)
+    }
 
     writeConstantsFile("NodeKeyNames", schema.nodeProperties) { property =>
       (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
@@ -93,10 +110,10 @@ class CodeGen(schema: Schema) {
       (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
     }
     writeConstantsFile("NodeTypes", schema.nodeTypes) { nodeType =>
-      (nodeType.comment, s"""public static final String ${nodeType.className} = "${nodeType.className}";""")
+      (nodeType.comment, s"""public static final String ${nodeType.name} = "${nodeType.name}";""")
     }
     writeConstantsFile("EdgeTypes", schema.edgeTypes) { edgeType =>
-      (edgeType.comment, s"""public static final String ${edgeType.className} = "${edgeType.className}";""")
+      (edgeType.comment, s"""public static final String ${edgeType.name} = "${edgeType.name}";""")
     }
     schema.constantsByCategory.foreach { case (category, constants) =>
       writeConstantsFile(category, constants) { constant =>
