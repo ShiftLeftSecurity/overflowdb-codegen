@@ -95,6 +95,13 @@ class CodeGen(schema: Schema) {
       s"""public static final String ${constant.name} = "${constant.value}";"""
     }
 
+    writeConstantsFile("NodeTypes", schema.nodeTypes.map(toConstant)) { constant =>
+      s"""public static final String ${constant.name} = "${constant.value}";"""
+    }
+    writeConstantsFile("EdgeTypes", schema.edgeTypes.map(toConstant)) { constant =>
+      s"""public static final String ${constant.name} = "${constant.value}";"""
+    }
+
     schema.constantsByCategory.foreach { case (category, constants) =>
       writeConstantsFile(category, constants) { constant =>
         s"""public static final String ${constant.name} = "${constant.value}";"""

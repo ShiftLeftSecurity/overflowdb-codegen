@@ -110,6 +110,11 @@ object Helpers {
   def toConstant(property: Property) =
     Constant(property.name, property.name, property.valueType, property.comment)
 
+  def toConstant(tpe: NodeType) =
+    Constant(tpe.name, tpe.name, tpe.className, tpe.comment)
+  def toConstant(tpe: EdgeType) =
+    Constant(tpe.name, tpe.name, tpe.className, tpe.comment)
+
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {
        |  private var errorMap = Set[(Class[_], String)]()
