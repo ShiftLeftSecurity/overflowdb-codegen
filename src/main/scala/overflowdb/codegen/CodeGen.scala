@@ -732,8 +732,8 @@ class CodeGen(schema: Schema) {
     def generateNodeSource(nodeType: NodeType) = {
       val properties = nodeType.properties
 
-      val keyNames = nodeType.properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
-      val propertyNameDefs = keyNames.map { name =>
+      val propertyNames = nodeType.properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
+      val propertyNameDefs = propertyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
 
@@ -767,7 +767,7 @@ class CodeGen(schema: Schema) {
            |
            |  object PropertyNames {
            |    $propertyNameDefs
-           |    val all: Set[String] = Set(${keyNames.map(camelCaseCaps).mkString(", ")})
+           |    val all: Set[String] = Set(${propertyNames.map(camelCaseCaps).mkString(", ")})
            |    val allAsJava: JSet[String] = all.asJava
            |  }
            |

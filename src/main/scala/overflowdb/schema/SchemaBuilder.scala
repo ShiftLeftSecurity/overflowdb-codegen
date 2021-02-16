@@ -1,7 +1,9 @@
 package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
+
 import scala.collection.mutable
+import scala.collection.mutable.Buffer
 
 /**
  *  TODO future refactorings:
@@ -29,7 +31,7 @@ class SchemaBuilder(basePackage: String) {
     addAndReturn(edgeTypes, EdgeType(name, stringToOption(comment)))
 
   def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseTypes] = Nil, comment: String = ""): NodeType =
-    addAndReturn(nodeTypes, NodeType(name, stringToOption(comment), id, extendz, containedNodes = Nil))
+    addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), id, extendz.to[Buffer], containedNodes = Buffer.empty))
 
   def addConstants(category: String, constants: Constant*): Seq[Constant] = {
     val previousEntries = constantsByCategory.getOrElse(category, Seq.empty)

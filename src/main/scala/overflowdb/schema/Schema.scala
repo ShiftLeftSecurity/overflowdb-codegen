@@ -1,6 +1,7 @@
 package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
+import scala.collection.mutable.Buffer
 
 /**
 * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
@@ -54,21 +55,25 @@ class Schema(val basePackage: String,
 //    (jsonRoot \ rootElementName).get.validate[List[Constant]].get
 }
 
-case class NodeType(name: String,
-                    comment: Option[String],
-                    id: Int,
-                    extendz: Seq[NodeBaseTypes],
-                    properties: Seq[Property] = Nil,
-                    outEdges: Seq[OutEdgeEntry] = Nil,
-                    containedNodes: Seq[ContainedNode]) {
+class NodeType(val name: String,
+               val comment: Option[String],
+               val id: Int,
+               val extendz: Buffer[NodeBaseTypes],
+               val properties: Buffer[Property] = Buffer.empty,
+               val outEdges: Buffer[OutEdgeEntry] = Buffer.empty,
+               val containedNodes: Buffer[ContainedNode]) {
   lazy val className = camelCaseCaps(name)
   lazy val classNameDb = s"${className}Db"
 
-  def addProperties(additional: Property*): NodeType =
-    copy(properties = properties ++ additional)
+  def addProperties(additional: Property*): NodeType = {
+    properties.appendAll(additional)
+    this
+  }
 
-  def addOutEdge(outEdge: EdgeType, inNodes: InNode*): NodeType =
-    copy(outEdges = outEdges :+ OutEdgeEntry(outEdge, inNodes))
+  def addOutEdge(outEdge: EdgeType, inNodes: InNode*): NodeType = {
+    ???
+//    copy(outEdges = outEdges :+ OutEdgeEntry(outEdge, inNodes))
+  }
 }
 
 case class OutEdgeEntry(edge: EdgeType, inNodes: Seq[InNode]) {
