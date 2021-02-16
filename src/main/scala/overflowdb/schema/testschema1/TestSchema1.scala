@@ -19,7 +19,9 @@ object TestSchema1 extends App {
       comment = "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME")
 
   // edge properties
+  val alias = builder.addEdgeProperty("ALIAS", "Boolean", Cardinality.One, "Defines whether a PROPAGATE edge creates an alias")
   val localName = builder.addEdgeProperty("LOCAL_NAME", "String", Cardinality.ZeroOrOne, "Local name of referenced CONTAINED node. This key is deprecated.")
+  val edgeKey1Lst = builder.addEdgeProperty("EDGEKEY_1_LST", "Integer", Cardinality.List, "test list edge key")
 
   //  edge types
   val ast = builder.addEdgeType("AST", "Syntax tree edge")
