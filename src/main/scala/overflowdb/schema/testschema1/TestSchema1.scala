@@ -9,24 +9,14 @@ object TestSchema1 extends App {
   val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
 
   object NodeProperties {
-    val name = builder.addNodeProperty("NAME", "string", Cardinality.One, "Name of represented object, e.g., method name (e.g. \"run\")")
-    val order = builder.addNodeProperty("ORDER", "int",
-      Cardinality.One,
+    val name = builder.addNodeProperty("NAME", "string", Cardinality.One,
+      "Name of represented object, e.g., method name (e.g. \"run\")")
+    val order = builder.addNodeProperty("ORDER", "int", Cardinality.One,
       "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code")
-    //  {
-    //    "id" : 120,
-    //    "name" : "HASH",
-    //    "comment" : "Hash value of the artifact that this CPG is built from.",
-    //    "valueType" : "string",
-    //    "cardinality" : "zeroOrOne"
-    //  },
-    //  {
-    //    "id" : 53,
-    //    "name" : "INHERITS_FROM_TYPE_FULL_NAME",
-    //    "comment" : "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME",
-    //    "valueType" : "string",
-    //    "cardinality" : "list"
-    //  }
+    val hash = builder.addNodeProperty(name = "NAME", valueType = "string", Cardinality.ZeroOrOne,
+      "Hash value of the artifact that this CPG is built from.")
+    val inheritsFromTypeFullName = builder.addNodeProperty(name = "INHERITS_FROM_TYPE_FULL_NAME", valueType = "string", Cardinality.List,
+        comment = "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME")
   }
 
   object EdgeProperties {
