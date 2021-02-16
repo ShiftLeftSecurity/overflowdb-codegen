@@ -28,7 +28,8 @@ object Base{
     val ast = builder.addEdgeType("AST", "Syntax tree edge")
 
     // node base types
-    val astNode = builder.addNodeBaseType("AST_NODE", Seq(order), extendz = Nil, "Any node that can exist in an abstract syntax tree")
+    val astNode = builder.addNodeBaseType("AST_NODE", extendz = Nil, "Any node that can exist in an abstract syntax tree")
+      .addProperties(order)
 
     // node types
     val namespaceBlock = builder.addNodeType("NAMESPACE_BLOCK", 41, Seq(astNode), "A reference to a namespace")

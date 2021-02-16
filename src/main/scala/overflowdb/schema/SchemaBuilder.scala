@@ -13,24 +13,24 @@ import scala.collection.mutable.Buffer
 class SchemaBuilder(basePackage: String) {
   val nodePropertyKeys = mutable.ListBuffer.empty[Property]
   val edgePropertyKeys = mutable.ListBuffer.empty[Property]
-  val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseTypes]
+  val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseType]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
 
   def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
+    addAndReturn(nodePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
 
   def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
+    addAndReturn(edgePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
 
-  def addNodeBaseType(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTypes] = Nil, comment: String = ""): NodeBaseTypes =
-    addAndReturn(nodeBaseTypes, NodeBaseTypes(name, properties, extendz, stringToOption(comment)))
+  def addNodeBaseType(name: String, extendz: Seq[NodeBaseType] = Nil, comment: String = ""): NodeBaseType =
+    addAndReturn(nodeBaseTypes, new NodeBaseType(name, extendz.to[Buffer], stringToOption(comment)))
 
   def addEdgeType(name: String, comment: String = ""): EdgeType =
-    addAndReturn(edgeTypes, EdgeType(name, stringToOption(comment)))
+    addAndReturn(edgeTypes, new EdgeType(name, stringToOption(comment)))
 
-  def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseTypes] = Nil, comment: String = ""): NodeType =
+  def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseType] = Nil, comment: String = ""): NodeType =
     addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), id, extendz.to[Buffer], containedNodes = Buffer.empty))
 
   def addConstants(category: String, constants: Constant*): Seq[Constant] = {

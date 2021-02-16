@@ -9,7 +9,7 @@ import scala.collection.mutable.Buffer
 class Schema(val basePackage: String,
              val nodeProperties: Seq[Property],
              val edgeProperties: Seq[Property],
-             val nodeBaseTypes: Seq[NodeBaseTypes],
+             val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
              val constantsByCategory: Map[String, Seq[Constant]]) {
@@ -58,12 +58,15 @@ class Schema(val basePackage: String,
 class NodeType(val name: String,
                val comment: Option[String],
                val id: Int,
-               val extendz: Buffer[NodeBaseTypes],
-               val properties: Buffer[Property] = Buffer.empty,
+               val extendz: Buffer[NodeBaseType],
+               properties: Buffer[Property] = Buffer.empty,
                val outEdges: Buffer[OutEdgeEntry] = Buffer.empty,
                val containedNodes: Buffer[ContainedNode]) {
   lazy val className = camelCaseCaps(name)
   lazy val classNameDb = s"${className}Db"
+
+  def properties: Seq[Property] =
+    (properties ++ extendz.flatMap(_.properties)).distinct
 
   def addProperties(additional: Property*): NodeType = {
     properties.appendAll(additional)
@@ -102,19 +105,37 @@ object Cardinality {
       .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq`, but was $name"))
 }
 
-case class EdgeType(name: String, comment: Option[String], properties: Seq[Property] = Nil) {
+class EdgeType(val name: String,
+               val comment: Option[String],
+               val properties: Buffer[Property] = Buffer.empty) {
   lazy val className = camelCaseCaps(name)
 
-  def addProperties(additionalProperties: Property*): EdgeType =
-    copy(properties = properties ++ additionalProperties)
+  def addProperties(additional: Property*): EdgeType = {
+    properties.appendAll(additional)
+    this
+  }
 }
 
-case class Property(name: String, comment: Option[String], valueType: String, cardinality: Cardinality)
+class Property(val name: String,
+               val comment: Option[String],
+               val valueType: String,
+               val cardinality: Cardinality)
 
-case class NodeBaseTypes(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTypes], comment: Option[String]) {
+class NodeBaseType(val name: String,
+                   val extendz: Buffer[NodeBaseType],
+                   val comment: Option[String]) {
+  val _properties: Buffer[Property] = Buffer.empty
   lazy val className = camelCaseCaps(name)
+
+  def properties: Seq[Property] = _properties
+
+  def addProperties(additional: Property*): NodeBaseType = {
+    _properties.appendAll(additional)
+    this
+  }
 }
 
+// TODO make non-case class as well?
 case class InEdgeContext(edge: EdgeType, neighborNodes: Set[OutNode])
 
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
@@ -131,7 +152,7 @@ object Direction extends Enumeration {
 }
 
 object DefaultEdgeTypes {
-  val ContainsNode = EdgeType("CONTAINS_NODE", None)
+  val ContainsNode = new EdgeType("CONTAINS_NODE", None)
 }
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)

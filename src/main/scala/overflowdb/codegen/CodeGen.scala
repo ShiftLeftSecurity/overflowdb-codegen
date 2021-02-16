@@ -694,7 +694,7 @@ class CodeGen(schema: Schema) {
          |}""".stripMargin
     }
 
-    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseTypes): String = {
+    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseType): String = {
       val className = nodeBaseTrait.className
       val properties = nodeBaseTrait.properties
 

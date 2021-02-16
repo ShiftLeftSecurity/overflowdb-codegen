@@ -21,7 +21,7 @@ object Helpers {
     case nonEmptyString => Some(nonEmptyString)
   }
 
-  def isNodeBaseTrait(baseTraits: List[NodeBaseTypes], nodeName: String): Boolean =
+  def isNodeBaseTrait(baseTraits: List[NodeBaseType], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.Node || baseTraits.map(_.name).contains(nodeName)
 
   def camelCaseCaps(snakeCase: String): String = camelCase(snakeCase).capitalize
