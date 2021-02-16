@@ -135,8 +135,4 @@ case class Constant(name: String, value: String, valueType: String, comment: Opt
 object Constant {
   def apply(name: String, value: String, valueType: String, comment: String = ""): Constant =
     Constant(name, value, valueType, stringToOption(comment))
-
-//  def fromProperty(property: Property) = Constant(property.name, property.name, property.comment, property.valueType, property.cardinality)
-//  def fromNodeType(tpe: NodeType) = Constant(tpe.name, tpe.name, tpe.comment, tpe.className, Cardinality.One) //TODO really cardinality one?
-//  def fromEdgeType(tpe: EdgeType) = Constant(tpe.name, tpe.name, tpe.comment, tpe.className, Cardinality.One) //TODO really cardinality one?
 }

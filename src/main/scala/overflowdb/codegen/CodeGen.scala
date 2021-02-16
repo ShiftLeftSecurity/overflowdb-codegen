@@ -59,31 +59,25 @@ class CodeGen(schema: Schema) {
       )
     }
 
-    // TODO revive - commented due to cardinality in constants
-//    import overflowdb.*;
-//    def writePropertyKeyConstants(className: String, constants: Seq[Constant]): Unit = {
-//      writeConstantsFile(className, constants) { constant =>
-//        val valueType = constant.valueType
-//        val cardinality = constant.cardinality
-//        val baseType = valueType match {
-//          case "string"  => "String"
-//          case "int"     => "Integer"
-//          case "boolean" => "Boolean"
-//        }
-//        val completeType = cardinality match {
-//          case Cardinality.One       => baseType
-//          case Cardinality.ZeroOrOne => baseType
-//          case Cardinality.List      => s"scala.collection.Seq<$baseType>"
-//          case Cardinality.ISeq => s"immutable.IndexedSeq<$baseType>"
-//        }
-//        s"""public static final PropertyKey<$completeType> ${constant.name} = new PropertyKey<>("${constant.value}");"""
-//      }
-//    }
+    writeConstantsFile("NodeKeyNames", schema.nodeProperties) { property =>
+      (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
+    }
+    writeConstantsFile("EdgeKeyNames", schema.edgeProperties) { property =>
+      (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
+    }
+    writeConstantsFile("NodeTypes", schema.nodeTypes) { nodeType =>
+      (nodeType.comment, s"""public static final String ${nodeType.name} = "${nodeType.name}";""")
+    }
+    writeConstantsFile("EdgeTypes", schema.edgeTypes) { edgeType =>
+      (edgeType.comment, s"""public static final String ${edgeType.name} = "${edgeType.name}";""")
+    }
+    schema.constantsByCategory.foreach { case (category, constants) =>
+      writeConstantsFile(category, constants) { constant =>
+        (constant.comment, s"""public static final String ${constant.name} = "${constant.value}";""")
+      }
+    }
 
-//    List("edgeKeys", "nodeKeys").foreach { element =>
-//      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
-//    }
-    writeConstantsFile("NodeKeys", schema.nodeProperties) { property =>
+    def propertyKeyCommentAndSource(property: Property): (Option[String], String) = {
       val src = {
         val valueType = property.valueType
         val cardinality = property.cardinality
@@ -102,24 +96,8 @@ class CodeGen(schema: Schema) {
       }
       (property.comment, src)
     }
-
-    writeConstantsFile("NodeKeyNames", schema.nodeProperties) { property =>
-      (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
-    }
-    writeConstantsFile("EdgeKeyNames", schema.edgeProperties) { property =>
-      (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
-    }
-    writeConstantsFile("NodeTypes", schema.nodeTypes) { nodeType =>
-      (nodeType.comment, s"""public static final String ${nodeType.name} = "${nodeType.name}";""")
-    }
-    writeConstantsFile("EdgeTypes", schema.edgeTypes) { edgeType =>
-      (edgeType.comment, s"""public static final String ${edgeType.name} = "${edgeType.name}";""")
-    }
-    schema.constantsByCategory.foreach { case (category, constants) =>
-      writeConstantsFile(category, constants) { constant =>
-        (constant.comment, s"""public static final String ${constant.name} = "${constant.value}";""")
-      }
-    }
+    writeConstantsFile("NodeKeys", schema.nodeProperties)(propertyKeyCommentAndSource)
+    writeConstantsFile("EdgeKeys", schema.edgeProperties)(propertyKeyCommentAndSource)
 
     outputDir
   }
