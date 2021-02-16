@@ -79,19 +79,18 @@ class CodeGen(schema: Schema) {
 //      }
 //    }
 
-    //    writeStringConstants("NodeKeyNames", schema.nodePropertyKeys.map(Constant.fromProperty))
-//    writeStringConstants("EdgeKeyNames", schema.edgePropertyKeys.map(Constant.fromProperty))
-//    writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
-//    writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
 
-    // TODO implement differently: this is how it worked with generic json
-//    List("controlStructureTypes", "dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
-//      writeStringConstants(element.capitalize, schema.constantsFromElement(element))
-//    }
+    // TODO revive
+    //    writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
+    //    writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
 //    List("edgeKeys", "nodeKeys").foreach { element =>
 //      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
 //    }
-//    writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
+
+    // TODO refactor: extract common code
+    writeConstantsFile("EdgeKeyNames", schema.edgePropertyKeys.map(toConstant)) { constant =>
+      s"""public static final String ${constant.name} = "${constant.value}";"""
+    }
     writeConstantsFile("NodeKeyNames", schema.nodePropertyKeys.map(toConstant)) { constant =>
       s"""public static final String ${constant.name} = "${constant.value}";"""
     }
