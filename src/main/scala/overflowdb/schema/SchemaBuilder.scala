@@ -11,7 +11,7 @@ import scala.collection.mutable
 class SchemaBuilder(basePackage: String) {
   val nodePropertyKeys = mutable.ListBuffer.empty[Property]
   val edgePropertyKeys = mutable.ListBuffer.empty[Property]
-  val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseTrait]
+  val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseTypes]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
@@ -22,13 +22,13 @@ class SchemaBuilder(basePackage: String) {
   def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
 
-  def addNodeBaseType(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeBaseTrait =
-    addAndReturn(nodeBaseTypes, NodeBaseTrait(name, properties, extendz, stringToOption(comment)))
+  def addNodeBaseType(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTypes] = Nil, comment: String = ""): NodeBaseTypes =
+    addAndReturn(nodeBaseTypes, NodeBaseTypes(name, properties, extendz, stringToOption(comment)))
 
   def addEdgeType(name: String, comment: String = ""): EdgeType =
     addAndReturn(edgeTypes, EdgeType(name, stringToOption(comment)))
 
-  def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseTrait] = Nil, comment: String = ""): NodeType =
+  def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseTypes] = Nil, comment: String = ""): NodeType =
     addAndReturn(nodeTypes, NodeType(name, stringToOption(comment), id, extendz, containedNodes = Nil))
 
   def addConstants(category: String, constants: Constant*): Seq[Constant] = {

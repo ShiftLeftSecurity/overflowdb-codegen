@@ -6,9 +6,9 @@ import overflowdb.codegen.Helpers._
 * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
 class Schema(val basePackage: String,
-             val nodePropertyKeys: Seq[Property],
-             val edgePropertyKeys: Seq[Property],
-             val nodeBaseTraits: Seq[NodeBaseTrait],
+             val nodeProperties: Seq[Property],
+             val edgeProperties: Seq[Property],
+             val nodeBaseTypes: Seq[NodeBaseTypes],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
              val constantsByCategory: Map[String, Seq[Constant]]) {
@@ -57,7 +57,7 @@ class Schema(val basePackage: String,
 case class NodeType(name: String,
                     comment: Option[String],
                     id: Int,
-                    extendz: Seq[NodeBaseTrait],
+                    extendz: Seq[NodeBaseTypes],
                     properties: Seq[Property] = Nil,
                     outEdges: Seq[OutEdgeEntry] = Nil,
                     containedNodes: Seq[ContainedNode]) {
@@ -106,7 +106,7 @@ case class EdgeType(name: String, comment: Option[String], properties: Seq[Prope
 
 case class Property(name: String, comment: Option[String], valueType: String, cardinality: Cardinality)
 
-case class NodeBaseTrait(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTrait], comment: Option[String]) {
+case class NodeBaseTypes(name: String, properties: Seq[Property], extendz: Seq[NodeBaseTypes], comment: Option[String]) {
   lazy val className = camelCaseCaps(name)
 }
 

@@ -21,7 +21,7 @@ object Helpers {
     case nonEmptyString => Some(nonEmptyString)
   }
 
-  def isNodeBaseTrait(baseTraits: List[NodeBaseTrait], nodeName: String): Boolean =
+  def isNodeBaseTrait(baseTraits: List[NodeBaseTypes], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.Node || baseTraits.map(_.name).contains(nodeName)
 
   def camelCaseCaps(snakeCase: String): String = camelCase(snakeCase).capitalize
@@ -109,7 +109,6 @@ object Helpers {
 
   def toConstant(property: Property) =
     Constant(property.name, property.name, property.valueType, property.comment)
-
   def toConstant(tpe: NodeType) =
     Constant(tpe.name, tpe.name, tpe.className, tpe.comment)
   def toConstant(tpe: EdgeType) =

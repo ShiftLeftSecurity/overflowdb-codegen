@@ -79,35 +79,30 @@ class CodeGen(schema: Schema) {
 //      }
 //    }
 
-
-    // TODO revive
-    //    writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
-    //    writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
 //    List("edgeKeys", "nodeKeys").foreach { element =>
 //      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
 //    }
+//    schema.nodeProperties.map { property =>
+//    }
 
-    // TODO refactor: extract common code
-    writeConstantsFile("EdgeKeyNames", schema.edgePropertyKeys.map(toConstant)) { constant =>
+    // TODO refactor: do we even need 'toConstant' ?
+    writeConstantsFile("EdgeKeyNames", schema.edgeProperties.map(toConstant)) { constant =>
       s"""public static final String ${constant.name} = "${constant.value}";"""
     }
-    writeConstantsFile("NodeKeyNames", schema.nodePropertyKeys.map(toConstant)) { constant =>
+    writeConstantsFile("NodeKeyNames", schema.nodeProperties.map(toConstant)) { constant =>
       s"""public static final String ${constant.name} = "${constant.value}";"""
     }
-
     writeConstantsFile("NodeTypes", schema.nodeTypes.map(toConstant)) { constant =>
       s"""public static final String ${constant.name} = "${constant.value}";"""
     }
     writeConstantsFile("EdgeTypes", schema.edgeTypes.map(toConstant)) { constant =>
       s"""public static final String ${constant.name} = "${constant.value}";"""
     }
-
     schema.constantsByCategory.foreach { case (category, constants) =>
       writeConstantsFile(category, constants) { constant =>
         s"""public static final String ${constant.name} = "${constant.value}";"""
       }
     }
-    println(s"generated constants for the categories ${schema.constantsByCategory.keys}")
 
     outputDir
   }
@@ -254,7 +249,7 @@ class CodeGen(schema: Schema) {
       } yield s"def $accessor: JIterator[StoredNode] = { JCollections.emptyIterator() }"
 
       val keyBasedTraits =
-        schema.nodePropertyKeys.map { property =>
+        schema.nodeProperties.map { property =>
           val camelCaseName = camelCase(property.name)
           val camelCaseCapitalized = camelCaseName.capitalize
           val tpe = getCompleteType(property)
@@ -330,9 +325,9 @@ class CodeGen(schema: Schema) {
         schema.nodeTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
 
       val implicitsForNodeBaseTypeTraversals =
-        schema.nodeBaseTraits.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+        schema.nodeBaseTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
 
-      val nonBaseTypes = (schema.nodeTypes.map(_.className).toSet -- schema.nodeBaseTraits.map(_.className).toSet).toList.sorted
+      val nonBaseTypes = (schema.nodeTypes.map(_.className).toSet -- schema.nodeBaseTypes.map(_.className).toSet).toList.sorted
       val implicitsForNewNodeBuilders =
         nonBaseTypes.map(implicitForNewNodeBuilder).mkString("\n")
 
@@ -704,7 +699,7 @@ class CodeGen(schema: Schema) {
          |}""".stripMargin
     }
 
-    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseTrait): String = {
+    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseTypes): String = {
       val className = nodeBaseTrait.className
       val properties = nodeBaseTrait.properties
 
@@ -1275,7 +1270,7 @@ class CodeGen(schema: Schema) {
     baseDir.createChild("package.scala").write(packageObject)
     baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits)
     baseDir.createChild("RootTypes.scala").write(rootTypeImpl)
-    schema.nodeBaseTraits.foreach { nodeBaseTrait =>
+    schema.nodeBaseTypes.foreach { nodeBaseTrait =>
       val src = generateNodeBaseTypeSource(nodeBaseTrait)
       val srcFile = nodeBaseTrait.className + ".scala"
       baseDir.createChild(srcFile).write(src)
