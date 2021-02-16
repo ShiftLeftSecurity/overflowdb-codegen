@@ -13,6 +13,20 @@
       "comment" : "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code",
       "valueType" : "int",
       "cardinality" : "one"
+    },
+    {
+      "id" : 120,
+      "name" : "HASH",
+      "comment" : "Hash value of the artifact that this CPG is built from.",
+      "valueType" : "string",
+      "cardinality" : "zeroOrOne"
+    },
+    {
+      "id" : 53,
+      "name" : "INHERITS_FROM_TYPE_FULL_NAME",
+      "comment" : "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME",
+      "valueType" : "string",
+      "cardinality" : "list"
     }
   ],
   "edgeKeys" : [
@@ -28,7 +42,7 @@
     {
       "id" : 41,
       "name" : "NAMESPACE_BLOCK",
-      "keys" : [],
+      "keys" : ["NAME", "ORDER"],
       "comment" : "A reference to a namespace",
       "is" : ["AST_NODE"],
       "outEdges" : []
@@ -36,7 +50,7 @@
     {
       "id" : 38,
       "name" : "FILE",
-      "keys" : [],
+      "keys" : ["NAME", "HASH", "INHERITS_FROM_TYPE_FULL_NAME", "ORDER"],
       "comment" : "Node representing a source file - the root of the AST",
       "outEdges" : [],
       "is" : ["AST_NODE"]
