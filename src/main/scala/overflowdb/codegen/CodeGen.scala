@@ -24,13 +24,13 @@ class CodeGen(schema: Schema) {
   def writeConstants(outputDir: JFile): JFile = {
     val baseDir = File(outputDir.getPath + "/" + basePackage.replaceAll("\\.", "/")).createDirectories
 
-    def writeConstantsFile(className: String, constants: Seq[Constant])(mkSrc: Constant => String): Unit = {
-      val src = constants.map { constant =>
-        val documentation =
-          constant.comment.map(comment => s"""/** $comment */""").getOrElse("")
-        s""" $documentation
-           | ${mkSrc(constant)}
-           |""".stripMargin
+    def writeConstantsFile[A](className: String, constants: Seq[A])(makeDocAndSource: A => (Option[String], String)): Unit = {
+      val constantsSource = constants.map(makeDocAndSource).map {
+        case (docMaybe, src) =>
+          val documentation = docMaybe.filter(_.nonEmpty).map(comment => s"""/** $comment */""").getOrElse("")
+          s""" $documentation
+             | $src
+             |""".stripMargin
       }.mkString("\n")
       val setType = if (src.contains("PropertyKey")) "PropertyKey" else "String"
       val constantsSetBody = constants.map { constant =>
@@ -53,13 +53,14 @@ class CodeGen(schema: Schema) {
            |
            |public class $className {
            |
-           |$src
+           |$constantsSource
            |$constantsSet
            |}""".stripMargin
       )
     }
 
     // TODO revive - commented due to cardinality in constants
+//    import overflowdb.*;
 //    def writePropertyKeyConstants(className: String, constants: Seq[Constant]): Unit = {
 //      writeConstantsFile(className, constants) { constant =>
 //        val valueType = constant.valueType
@@ -85,22 +86,21 @@ class CodeGen(schema: Schema) {
 //    schema.nodeProperties.map { property =>
 //    }
 
-    // TODO refactor: do we even need 'toConstant' ?
-    writeConstantsFile("EdgeKeyNames", schema.edgeProperties.map(toConstant)) { constant =>
-      s"""public static final String ${constant.name} = "${constant.value}";"""
+    writeConstantsFile("NodeKeyNames", schema.nodeProperties) { property =>
+      (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
     }
-    writeConstantsFile("NodeKeyNames", schema.nodeProperties.map(toConstant)) { constant =>
-      s"""public static final String ${constant.name} = "${constant.value}";"""
+    writeConstantsFile("EdgeKeyNames", schema.edgeProperties) { property =>
+      (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
     }
-    writeConstantsFile("NodeTypes", schema.nodeTypes.map(toConstant)) { constant =>
-      s"""public static final String ${constant.name} = "${constant.value}";"""
+    writeConstantsFile("NodeTypes", schema.nodeTypes) { nodeType =>
+      (nodeType.comment, s"""public static final String ${nodeType.className} = "${nodeType.className}";""")
     }
-    writeConstantsFile("EdgeTypes", schema.edgeTypes.map(toConstant)) { constant =>
-      s"""public static final String ${constant.name} = "${constant.value}";"""
+    writeConstantsFile("EdgeTypes", schema.edgeTypes) { edgeType =>
+      (edgeType.comment, s"""public static final String ${edgeType.className} = "${edgeType.className}";""")
     }
     schema.constantsByCategory.foreach { case (category, constants) =>
       writeConstantsFile(category, constants) { constant =>
-        s"""public static final String ${constant.name} = "${constant.value}";"""
+        (constant.comment, s"""public static final String ${constant.name} = "${constant.value}";""")
       }
     }
 
