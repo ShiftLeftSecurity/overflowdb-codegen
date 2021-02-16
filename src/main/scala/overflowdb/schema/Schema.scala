@@ -1,6 +1,8 @@
 package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
+
+import scala.collection.mutable
 import scala.collection.mutable.Buffer
 
 /**
@@ -12,82 +14,59 @@ class Schema(val basePackage: String,
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
-             val constantsByCategory: Map[String, Seq[Constant]]) {
-
-  /* schema only specifies `node.outEdges` - this builds a reverse map (essentially `node.inEdges`) along with the outNodes */
-  lazy val nodeToInEdgeContexts: Map[NodeType, Seq[InEdgeContext]] = {
-    case class NeighborContext(neighborNode: NodeType, edge: EdgeType, outNode: OutNode)
-    val tuples: Seq[NeighborContext] =
-      for {
-        nodeType <- nodeTypes
-        outEdge <- nodeType.outEdges
-        inNode <- outEdge.inNodes
-      } yield NeighborContext(inNode.node, outEdge.edge, OutNode(nodeType.name, inNode.cardinality))
-
-    /* grouping above tuples by `neighborNodeType` and `inEdgeName`
-     * we use this from sbt, so unfortunately we can't yet use scala 2.13's `groupMap` :( */
-    val grouped: Map[NodeType, Map[EdgeType, Seq[OutNode]]] =
-      tuples.groupBy(_.neighborNode).mapValues(_.groupBy(_.edge).mapValues(_.map(_.outNode)).toMap)
-
-    grouped.mapValues { inEdgesWithNeighborNodes =>
-      // all nodes can have incoming `CONTAINS_NODE` edges
-      val adjustedInEdgesWithNeighborNodes =
-        if (inEdgesWithNeighborNodes.contains(DefaultEdgeTypes.ContainsNode)) inEdgesWithNeighborNodes
-        else inEdgesWithNeighborNodes + (DefaultEdgeTypes.ContainsNode -> Set.empty)
-
-      adjustedInEdgesWithNeighborNodes.map { case (edge, neighborNodes) =>
-        InEdgeContext(edge, neighborNodes.toSet)
-      }.toSeq
-    }
-  }
-
-//  lazy val defaultConstantReads: Reads[Constant] = constantReads("name", "name")
-
-//  def constantReads(nameField: String, valueField: String): Reads[Constant] = (
-//    (JsPath \ nameField).read[String] and
-//      (JsPath \ valueField).read[String] and
-//      (JsPath \ "comment").readNullable[String] and
-//      (JsPath \ "valueType").readNullable[String] and
-//      (JsPath \ "cardinality").readNullable[String]
-//    )(Constant.apply _)
-//
-//  def constantsFromElement(rootElementName: String)(implicit reads: Reads[Constant] = defaultConstantReads): List[Constant] =
-//    (jsonRoot \ rootElementName).get.validate[List[Constant]].get
-}
+             val constantsByCategory: Map[String, Seq[Constant]])
 
 class NodeType(val name: String,
                val comment: Option[String],
                val id: Int,
                val extendz: Buffer[NodeBaseType],
-               properties: Buffer[Property] = Buffer.empty,
-               val outEdges: Buffer[OutEdgeEntry] = Buffer.empty,
+               properties: mutable.Set[Property] = mutable.Set.empty,
+               protected val _outEdges: mutable.Set[OutEdge] = mutable.Set.empty,
+               protected val _inEdges: mutable.Set[InEdge] = mutable.Set.empty,
                val containedNodes: Buffer[ContainedNode]) {
   lazy val className = camelCaseCaps(name)
   lazy val classNameDb = s"${className}Db"
 
   def properties: Seq[Property] =
-    (properties ++ extendz.flatMap(_.properties)).distinct
+    (properties ++ extendz.flatMap(_.properties)).toSeq
+
+  def outEdges: Seq[OutEdge] =
+    _outEdges.toSeq
+
+  def inEdges: Seq[InEdge] =
+    _inEdges.toSeq
 
   def addProperties(additional: Property*): NodeType = {
-    properties.appendAll(additional)
+    additional.foreach(properties.add)
     this
   }
 
-  def addOutEdge(outEdge: EdgeType, inNodes: InNode*): NodeType = {
-    ???
-//    copy(outEdges = outEdges :+ OutEdgeEntry(outEdge, inNodes))
+  /**
+   * note: allowing to define one outEdge for ONE inNode only - if you are looking for Union Types, please use NodeBaseTypes
+   */
+  def addOutEdge(edge: EdgeType,
+                 inNode: NodeType,
+                 cardinalityOut: Cardinality = Cardinality.List,
+                 cardinalityIn: Cardinality = Cardinality.List): NodeType = {
+    _outEdges.add(OutEdge(edge, inNode, cardinalityOut))
+    inNode._inEdges.add(InEdge(edge, this, cardinalityIn))
+    this
+  }
+
+  def addInEdge(edge: EdgeType,
+                outNode: NodeType,
+                cardinalityIn: Cardinality = Cardinality.List,
+                cardinalityOut: Cardinality = Cardinality.List): NodeType = {
+    _inEdges.add(InEdge(edge, outNode, cardinalityIn))
+    outNode._outEdges.add(OutEdge(edge, this, cardinalityOut))
+    this
   }
 }
 
-case class OutEdgeEntry(edge: EdgeType, inNodes: Seq[InNode]) {
-  lazy val className = camelCaseCaps(edge.name)
-}
+case class OutEdge(edge: EdgeType, inNode: NodeType, cardinality: Cardinality)
+case class InEdge(edge: EdgeType, outNode: NodeType, cardinality: Cardinality)
 
-case class InNode(node: NodeType, cardinality: String = "n:n") // TODO express in proper types
-case class OutNode(name: String, cardinality: String = "n:n") { // TODO express in proper types
-  lazy val className = camelCaseCaps(name)
-}
-
+// TODO make this a generic edge rather than a specialised feature?
 case class ContainedNode(nodeType: String, localName: String, cardinality: Cardinality) {
   lazy val nodeTypeClassName = camelCaseCaps(nodeType)
 }
@@ -133,9 +112,10 @@ class NodeBaseType(val name: String,
     _properties.appendAll(additional)
     this
   }
+
+  // TODO add ability for outEdge/inEdge etc. - maybe via trait mixin?
 }
 
-// TODO make non-case class as well?
 case class InEdgeContext(edge: EdgeType, neighborNodes: Set[OutNode])
 
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)

@@ -740,11 +740,11 @@ class CodeGen(schema: Schema) {
         propertyKeyDef(containedNode.localName, containedNode.nodeTypeClassName, containedNode.cardinality)
       }.mkString("\n|    ")
 
-      val outEdges: Seq[OutEdgeEntry] = nodeType.outEdges
-      val inEdges: Seq[InEdgeContext] = schema.nodeToInEdgeContexts.getOrElse(nodeType, Seq.empty)
+      val outEdges: Seq[OutEdge] = nodeType.outEdges
+      val inEdges: Seq[InEdge] = nodeType.inEdges
 
-      val outEdgeLayouts = outEdges.map(edge => s"edges.${edge.className}.layoutInformation").mkString(", ")
-      val inEdgeLayouts = inEdges.map(edgeContext => s"edges.${edgeContext.edge.className}.layoutInformation").mkString(", ")
+      val outEdgeLayouts = outEdges.map(outEdge => s"edges.${outEdge.edge.className}.layoutInformation").mkString(", ")
+      val inEdgeLayouts = inEdges.map(inEdge => s"edges.${inEdge.edge.className}.layoutInformation").mkString(", ")
 
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
@@ -775,7 +775,7 @@ class CodeGen(schema: Schema) {
            |
            |  object Edges {
            |    val In: Array[String] = Array(${quoted(inEdges.map(_.edge.className)).mkString(",")})
-           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.className)).mkString(",")})
+           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.edge.className)).mkString(",")})
            |  }
            |
            |  val factory = new NodeFactory[$classNameDb] {
@@ -1000,8 +1000,6 @@ class CodeGen(schema: Schema) {
          * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
         var offsetPos = -1
         def nextOffsetPos = { offsetPos += 1; offsetPos }
-
-        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType, Nil)
 
         def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
           val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
