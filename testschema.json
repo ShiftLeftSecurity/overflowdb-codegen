@@ -31,11 +31,25 @@
   ],
   "edgeKeys" : [
     {
+      "id" : 1,
+      "name" : "ALIAS",
+      "comment" : "Defines whether a PROPAGATE edge creates an alias",
+      "valueType" : "boolean",
+      "cardinality" : "one"
+    },
+    {
       "id" : 6,
       "name" : "LOCAL_NAME",
       "comment" : "Local name of referenced CONTAINED node. This key is deprecated.",
       "valueType" : "string",
       "cardinality" : "zeroOrOne"
+    },
+    {
+      "id" : 6999,
+      "name" : "EDGEKEY_1_LST",
+      "comment" : "test list edge key",
+      "valueType" : "int",
+      "cardinality" : "list"
     }
   ],
   "nodeTypes" : [
