@@ -20,15 +20,15 @@ class NodeType(val name: String,
                val comment: Option[String],
                val id: Int,
                val extendz: Buffer[NodeBaseType],
-               properties: mutable.Set[Property] = mutable.Set.empty,
                protected val _outEdges: mutable.Set[OutEdge] = mutable.Set.empty,
                protected val _inEdges: mutable.Set[InEdge] = mutable.Set.empty,
                val containedNodes: Buffer[ContainedNode]) {
   lazy val className = camelCaseCaps(name)
   lazy val classNameDb = s"${className}Db"
+  protected val _properties: mutable.Set[Property] = mutable.Set.empty
 
   def properties: Seq[Property] =
-    (properties ++ extendz.flatMap(_.properties)).toSeq
+    (_properties ++ extendz.flatMap(_.properties)).toSeq.sortBy(_.name)
 
   def outEdges: Seq[OutEdge] =
     _outEdges.toSeq
@@ -37,7 +37,7 @@ class NodeType(val name: String,
     _inEdges.toSeq
 
   def addProperties(additional: Property*): NodeType = {
-    additional.foreach(properties.add)
+    additional.foreach(_properties.add)
     this
   }
 
@@ -85,41 +85,41 @@ object Cardinality {
 }
 
 class EdgeType(val name: String,
-               val comment: Option[String],
-               val properties: Buffer[Property] = Buffer.empty) {
+               val comment: Option[String]) {
+  protected val _properties: mutable.Set[Property] = mutable.Set.empty
   lazy val className = camelCaseCaps(name)
 
+  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
+
   def addProperties(additional: Property*): EdgeType = {
-    properties.appendAll(additional)
+    additional.foreach(_properties.add)
     this
   }
 }
 
-class Property(val name: String,
-               val comment: Option[String],
-               val valueType: String,
-               val cardinality: Cardinality)
+case class Property(name: String,
+                    comment: Option[String],
+                    valueType: String,
+                    cardinality: Cardinality)
 
 class NodeBaseType(val name: String,
                    val extendz: Buffer[NodeBaseType],
                    val comment: Option[String]) {
-  val _properties: Buffer[Property] = Buffer.empty
+  protected val _properties: mutable.Set[Property] = mutable.Set.empty
   lazy val className = camelCaseCaps(name)
 
-  def properties: Seq[Property] = _properties
+  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
 
   def addProperties(additional: Property*): NodeBaseType = {
-    _properties.appendAll(additional)
+    additional.foreach(_properties.add)
     this
   }
 
   // TODO add ability for outEdge/inEdge etc. - maybe via trait mixin?
 }
 
-case class InEdgeContext(edge: EdgeType, neighborNodes: Set[OutNode])
-
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
-case class NeighborInfo(accessorNameForEdge: String, nodeInfos: Set[NeighborNodeInfo], offsetPosition: Int)
+case class NeighborInfo(accessorNameForEdge: String, nodeInfo: NeighborNodeInfo, offsetPosition: Int)
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value

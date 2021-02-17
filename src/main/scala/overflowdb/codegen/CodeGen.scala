@@ -124,16 +124,16 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generateEdgeSource(edgeType: EdgeType, keys: Seq[Property]) = {
+    def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property]) = {
       val edgeClassName = edgeType.className
 
-      val keyNames = keys.map(p => camelCaseCaps(p.name))
+      val propertyNames = properties.map(p => camelCaseCaps(p.name))
 
-      val propertyNameDefs = keys.map { p =>
+      val propertyNameDefs = properties.map { p =>
         s"""val ${camelCaseCaps(p.name)} = "${p.name}" """
       }.mkString("\n|    ")
 
-      val propertyDefs = keys.map { p =>
+      val propertyDefs = properties.map { p =>
         val baseType = p.valueType match {
           case "string"  => "String"
           case "int"     => "Integer"
@@ -148,7 +148,7 @@ class CodeGen(schema: Schema) {
            |
            |  object PropertyNames {
            |    $propertyNameDefs
-           |    val all: Set[String] = Set(${keyNames.mkString(", ")})
+           |    val all: Set[String] = Set(${propertyNames.mkString(", ")})
            |    val allAsJava: JSet[String] = all.asJava
            |  }
            |
@@ -190,7 +190,7 @@ class CodeGen(schema: Schema) {
       val classImpl =
         s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
            |extends Edge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
-           |${propertyBasedFieldAccessors(keys)}
+           |${propertyBasedFieldAccessors(properties)}
            |}
            |""".stripMargin
 
@@ -774,8 +774,8 @@ class CodeGen(schema: Schema) {
            |
            |
            |  object Edges {
-           |    val In: Array[String] = Array(${quoted(inEdges.map(_.edge.className)).mkString(",")})
-           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.edge.className)).mkString(",")})
+           |    val In: Array[String] = Array(${quoted(inEdges.map(_.edge.name)).mkString(",")})
+           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.edge.name)).mkString(",")})
            |  }
            |
            |  val factory = new NodeFactory[$classNameDb] {
@@ -1007,47 +1007,40 @@ class CodeGen(schema: Schema) {
         }
 
         val neighborOutInfos =
-          nodeType.outEdges.map { case OutEdgeEntry(edge, inNodes) =>
+          nodeType.outEdges.map { case OutEdge(edge, inNode, cardinality) =>
             val viaEdgeAndDirection = edge.className + "Out"
-            val neighborNodeInfos = inNodes.map { inNode =>
-              val nodeName = inNode.node.name
-              val cardinality = inNode.cardinality match {
-                  // TODO
-//                case Some(c) if c.endsWith(":1") => Cardinality.One
-//                case Some(c) if c.endsWith(":0-1") => Cardinality.ZeroOrOne
-                case _ => Cardinality.List
-              }
-              createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection, cardinality)
-            }.toSet
-            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.OUT), neighborNodeInfos, nextOffsetPos)
+            val neighborNodeInfo = createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
+            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.OUT), neighborNodeInfo, nextOffsetPos)
           }
 
-        val neighborInInfos =
-          inEdges.map { case InEdgeContext(edge, neighborNodes) =>
-            val viaEdgeAndDirection = edge.name + "In"
-            val neighborNodeInfos = neighborNodes.map { neighborNode =>
-//              val neighborNodeClassName = schema.nodeTypeByName(neighborNode.name).className
-              // note: cardinalities are defined on the 'other' side, i.e. on `outEdges.inEdges.cardinality`
-              // therefor, here we're interested in the left side of the `:`
-              val cardinality = neighborNode.cardinality match {
-                // TODO
-//                case Some(c) if c.startsWith("1:") => Cardinality.One
-//                case Some(c) if c.startsWith("0-1:") => Cardinality.ZeroOrOne
-                case _ => Cardinality.List
-              }
-              createNeighborNodeInfo(neighborNode.name, neighborNode.className, viaEdgeAndDirection, cardinality)
-            }
-            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfos, nextOffsetPos)
-          }
-
+        // TODO revive
+        val neighborInInfos = Seq.empty[NeighborInfo]
+//          inEdges.map { case InEdgeContext(edge, neighborNodes) =>
+//            val viaEdgeAndDirection = edge.name + "In"
+//            val neighborNodeInfos = neighborNodes.map { neighborNode =>
+////              val neighborNodeClassName = schema.nodeTypeByName(neighborNode.name).className
+//              // note: cardinalities are defined on the 'other' side, i.e. on `outEdges.inEdges.cardinality`
+//              // therefor, here we're interested in the left side of the `:`
+//              val cardinality = neighborNode.cardinality match {
+//                // TODO
+////                case Some(c) if c.startsWith("1:") => Cardinality.One
+////                case Some(c) if c.startsWith("0-1:") => Cardinality.ZeroOrOne
+//                case _ => Cardinality.List
+//              }
+//              createNeighborNodeInfo(neighborNode.name, neighborNode.className, viaEdgeAndDirection, cardinality)
+//            }
+//            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfos, nextOffsetPos)
+//          }
+//
         neighborOutInfos ++ neighborInInfos
       }
 
-      val neighborDelegators = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, _) =>
+      val neighborDelegators = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfo, _) =>
         val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
 
-        val specificNodeBasedDelegators = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
+        // TODO revive, refactor, ...
+        val specificNodeBasedDelegators = neighborNodeInfo match {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality)  =>
             val returnType = cardinality match {
               case Cardinality.List => s"Iterator[$className]"
@@ -1096,11 +1089,12 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, offsetPos) =>
+      val neighborAccessors = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfo, offsetPos) =>
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        val specificNodeBasedAccessors = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
+        // TODO revive, refactor, ...
+        val specificNodeBasedAccessors = neighborNodeInfo match {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             cardinality match {
               case Cardinality.List =>
