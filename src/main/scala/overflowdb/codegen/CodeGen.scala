@@ -127,10 +127,10 @@ class CodeGen(schema: Schema) {
     def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property]) = {
       val edgeClassName = edgeType.className
 
-      val propertyNames = properties.map(p => camelCaseCaps(p.name))
+      val propertyNames = properties.map(_.className)
 
       val propertyNameDefs = properties.map { p =>
-        s"""val ${camelCaseCaps(p.name)} = "${p.name}" """
+        s"""val ${p.className} = "${p.name}" """
       }.mkString("\n|    ")
 
       val propertyDefs = properties.map { p =>
@@ -241,9 +241,8 @@ class CodeGen(schema: Schema) {
       val keyBasedTraits =
         schema.nodeProperties.map { property =>
           val camelCaseName = camelCase(property.name)
-          val camelCaseCapitalized = camelCaseName.capitalize
           val tpe = getCompleteType(property)
-          s"trait Has$camelCaseCapitalized { def $camelCaseName: $tpe }"
+          s"trait Has${property.className} { def $camelCaseName: $tpe }"
         }.mkString("\n") + "\n"
 
       val factories = {
@@ -694,7 +693,7 @@ class CodeGen(schema: Schema) {
       val properties = nodeBaseTrait.properties
 
       val mixins = nodeBaseTrait.properties.map { property =>
-        s"with Has${camelCaseCaps(property.name)}"
+        s"with Has${property.className}"
       }.mkString(" ")
 
       val mixinTraits = nodeBaseTrait.extendz.map { baseTrait =>
@@ -803,7 +802,7 @@ class CodeGen(schema: Schema) {
           }
           .mkString(" ")
 
-      val propertyBasedTraits = properties.map(key => s"with Has${camelCaseCaps(key.name)}").mkString(" ")
+      val propertyBasedTraits = properties.map(p => s"with Has${p.className}").mkString(" ")
 
       val valueMapImpl = {
         val putKeysImpl = properties

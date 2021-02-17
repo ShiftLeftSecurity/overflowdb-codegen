@@ -100,7 +100,9 @@ class EdgeType(val name: String,
 case class Property(name: String,
                     comment: Option[String],
                     valueType: String,
-                    cardinality: Cardinality)
+                    cardinality: Cardinality) {
+  lazy val className = camelCaseCaps(name)
+}
 
 class NodeBaseType(val name: String,
                    val extendz: Buffer[NodeBaseType],
