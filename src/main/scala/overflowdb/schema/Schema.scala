@@ -3,7 +3,6 @@ package overflowdb.schema
 import overflowdb.codegen.Helpers._
 
 import scala.collection.mutable
-import scala.collection.mutable.Buffer
 
 /**
 * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
@@ -47,8 +46,8 @@ class NodeType(val name: String,
     this
   }
 
-  def addContainedNodes(additional: ContainedNode*): NodeType = {
-    additional.foreach(_containedNodes.add)
+  def addContainedNode(node: NodeType, localName: String, cardinality: Cardinality): NodeType = {
+    _containedNodes.add(ContainedNode(node, localName, cardinality))
     this
   }
 
@@ -82,10 +81,7 @@ class NodeType(val name: String,
 case class OutEdge(edge: EdgeType, inNode: NodeType, cardinality: Cardinality)
 case class InEdge(edge: EdgeType, outNode: NodeType, cardinality: Cardinality)
 
-// TODO make this a generic edge rather than a specialised feature?
-case class ContainedNode(nodeType: String, localName: String, cardinality: Cardinality) {
-  lazy val nodeTypeClassName = camelCaseCaps(nodeType)
-}
+case class ContainedNode(nodeType: NodeType, localName: String, cardinality: Cardinality)
 
 sealed abstract class Cardinality(val name: String)
 object Cardinality {
@@ -141,7 +137,7 @@ class NodeBaseType(val name: String,
     this
   }
 
-  // TODO add ability for outEdge/inEdge etc. - maybe via trait mixin?
+  // TODO add ability for outEdge/inEdge etc.
 }
 
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)

@@ -736,7 +736,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
-        propertyKeyDef(containedNode.localName, containedNode.nodeTypeClassName, containedNode.cardinality)
+        propertyKeyDef(containedNode.localName, containedNode.nodeType.className, containedNode.cardinality)
       }.mkString("\n|    ")
 
       val outEdges: Seq[OutEdge] = nodeType.outEdges
@@ -859,7 +859,7 @@ class CodeGen(schema: Schema) {
         val initRefsImpl = {
           nodeType.containedNodes.map { containedNode =>
             val memberName = containedNode.localName
-            val containedNodeType = containedNode.nodeTypeClassName
+            val containedNodeType = containedNode.nodeType.className
 
             containedNode.cardinality match {
               case Cardinality.One =>
@@ -915,7 +915,7 @@ class CodeGen(schema: Schema) {
       val containedNodesAsMembers =
         nodeType.containedNodes
           .map { containedNode =>
-            val containedNodeType = containedNode.nodeTypeClassName
+            val containedNodeType = containedNode.nodeType.className
             containedNode.cardinality match {
               case Cardinality.One =>
                 s"""
@@ -975,13 +975,13 @@ class CodeGen(schema: Schema) {
       val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         containedNode.cardinality match {
           case Cardinality.One =>
-            s"""  def ${containedNode.localName}: ${containedNode.nodeTypeClassName} = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
           case Cardinality.ZeroOrOne =>
-            s"""  def ${containedNode.localName}: Option[${containedNode.nodeTypeClassName}] = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: Option[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.List =>
-            s"""  def ${containedNode.localName}: List[${containedNode.nodeTypeClassName}] = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: List[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.ISeq =>
-            s"""  def ${containedNode.localName}: immutable.IndexedSeq[${containedNode.nodeTypeClassName}] = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
         }
       }.mkString("\n")
 
@@ -1129,7 +1129,7 @@ class CodeGen(schema: Schema) {
         val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, p.valueType)).mkString("\n")
 
         val forContaintedNodes = nodeType.containedNodes.map(containedNode =>
-          caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
+          caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeType.className)
         ).mkString("\n")
 
         s"""  override protected def updateSpecificProperty(key:String, value: Object): Unit = {

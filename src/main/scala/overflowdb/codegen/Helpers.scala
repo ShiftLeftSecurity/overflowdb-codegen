@@ -54,10 +54,10 @@ object Helpers {
     }
 
   def getCompleteType(containedNode: ContainedNode): String = {
-    val tpe = if (containedNode.nodeType != DefaultNodeTypes.Node) {
-      containedNode.nodeTypeClassName + "Base"
+    val tpe = if (containedNode.nodeType.name != DefaultNodeTypes.Node) {
+      containedNode.nodeType.className + "Base"
     } else {
-      containedNode.nodeTypeClassName
+      containedNode.nodeType.className
     }
 
     containedNode.cardinality match {
