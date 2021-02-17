@@ -35,7 +35,7 @@ object TestSchema1 extends App {
     .addProperties(name)
   val file = builder.addNodeType("FILE", 38, Seq(astNode), "Node representing a source file - the root of the AST")
     .addProperties(name, hash, inheritsFromTypeFullName)
-    .addOutEdge(edge = ast, inNode = namespaceBlock, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.List)
+    .addOutEdge(edge = ast, inNode = namespaceBlock, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
 
   // constants
   val dispatchTypes = builder.addConstants(category = "DispatchTypes",
