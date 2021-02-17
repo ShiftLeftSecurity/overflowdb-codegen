@@ -31,9 +31,11 @@ object TestSchema1 extends App {
     .addProperties(order)
 
   // node types
-  val namespaceBlock = builder.addNodeType("NAMESPACE_BLOCK", 41, Seq(astNode), "A reference to a namespace")
+  val namespaceBlock = builder.addNodeType("NAMESPACE_BLOCK", 41, "A reference to a namespace")
+    .extendz(astNode)
     .addProperties(name)
-  val file = builder.addNodeType("FILE", 38, Seq(astNode), "Node representing a source file - the root of the AST")
+  val file = builder.addNodeType("FILE", 38, "Node representing a source file - the root of the AST")
+    .extendz(astNode)
     .addProperties(name, hash, inheritsFromTypeFullName)
     .addOutEdge(edge = ast, inNode = namespaceBlock, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
 

@@ -32,9 +32,11 @@ object Base{
       .addProperties(order)
 
     // node types
-    val namespaceBlock = builder.addNodeType("NAMESPACE_BLOCK", 41, Seq(astNode), "A reference to a namespace")
+    val namespaceBlock = builder.addNodeType("NAMESPACE_BLOCK", 41, "A reference to a namespace")
+      .extendz(astNode)
 
-    val file = builder.addNodeType("FILE", 38, Seq(astNode), "Node representing a source file - the root of the AST")
+    val file = builder.addNodeType("FILE", 38, "Node representing a source file - the root of the AST")
+      .extendz(astNode)
     //    .addProperties(name, order)
     //    .addOutEdge(ast, InNode(namespaceBlock, "0-1:n"))
 
@@ -56,7 +58,8 @@ object Base{
 object JavaSpecific {
   def apply(builder: SchemaBuilder, base: Base.Schema) = new Schema(builder, base)
   class Schema(builder: SchemaBuilder, base: Base.Schema) {
-    val annotation = builder.addNodeType(name = "ANNOTATION", id = 5, extendz = Seq(base.astNode), "A method annotation")
+    val annotation = builder.addNodeType(name = "ANNOTATION", id = 5, "A method annotation")
+      .extendz(base.astNode)
       .addProperties(base.name)
   }
 

@@ -52,7 +52,7 @@ class NodeType(val name: String,
     this
   }
 
-  def addExtendz(additional: NodeBaseType*): NodeType = {
+  def extendz(additional: NodeBaseType*): NodeType = {
     additional.foreach(_extendz.add)
     this
   }
@@ -131,7 +131,7 @@ class NodeBaseType(val name: String,
   def extendz: Seq[NodeBaseType] =
     _extendz.toSeq
 
-  def addExtendz(additional: NodeBaseType*): NodeBaseType = {
+  def extendz(additional: NodeBaseType*): NodeBaseType = {
     additional.foreach(_extendz.add)
     this
   }

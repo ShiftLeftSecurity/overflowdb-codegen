@@ -3,7 +3,6 @@ package overflowdb.schema
 import overflowdb.codegen.Helpers._
 
 import scala.collection.mutable
-import scala.collection.mutable.Buffer
 
 /**
  *  TODO future refactorings:
@@ -19,10 +18,10 @@ class SchemaBuilder(basePackage: String) {
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
 
   def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(nodePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
+    addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
 
   def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(edgePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
+    addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
 
   def addNodeBaseType(name: String, comment: String = ""): NodeBaseType =
     addAndReturn(nodeBaseTypes, new NodeBaseType(name, stringToOption(comment)))
@@ -30,7 +29,7 @@ class SchemaBuilder(basePackage: String) {
   def addEdgeType(name: String, comment: String = ""): EdgeType =
     addAndReturn(edgeTypes, new EdgeType(name, stringToOption(comment)))
 
-  def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseType] = Nil, comment: String = ""): NodeType =
+  def addNodeType(name: String, id: Int, comment: String = ""): NodeType =
     addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), id))
 
   def addConstants(category: String, constants: Constant*): Seq[Constant] = {
