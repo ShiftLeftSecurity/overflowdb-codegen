@@ -46,23 +46,11 @@ object Helpers {
       case  Cardinality.ISeq => ???
     }
 
-  def getBaseType(schemaType: String): String = {
-    schemaType match {
-      case "string"  => "String"
-      case "int"     => "Integer"
-      case "boolean" => "JBoolean"
-      case _         => "Nothing"
-    }
-  }
-
-  def getBaseType(property: Property): String =
-    getBaseType(property.valueType)
-
   def getCompleteType(property: Property): String =
     getHigherType(property.cardinality) match {
-      case HigherValueType.None   => getBaseType(property)
-      case HigherValueType.Option => s"Option[${getBaseType(property)}]"
-      case HigherValueType.List   => s"List[${getBaseType(property)}]"
+      case HigherValueType.None   => property.valueType
+      case HigherValueType.Option => s"Option[${property.valueType}]"
+      case HigherValueType.List   => s"List[${property.valueType}]"
     }
 
   def getCompleteType(containedNode: ContainedNode): String = {

@@ -341,7 +341,7 @@ class CodeGen(schema: Schema) {
     def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
-        val baseType = getBaseType(property)
+        val baseType = property.valueType
         val cardinality = property.cardinality
 
         val mapOrFlatMap = cardinality match {
@@ -1050,7 +1050,8 @@ class CodeGen(schema: Schema) {
             }
             s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
           }
-        specificNodeBasedDelegators + genericEdgeBasedDelegators
+        s"""$specificNodeBasedDelegators
+           |$genericEdgeBasedDelegators""".stripMargin
       }.mkString("\n")
 
       val nodeRefImpl = {
@@ -1106,7 +1107,8 @@ class CodeGen(schema: Schema) {
               case Cardinality.ISeq => ???
             }
         }
-        specificNodeBasedAccessors + genericEdgeBasedAccessor
+        s"""$specificNodeBasedAccessors
+           |$genericEdgeBasedAccessor""".stripMargin
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
@@ -1138,7 +1140,7 @@ class CodeGen(schema: Schema) {
           s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = properties.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
+        val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, p.valueType)).mkString("\n")
 
         val forContaintedNodes = nodeType.containedNodes.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
