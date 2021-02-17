@@ -19,16 +19,19 @@ class Schema(val basePackage: String,
 class NodeType(val name: String,
                val comment: Option[String],
                val id: Int,
-               val extendz: Buffer[NodeBaseType],
                protected val _outEdges: mutable.Set[OutEdge] = mutable.Set.empty,
-               protected val _inEdges: mutable.Set[InEdge] = mutable.Set.empty,
-               val containedNodes: Buffer[ContainedNode]) {
+               protected val _inEdges: mutable.Set[InEdge] = mutable.Set.empty) {
   lazy val className = camelCaseCaps(name)
   lazy val classNameDb = s"${className}Db"
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
+  protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
+  protected val _containedNodes: mutable.Set[ContainedNode] = mutable.Set.empty
 
   def properties: Seq[Property] =
-    (_properties ++ extendz.flatMap(_.properties)).toSeq.sortBy(_.name)
+    (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name)
+
+  def extendz: Seq[NodeBaseType] =
+    _extendz.toSeq
 
   def outEdges: Seq[OutEdge] =
     _outEdges.toSeq
@@ -36,8 +39,21 @@ class NodeType(val name: String,
   def inEdges: Seq[InEdge] =
     _inEdges.toSeq
 
+  def containedNodes: Seq[ContainedNode] =
+    _containedNodes.toSeq
+
   def addProperties(additional: Property*): NodeType = {
     additional.foreach(_properties.add)
+    this
+  }
+
+  def addContainedNodes(additional: ContainedNode*): NodeType = {
+    additional.foreach(_containedNodes.add)
+    this
+  }
+
+  def addExtendz(additional: NodeBaseType*): NodeType = {
+    additional.foreach(_extendz.add)
     this
   }
 
@@ -105,12 +121,20 @@ case class Property(name: String,
 }
 
 class NodeBaseType(val name: String,
-                   val extendz: Buffer[NodeBaseType],
                    val comment: Option[String]) {
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
+  protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   lazy val className = camelCaseCaps(name)
 
   def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
+
+  def extendz: Seq[NodeBaseType] =
+    _extendz.toSeq
+
+  def addExtendz(additional: NodeBaseType*): NodeBaseType = {
+    additional.foreach(_extendz.add)
+    this
+  }
 
   def addProperties(additional: Property*): NodeBaseType = {
     additional.foreach(_properties.add)

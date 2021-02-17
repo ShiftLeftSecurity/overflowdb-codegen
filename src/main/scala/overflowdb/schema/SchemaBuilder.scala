@@ -24,14 +24,14 @@ class SchemaBuilder(basePackage: String) {
   def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(edgePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
 
-  def addNodeBaseType(name: String, extendz: Seq[NodeBaseType] = Nil, comment: String = ""): NodeBaseType =
-    addAndReturn(nodeBaseTypes, new NodeBaseType(name, extendz.to[Buffer], stringToOption(comment)))
+  def addNodeBaseType(name: String, comment: String = ""): NodeBaseType =
+    addAndReturn(nodeBaseTypes, new NodeBaseType(name, stringToOption(comment)))
 
   def addEdgeType(name: String, comment: String = ""): EdgeType =
     addAndReturn(edgeTypes, new EdgeType(name, stringToOption(comment)))
 
   def addNodeType(name: String, id: Int, extendz: Seq[NodeBaseType] = Nil, comment: String = ""): NodeType =
-    addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), id, extendz.to[Buffer], containedNodes = Buffer.empty))
+    addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), id))
 
   def addConstants(category: String, constants: Constant*): Seq[Constant] = {
     val previousEntries = constantsByCategory.getOrElse(category, Seq.empty)

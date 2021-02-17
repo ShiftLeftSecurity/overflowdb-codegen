@@ -27,7 +27,7 @@ object TestSchema1 extends App {
   val ast = builder.addEdgeType("AST", "Syntax tree edge")
 
   //  node base types
-  val astNode = builder.addNodeBaseType("AST_NODE", extendz = Nil, "Any node that can exist in an abstract syntax tree")
+  val astNode = builder.addNodeBaseType("AST_NODE", "Any node that can exist in an abstract syntax tree")
     .addProperties(order)
 
   // node types
