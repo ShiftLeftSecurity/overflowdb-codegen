@@ -1013,25 +1013,13 @@ class CodeGen(schema: Schema) {
             NeighborInfo(neighborAccessorNameForEdge(edge, Direction.OUT), neighborNodeInfo, nextOffsetPos)
           }
 
-        // TODO revive
-        val neighborInInfos = Seq.empty[NeighborInfo]
-//          inEdges.map { case InEdgeContext(edge, neighborNodes) =>
-//            val viaEdgeAndDirection = edge.name + "In"
-//            val neighborNodeInfos = neighborNodes.map { neighborNode =>
-////              val neighborNodeClassName = schema.nodeTypeByName(neighborNode.name).className
-//              // note: cardinalities are defined on the 'other' side, i.e. on `outEdges.inEdges.cardinality`
-//              // therefor, here we're interested in the left side of the `:`
-//              val cardinality = neighborNode.cardinality match {
-//                // TODO
-////                case Some(c) if c.startsWith("1:") => Cardinality.One
-////                case Some(c) if c.startsWith("0-1:") => Cardinality.ZeroOrOne
-//                case _ => Cardinality.List
-//              }
-//              createNeighborNodeInfo(neighborNode.name, neighborNode.className, viaEdgeAndDirection, cardinality)
-//            }
-//            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfos, nextOffsetPos)
-//          }
-//
+        val neighborInInfos =
+          nodeType.inEdges.map { case InEdge(edge, outNode, cardinality) =>
+            val viaEdgeAndDirection = edge.className + "In"
+            val neighborNodeInfo = createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
+            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfo, nextOffsetPos)
+          }
+
         neighborOutInfos ++ neighborInInfos
       }
 
@@ -1094,7 +1082,6 @@ class CodeGen(schema: Schema) {
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        // TODO revive, refactor, ...
         val specificNodeBasedAccessors = neighborNodeInfo match {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             cardinality match {
