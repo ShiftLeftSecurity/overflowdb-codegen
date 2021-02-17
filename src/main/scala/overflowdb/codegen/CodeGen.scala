@@ -1026,7 +1026,6 @@ class CodeGen(schema: Schema) {
         val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
 
-        // TODO revive, refactor, ...
         val specificNodeBasedDelegators = neighborNodeInfo match {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality)  =>
             val returnType = cardinality match {
