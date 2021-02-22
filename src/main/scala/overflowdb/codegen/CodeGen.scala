@@ -44,7 +44,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }.mkString("\n").stripSuffix("\n")
       val constantsSet =
         s"""
-           | public static Set<$setType> ALL = new HashSet<>() {{
+           | public static Set<$setType> ALL = new HashSet<$setType>() {{
            |$constantsSetBody
            | }};
            |""".stripMargin
