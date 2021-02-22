@@ -38,15 +38,29 @@ class CodeGen(schemaFile: String, basePackage: String) {
            | ${mkSrc(constant)}
            |""".stripMargin
       }.mkString("\n")
-
+      val setType = if (src.contains("PropertyKey")) "PropertyKey" else "String"
+      val constantsSetBody = constants.map { constant =>
+        s"     add(${constant.name});"
+      }.mkString("\n").stripSuffix("\n")
+      val constantsSet =
+        s"""
+           | public static Set<$setType> ALL = new HashSet<>() {{
+           |$constantsSetBody
+           | }};
+           |""".stripMargin
       baseDir.createChild(s"$className.java").write(
         s"""package io.shiftleft.codepropertygraph.generated;
            |
            |import overflowdb.*;
            |
+           |import java.util.Collection;
+           |import java.util.HashSet;
+           |import java.util.Set;
+           |
            |public class $className {
            |
            |$src
+           |$constantsSet
            |}""".stripMargin
       )
     }
