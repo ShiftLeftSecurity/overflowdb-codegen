@@ -1,6 +1,7 @@
 package overflowdb.codegen
 
 import better.files._
+import overflowdb.codegen.CodeGen.ConstantContext
 
 import java.io.{File => JFile}
 import overflowdb.schema._
@@ -24,13 +25,12 @@ class CodeGen(schema: Schema) {
   def writeConstants(outputDir: JFile): JFile = {
     val baseDir = File(outputDir.getPath + "/" + basePackage.replaceAll("\\.", "/")).createDirectories
 
-    def writeConstantsFile[A](className: String, constants: Seq[A])(makeDocAndSource: A => (Option[String], String)): Unit = {
-      val constantsSource = constants.map(makeDocAndSource).map {
-        case (docMaybe, src) =>
-          val documentation = docMaybe.filter(_.nonEmpty).map(comment => s"""/** $comment */""").getOrElse("")
-          s""" $documentation
-             | $src
-             |""".stripMargin
+    def writeConstantsFile(className: String, constants: Seq[ConstantContext]): Unit = {
+      val constantsSource = constants.map { constant =>
+        val documentation = constant.documentation.filter(_.nonEmpty).map(comment => s"""/** $comment */""").getOrElse("")
+        s""" $documentation
+           | ${constant.source}
+           |""".stripMargin
       }.mkString("\n")
       val allConstantsSetType = if (constantsSource.contains("PropertyKey")) "PropertyKey" else "String"
       val allConstantsBody = constants.map { constant =>
@@ -59,25 +59,25 @@ class CodeGen(schema: Schema) {
       )
     }
 
-    writeConstantsFile("NodeKeyNames", schema.nodeProperties) { property =>
-      (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
-    }
-    writeConstantsFile("EdgeKeyNames", schema.edgeProperties) { property =>
-      (property.comment, s"""public static final String ${property.name} = "${property.name}";""")
-    }
-    writeConstantsFile("NodeTypes", schema.nodeTypes) { nodeType =>
-      (nodeType.comment, s"""public static final String ${nodeType.name} = "${nodeType.name}";""")
-    }
-    writeConstantsFile("EdgeTypes", schema.edgeTypes) { edgeType =>
-      (edgeType.comment, s"""public static final String ${edgeType.name} = "${edgeType.name}";""")
-    }
+    writeConstantsFile("NodeKeyNames", schema.nodeProperties.map { property =>
+      ConstantContext(property.name, s"""public static final String ${property.name} = "${property.name}";""", property.comment)
+    })
+    writeConstantsFile("EdgeKeyNames", schema.edgeProperties.map { property =>
+      ConstantContext(property.name, s"""public static final String ${property.name} = "${property.name}";""", property.comment)
+    })
+    writeConstantsFile("NodeTypes", schema.nodeTypes.map { nodeType =>
+      ConstantContext(nodeType.name, s"""public static final String ${nodeType.name} = "${nodeType.name}";""", nodeType.comment)
+    })
+    writeConstantsFile("EdgeTypes", schema.edgeTypes.map { edgeType =>
+      ConstantContext(edgeType.name, s"""public static final String ${edgeType.name} = "${edgeType.name}";""", edgeType.comment)
+    })
     schema.constantsByCategory.foreach { case (category, constants) =>
-      writeConstantsFile(category, constants) { constant =>
-        (constant.comment, s"""public static final String ${constant.name} = "${constant.value}";""")
-      }
+      writeConstantsFile(category, constants.map { constant =>
+        ConstantContext(constant.name, s"""public static final String ${constant.name} = "${constant.value}";""", constant.comment)
+      })
     }
 
-    def propertyKeyCommentAndSource(property: Property): (Option[String], String) = {
+    def toConstantContext(property: Property): ConstantContext = {
       val src = {
         val valueType = property.valueType
         val cardinality = property.cardinality
@@ -89,10 +89,10 @@ class CodeGen(schema: Schema) {
         }
         s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
       }
-      (property.comment, src)
+      ConstantContext(property.name, src, property.comment)
     }
-    writeConstantsFile("NodeKeys", schema.nodeProperties)(propertyKeyCommentAndSource)
-    writeConstantsFile("EdgeKeys", schema.edgeProperties)(propertyKeyCommentAndSource)
+    writeConstantsFile("NodeKeys", schema.nodeProperties.map(toConstantContext))
+    writeConstantsFile("EdgeKeys", schema.edgeProperties.map(toConstantContext))
 
     outputDir
   }
@@ -1414,4 +1414,8 @@ class CodeGen(schema: Schema) {
   /* surrounds input with `"` */
   def quoted(strings: Iterable[String]): Iterable[String] =
     strings.map(string => s""""$string"""")
+}
+
+object CodeGen {
+  case class ConstantContext(name: String, source: String, documentation: Option[String])
 }
