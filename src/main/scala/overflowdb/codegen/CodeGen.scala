@@ -32,14 +32,14 @@ class CodeGen(schema: Schema) {
              | $src
              |""".stripMargin
       }.mkString("\n")
-      val setType = if (src.contains("PropertyKey")) "PropertyKey" else "String"
-      val constantsSetBody = constants.map { constant =>
+      val allConstantsSetType = if (constantsSource.contains("PropertyKey")) "PropertyKey" else "String"
+      val allConstantsBody = constants.map { constant =>
         s"     add(${constant.name});"
       }.mkString("\n").stripSuffix("\n")
-      val constantsSet =
+      val allConstantsSet =
         s"""
-           | public static Set<$setType> ALL = new HashSet<$setType>() {{
-           |$constantsSetBody
+           | public static Set<$allConstantsSetType> ALL = new HashSet<>() {{
+           |$allConstantsBody
            | }};
            |""".stripMargin
       baseDir.createChild(s"$className.java").write(
@@ -54,7 +54,7 @@ class CodeGen(schema: Schema) {
            |public class $className {
            |
            |$constantsSource
-           |$constantsSet
+           |$allConstantsSet
            |}""".stripMargin
       )
     }
