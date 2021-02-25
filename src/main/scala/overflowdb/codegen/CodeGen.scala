@@ -15,15 +15,14 @@ class CodeGen(schema: Schema) {
 
   def run(outputDir: java.io.File): Seq[java.io.File] = {
     val _outputDir = outputDir.toScala
-    Seq(
-      writeConstants(_outputDir),
-      writeEdgeFiles(_outputDir),
-      writeNodeFiles(_outputDir),
-      writeNewNodeFiles(_outputDir)
-    ).map(_.toJava)
+
+    val results = writeConstants(_outputDir) ++ writeEdgeFiles(_outputDir) ++ writeNodeFiles(_outputDir) :+ writeNewNodeFile(_outputDir)
+    println(s"generated ${results.size} files in ${_outputDir}")
+    results.map(_.toJava)
   }
 
-  protected def writeConstants(outputDir: File): File = {
+  protected def writeConstants(outputDir: File): Seq[File] = {
+    val results = mutable.Buffer.empty[File]
     val baseDir = outputDir / basePackage.replaceAll("\\.", "/")
     baseDir.createDirectories()
 
@@ -44,7 +43,7 @@ class CodeGen(schema: Schema) {
            |$allConstantsBody
            | }};
            |""".stripMargin
-      baseDir.createChild(s"$className.java").write(
+      val file = baseDir.createChild(s"$className.java").write(
         s"""package $basePackage;
            |
            |import overflowdb.*;
@@ -59,6 +58,7 @@ class CodeGen(schema: Schema) {
            |$allConstantsSet
            |}""".stripMargin
       )
+      results.append(file)
     }
 
     writeConstantsFile("NodeKeyNames", schema.nodeProperties.map { property =>
@@ -96,10 +96,10 @@ class CodeGen(schema: Schema) {
     writeConstantsFile("NodeKeys", schema.nodeProperties.map(toConstantContext))
     writeConstantsFile("EdgeKeys", schema.edgeProperties.map(toConstantContext))
 
-    outputDir
+    results
   }
 
-  protected def writeEdgeFiles(outputDir: File): File = {
+  protected def writeEdgeFiles(outputDir: File): Seq[File] = {
     val staticHeader =
       s"""package $edgesPackage
          |
@@ -205,20 +205,19 @@ class CodeGen(schema: Schema) {
     val baseDir = outputDir / edgesPackage.replaceAll("\\.", "/")
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
-    baseDir.createChild("package.scala").write(packageObject)
-    schema.edgeTypes.foreach { edge =>
+    val pkgObjFile = baseDir.createChild("package.scala").write(packageObject)
+    val edgeTypeFiles = schema.edgeTypes.map { edge =>
       val src = generateEdgeSource(edge, edge.properties)
       val srcFile = edge.className + ".scala"
       baseDir.createChild(srcFile).write(src)
     }
-    println(s"generated edge sources in $baseDir (${baseDir.list.size} files)")
-    baseDir
+    pkgObjFile +: edgeTypeFiles
   }
 
   protected def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
     "_" + camelCase(edge.className + "_" + direction)
 
-  protected def writeNodeFiles(outputDir: File): File = {
+  protected def writeNodeFiles(outputDir: File): Seq[File] = {
     val staticHeader =
       s"""package $nodesPackage
          |
@@ -1230,30 +1229,30 @@ class CodeGen(schema: Schema) {
          |package object nodes extends NodeTraversalImplicits
          |""".stripMargin
 
+    val results = mutable.Buffer.empty[File]
     val baseDir = outputDir / nodesPackage.replaceAll("\\.", "/")
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
-    baseDir.createChild("package.scala").write(packageObject)
-    baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits)
-    baseDir.createChild("RootTypes.scala").write(rootTypeImpl)
+    results.append(baseDir.createChild("package.scala").write(packageObject))
+    results.append(baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits))
+    results.append(baseDir.createChild("RootTypes.scala").write(rootTypeImpl))
     schema.nodeBaseTypes.foreach { nodeBaseTrait =>
       val src = generateNodeBaseTypeSource(nodeBaseTrait)
       val srcFile = nodeBaseTrait.className + ".scala"
-      baseDir.createChild(srcFile).write(src)
+      results.append(baseDir.createChild(srcFile).write(src))
     }
     schema.nodeTypes.foreach { nodeType =>
       val src = generateNodeSource(nodeType)
       val srcFile = nodeType.className + ".scala"
-      baseDir.createChild(srcFile).write(src)
+      results.append(baseDir.createChild(srcFile).write(src))
     }
-    println(s"generated node sources in $baseDir (${baseDir.list.size} files)")
-    baseDir
+    results
   }
 
   /** generates classes to easily add new nodes to the graph
     * this ability could have been added to the existing nodes, but it turned out as a different specialisation,
     * since e.g. `id` is not set before adding it to the graph */
-  protected def writeNewNodeFiles(outputDir: File): File = {
+  protected def writeNewNodeFile(outputDir: File): File = {
     val staticHeader =
       s"""package $nodesPackage
          |
@@ -1409,8 +1408,6 @@ class CodeGen(schema: Schema) {
     outfile.write(s"""$staticHeader
                      |$src
                      |""".stripMargin)
-    println(s"generated NewNode sources in $outfile")
-    outfile
   }
 }
 
