@@ -1,7 +1,6 @@
 package overflowdb.codegen
 
 import better.files._
-import java.io.{File => JFile}
 import overflowdb.codegen.CodeGen.ConstantContext
 import overflowdb.schema._
 
@@ -14,15 +13,19 @@ class CodeGen(schema: Schema) {
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
 
-  def run(outputDir: JFile): Seq[JFile] =
-    List(
-      writeConstants(outputDir),
-      writeEdgeFiles(outputDir),
-      writeNodeFiles(outputDir),
-      writeNewNodeFiles(outputDir))
+  def run(outputDir: java.io.File): Seq[java.io.File] = {
+    val _outputDir = outputDir.toScala
+    Seq(
+      writeConstants(_outputDir),
+      writeEdgeFiles(_outputDir),
+      writeNodeFiles(_outputDir),
+      writeNewNodeFiles(_outputDir)
+    ).map(_.toJava)
+  }
 
-  protected def writeConstants(outputDir: JFile): JFile = {
-    val baseDir = File(outputDir.getPath + "/" + basePackage.replaceAll("\\.", "/")).createDirectories
+  protected def writeConstants(outputDir: File): File = {
+    val baseDir = outputDir / basePackage.replaceAll("\\.", "/")
+    baseDir.createDirectories()
 
     def writeConstantsFile(className: String, constants: Seq[ConstantContext]): Unit = {
       val constantsSource = constants.map { constant =>
@@ -96,7 +99,7 @@ class CodeGen(schema: Schema) {
     outputDir
   }
 
-  protected def writeEdgeFiles(outputDir: JFile): JFile = {
+  protected def writeEdgeFiles(outputDir: File): File = {
     val staticHeader =
       s"""package $edgesPackage
          |
@@ -199,7 +202,7 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    val baseDir = File(outputDir.getPath + "/" + edgesPackage.replaceAll("\\.", "/"))
+    val baseDir = outputDir / edgesPackage.replaceAll("\\.", "/")
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
     baseDir.createChild("package.scala").write(packageObject)
@@ -209,13 +212,13 @@ class CodeGen(schema: Schema) {
       baseDir.createChild(srcFile).write(src)
     }
     println(s"generated edge sources in $baseDir (${baseDir.list.size} files)")
-    baseDir.toJava
+    baseDir
   }
 
   protected def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
     "_" + camelCase(edge.className + "_" + direction)
 
-  protected def writeNodeFiles(outputDir: JFile): JFile = {
+  protected def writeNodeFiles(outputDir: File): File = {
     val staticHeader =
       s"""package $nodesPackage
          |
@@ -1227,7 +1230,7 @@ class CodeGen(schema: Schema) {
          |package object nodes extends NodeTraversalImplicits
          |""".stripMargin
 
-    val baseDir = File(outputDir.getPath + "/" + nodesPackage.replaceAll("\\.", "/"))
+    val baseDir = outputDir / nodesPackage.replaceAll("\\.", "/")
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
     baseDir.createChild("package.scala").write(packageObject)
@@ -1244,13 +1247,13 @@ class CodeGen(schema: Schema) {
       baseDir.createChild(srcFile).write(src)
     }
     println(s"generated node sources in $baseDir (${baseDir.list.size} files)")
-    baseDir.toJava
+    baseDir
   }
 
   /** generates classes to easily add new nodes to the graph
     * this ability could have been added to the existing nodes, but it turned out as a different specialisation,
     * since e.g. `id` is not set before adding it to the graph */
-  protected def writeNewNodeFiles(outputDir: JFile): JFile = {
+  protected def writeNewNodeFiles(outputDir: File): File = {
     val staticHeader =
       s"""package $nodesPackage
          |
@@ -1397,7 +1400,7 @@ class CodeGen(schema: Schema) {
     }
 
 
-    val outfile = File(outputDir.getPath + "/" + nodesPackage.replaceAll("\\.", "/") + "/NewNodes.scala")
+    val outfile = outputDir / nodesPackage.replaceAll("\\.", "/") / "NewNodes.scala"
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
@@ -1407,7 +1410,7 @@ class CodeGen(schema: Schema) {
                      |$src
                      |""".stripMargin)
     println(s"generated NewNode sources in $outfile")
-    outfile.toJava
+    outfile
   }
 }
 
