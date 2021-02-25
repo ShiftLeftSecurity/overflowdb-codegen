@@ -16,6 +16,10 @@ object DefaultEdgeTypes {
 
 object Helpers {
 
+  /* surrounds input with `"` */
+  def quoted(strings: Iterable[String]): Iterable[String] =
+    strings.map(string => s""""$string"""")
+
   def stringToOption(s: String): Option[String] = s.trim match {
     case "" => None
     case nonEmptyString => Some(nonEmptyString)

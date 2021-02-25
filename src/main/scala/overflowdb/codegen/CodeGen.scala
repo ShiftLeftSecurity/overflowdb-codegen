@@ -1,9 +1,8 @@
 package overflowdb.codegen
 
 import better.files._
-import overflowdb.codegen.CodeGen.ConstantContext
-
 import java.io.{File => JFile}
+import overflowdb.codegen.CodeGen.ConstantContext
 import overflowdb.schema._
 
 import scala.collection.mutable
@@ -22,7 +21,7 @@ class CodeGen(schema: Schema) {
       writeNodeFiles(outputDir),
       writeNewNodeFiles(outputDir))
 
-  def writeConstants(outputDir: JFile): JFile = {
+  protected def writeConstants(outputDir: JFile): JFile = {
     val baseDir = File(outputDir.getPath + "/" + basePackage.replaceAll("\\.", "/")).createDirectories
 
     def writeConstantsFile(className: String, constants: Seq[ConstantContext]): Unit = {
@@ -97,7 +96,7 @@ class CodeGen(schema: Schema) {
     outputDir
   }
 
-  def writeEdgeFiles(outputDir: JFile): JFile = {
+  protected def writeEdgeFiles(outputDir: JFile): JFile = {
     val staticHeader =
       s"""package $edgesPackage
          |
@@ -213,10 +212,10 @@ class CodeGen(schema: Schema) {
     baseDir.toJava
   }
 
-  def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
+  protected def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
     "_" + camelCase(edge.className + "_" + direction)
 
-  def writeNodeFiles(outputDir: JFile): JFile = {
+  protected def writeNodeFiles(outputDir: JFile): JFile = {
     val staticHeader =
       s"""package $nodesPackage
          |
@@ -1251,7 +1250,7 @@ class CodeGen(schema: Schema) {
   /** generates classes to easily add new nodes to the graph
     * this ability could have been added to the existing nodes, but it turned out as a different specialisation,
     * since e.g. `id` is not set before adding it to the graph */
-  def writeNewNodeFiles(outputDir: JFile): JFile = {
+  protected def writeNewNodeFiles(outputDir: JFile): JFile = {
     val staticHeader =
       s"""package $nodesPackage
          |
@@ -1410,10 +1409,6 @@ class CodeGen(schema: Schema) {
     println(s"generated NewNode sources in $outfile")
     outfile.toJava
   }
-
-  /* surrounds input with `"` */
-  def quoted(strings: Iterable[String]): Iterable[String] =
-    strings.map(string => s""""$string"""")
 }
 
 object CodeGen {
