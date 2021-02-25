@@ -929,7 +929,7 @@ class CodeGen(schema: Schema) {
                    |""".stripMargin
               case Cardinality.List =>
                 s"""
-                   |private var _${containedNode.localName}: Seq[$containedNodeType] = Nil
+                   |private var _${containedNode.localName}: Seq[$containedNodeType] = Seq.empty
                    |def ${containedNode.localName}: Seq[$containedNodeType] = this._${containedNode.localName}
                    |""".stripMargin
               case Cardinality.ISeq =>
