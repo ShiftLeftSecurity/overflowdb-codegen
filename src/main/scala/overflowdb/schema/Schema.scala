@@ -18,6 +18,7 @@ class Schema(val basePackage: String,
 class NodeType(val name: String,
                val comment: Option[String],
                val id: Int,
+               val protoId: Int,
                protected val _outEdges: mutable.Set[OutEdge] = mutable.Set.empty,
                protected val _inEdges: mutable.Set[InEdge] = mutable.Set.empty) {
   lazy val className = camelCaseCaps(name)
