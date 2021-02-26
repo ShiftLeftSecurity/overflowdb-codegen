@@ -66,9 +66,11 @@ object TestSchema1 extends App {
     protoId = 3
   ).addProperties(localName)
 
-  //  node base types
-  val astNode = builder.addNodeBaseType("AST_NODE", "Any node that can exist in an abstract syntax tree")
-    .addProperties(order)
+  // node base types
+  val astNode = builder.addNodeBaseType(
+    name = "AST_NODE",
+    comment = "Any node that can exist in an abstract syntax tree"
+  ).addProperties(order)
 
   // node types
   val namespaceBlock = builder.addNodeType("NAMESPACE_BLOCK", 41, "A reference to a namespace")
