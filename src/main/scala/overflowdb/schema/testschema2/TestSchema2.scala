@@ -2,6 +2,7 @@ package overflowdb.schema.testschema2
 
 import java.io.File
 import overflowdb.codegen.CodeGen
+import overflowdb.schema.testschema1.TestSchema1.builder
 import overflowdb.schema.{Cardinality, Constant, SchemaBuilder}
 
 // TODO create integration test from this
@@ -16,13 +17,27 @@ object Base{
   def apply(builder: SchemaBuilder) = new Schema(builder)
   class Schema(builder: SchemaBuilder) {
     // node properties
-    val name = builder.addNodeProperty("NAME", "string", Cardinality.One, "Name of represented object, e.g., method name (e.g. \"run\")")
-    val order = builder.addNodeProperty("ORDER", "int",
-      Cardinality.One,
-      "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code")
+    val name = builder.addNodeProperty(
+      name = "NAME",
+      valueType = "String",
+      cardinality = Cardinality.One,
+      protoId = 5,
+      comment = "Name of represented object, e.g., method name (e.g. \"run\")")
+
+    val order = builder.addNodeProperty(
+      name = "ORDER",
+      valueType = "Integer",
+      cardinality = Cardinality.One,
+      protoId = 4,
+      comment = "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code")
 
     // edge properties
-    val localName = builder.addEdgeProperty("LOCAL_NAME", "string", Cardinality.ZeroOrOne, "Local name of referenced CONTAINED node. This key is deprecated.")
+    val localName = builder.addEdgeProperty(
+      name = "LOCAL_NAME",
+      valueType = "String",
+      cardinality = Cardinality.ZeroOrOne,
+      protoId = 6,
+      comment = "Local name of referenced CONTAINED node. This key is deprecated.")
 
     // edge types
     val ast = builder.addEdgeType("AST", "Syntax tree edge")

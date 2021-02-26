@@ -17,11 +17,11 @@ class SchemaBuilder(basePackage: String) {
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
 
-  def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
+  def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, protoId: Int, comment: String = ""): Property =
+    addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality, protoId))
 
-  def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality))
+  def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, protoId: Int, comment: String = ""): Property =
+    addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality, protoId))
 
   def addNodeBaseType(name: String, comment: String = ""): NodeBaseType =
     addAndReturn(nodeBaseTypes, new NodeBaseType(name, stringToOption(comment)))

@@ -112,7 +112,8 @@ class EdgeType(val name: String,
 case class Property(name: String,
                     comment: Option[String],
                     valueType: String,
-                    cardinality: Cardinality) {
+                    cardinality: Cardinality,
+                    protoId: Int) {
   lazy val className = camelCaseCaps(name)
 }
 
