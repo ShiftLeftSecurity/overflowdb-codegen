@@ -13,51 +13,51 @@ object TestSchema1 extends App {
     name = "NAME",
     valueType = "String",
     cardinality = Cardinality.One,
-    protoId = 5,
-    comment = "Name of represented object, e.g., method name (e.g. \"run\")")
+    comment = "Name of represented object, e.g., method name (e.g. \"run\")",
+    protoId = 5)
 
   val order = builder.addNodeProperty(
     name = "ORDER",
     valueType = "Integer",
     cardinality = Cardinality.One,
-    protoId = 4,
-    comment = "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code")
+    comment = "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code",
+    protoId = 4)
 
   val hash = builder.addNodeProperty(
     name = "HASH",
     valueType = "String",
     cardinality = Cardinality.ZeroOrOne,
-    protoId = 120,
-    comment = "Hash value of the artifact that this CPG is built from.")
+    comment = "Hash value of the artifact that this CPG is built from.",
+    protoId = 120)
 
   val inheritsFromTypeFullName = builder.addNodeProperty(
     name = "INHERITS_FROM_TYPE_FULL_NAME",
     valueType = "String",
     cardinality = Cardinality.List,
-    protoId = 53,
-    comment = "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME")
+    comment = "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME",
+    protoId = 53)
 
   // edge properties
   val alias = builder.addEdgeProperty(
     name = "ALIAS",
     valueType = "Boolean",
     cardinality = Cardinality.One,
-    protoId = 1,
-    comment = "Defines whether a PROPAGATE edge creates an alias")
+    comment = "Defines whether a PROPAGATE edge creates an alias",
+    protoId = 1)
 
   val localName = builder.addEdgeProperty(
     name = "LOCAL_NAME",
     valueType = "String",
     cardinality = Cardinality.ZeroOrOne,
-    protoId = 6,
-    comment = "Local name of referenced CONTAINED node. This key is deprecated.")
+    comment = "Local name of referenced CONTAINED node. This key is deprecated.",
+    protoId = 6)
 
   val edgekey1Lst = builder.addEdgeProperty(
     name = "EDGEKEY_1_LST",
     valueType = "Integer",
     cardinality = Cardinality.List,
-    protoId = 6999,
-    comment = "test list edge key")
+    comment = "test list edge key",
+    protoId = 6999)
 
   //  edge types
   val ast = builder.addEdgeType("AST", "Syntax tree edge")
@@ -90,4 +90,6 @@ object TestSchema1 extends App {
   )
 
   new CodeGen(builder.build).run(new File("target"))
+
+  println(ast.protoId)
 }

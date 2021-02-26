@@ -97,7 +97,8 @@ object Cardinality {
 }
 
 class EdgeType(val name: String,
-               val comment: Option[String]) {
+               val comment: Option[String],
+               val protoId: Int) {
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
   lazy val className = camelCaseCaps(name)
 
@@ -155,7 +156,7 @@ object Direction extends Enumeration {
 }
 
 object DefaultEdgeTypes {
-  val ContainsNode = new EdgeType("CONTAINS_NODE", None)
+  val ContainsNode = new EdgeType("CONTAINS_NODE", None, 9)
 }
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)

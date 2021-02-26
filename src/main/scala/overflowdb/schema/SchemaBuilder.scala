@@ -1,7 +1,9 @@
 package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
+import overflowdb.schema.SchemaBuilder.nextProtoId
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 
 /**
@@ -17,17 +19,17 @@ class SchemaBuilder(basePackage: String) {
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
 
-  def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, protoId: Int, comment: String = ""): Property =
+  def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = "", protoId: Int = nextProtoId): Property =
     addAndReturn(nodePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality, protoId))
 
-  def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, protoId: Int, comment: String = ""): Property =
+  def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = "", protoId: Int = nextProtoId): Property =
     addAndReturn(edgePropertyKeys, Property(name, stringToOption(comment), valueType, cardinality, protoId))
 
   def addNodeBaseType(name: String, comment: String = ""): NodeBaseType =
     addAndReturn(nodeBaseTypes, new NodeBaseType(name, stringToOption(comment)))
 
-  def addEdgeType(name: String, comment: String = ""): EdgeType =
-    addAndReturn(edgeTypes, new EdgeType(name, stringToOption(comment)))
+  def addEdgeType(name: String, comment: String = "", protoId: Int = nextProtoId): EdgeType =
+    addAndReturn(edgeTypes, new EdgeType(name, stringToOption(comment), protoId))
 
   def addNodeType(name: String, id: Int, comment: String = ""): NodeType =
     addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), id))
@@ -45,4 +47,9 @@ class SchemaBuilder(basePackage: String) {
     buffer.append(a)
     a
   }
+}
+
+object SchemaBuilder {
+  private val _nextProtoId = new AtomicInteger(1)
+  def nextProtoId = _nextProtoId.getAndIncrement()
 }
