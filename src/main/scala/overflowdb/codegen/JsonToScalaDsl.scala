@@ -1,13 +1,24 @@
 package overflowdb.codegen
 
+import Helpers._
+
 object JsonToScalaDsl extends App {
   val schema = new Schema("testschema.json")
 
-  println("// node properties")
+  p("// node properties")
   schema.nodeKeys.foreach { key =>
-    println(
-      s"""val ${Helpers.camelCase(key.name)} = builder.addNodeProperty("${key.name}", "String", Cardinality.One,
-        "Name of represented object, e.g., method name (e.g. \"run\")")"""
+    p(
+      s"""val ${Helpers.camelCase(key.name)} = builder.addNodeProperty(
+         |  name = "${key.name}",
+         |  valueType = "${getBaseType(key.valueType)}",
+         |  cardinality = Cardinality.${key.cardinality.capitalize},
+         |  comment = "${key.comment.getOrElse("")}"
+         |)
+         |""".stripMargin
     )
+  }
+
+  def p(s: String): Unit = {
+    println(s)
   }
 }
