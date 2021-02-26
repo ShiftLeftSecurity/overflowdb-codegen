@@ -63,7 +63,8 @@ object TestSchema1 extends App {
   val ast = builder.addEdgeType(
     name = "AST",
     comment = "Syntax tree edge",
-    protoId = 3)
+    protoId = 3
+  ).addProperties(localName)
 
   //  node base types
   val astNode = builder.addNodeBaseType("AST_NODE", "Any node that can exist in an abstract syntax tree")
