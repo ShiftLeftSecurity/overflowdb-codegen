@@ -6,7 +6,8 @@ object JsonToScalaDsl extends App {
   val schema = new Schema("testschema.json")
 //  nodeProperties()
 //  edgeProperties()
-  edgeTypes()
+//  edgeTypes()
+    nodeBaseTypes()
 
   def nodeProperties() = {
     p("// node properties")
@@ -54,6 +55,27 @@ object JsonToScalaDsl extends App {
            |  name = "${edge.name}",
            |  comment = "${escape(edge.comment)}",
            |  protoId = ${edge.id}
+           |)$addPropertiesMaybe
+           |""".stripMargin
+      )
+    }
+  }
+
+  def nodeBaseTypes() = {
+    p("// node base types")
+    schema.nodeBaseTraits.foreach { nodeBaseType =>
+      val addPropertiesMaybe = {
+        if (nodeBaseType.hasKeys.isEmpty) ""
+        else {
+          val properties = nodeBaseType.hasKeys.map(Helpers.camelCase).mkString(", ")
+          s".addProperties($properties)"
+        }
+      }
+
+      p(
+        s"""val ${Helpers.camelCase(nodeBaseType.name)} = builder.addNodeBaseType(
+           |  name = "${nodeBaseType.name}",
+           |  comment = "${escape(nodeBaseType.comment)}"
            |)$addPropertiesMaybe
            |""".stripMargin
       )

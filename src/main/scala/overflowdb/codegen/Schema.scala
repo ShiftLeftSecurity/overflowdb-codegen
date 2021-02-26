@@ -115,7 +115,7 @@ case class EdgeType(id: Int, name: String, keys: List[String], comment: Option[S
 
 case class Property(id: Int, name: String, comment: Option[String], valueType: String, cardinality: String)
 
-case class NodeBaseTrait(name: String, hasKeys: List[String], `extends`: Option[List[String]]) {
+case class NodeBaseTrait(name: String, hasKeys: List[String], `extends`: Option[List[String]], comment: String) {
   lazy val extendz = `extends` //it's mapped from the key in json :(
   lazy val className = Helpers.camelCaseCaps(name)
 }
