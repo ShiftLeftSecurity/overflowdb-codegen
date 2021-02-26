@@ -31,7 +31,7 @@ object Helpers {
     schemaType match {
       case "string"  => "String"
       case "int"     => "Integer"
-      case "boolean" => "JBoolean"
+      case "boolean" => "Boolean"
       case _         => "Nothing"
     }
   }
