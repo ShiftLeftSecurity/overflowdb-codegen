@@ -81,7 +81,8 @@ case class NodeType(
     keys: List[String],
     outEdges: List[OutEdgeEntry],
     is: Option[List[String]],
-    containedNodes: Option[List[ContainedNode]]) {
+    containedNodes: Option[List[ContainedNode]],
+    id: Int) {
   lazy val className = Helpers.camelCaseCaps(name)
   lazy val classNameDb = s"${className}Db"
   lazy val containedNodesList = containedNodes.getOrElse(Nil)
