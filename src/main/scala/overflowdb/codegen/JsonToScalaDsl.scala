@@ -4,9 +4,9 @@ import Helpers._
 
 object JsonToScalaDsl extends App {
   val schema = new Schema("testschema.json")
-  nodeProperties()
-  edgeProperties()
-//  edgeTypes()
+//  nodeProperties()
+//  edgeProperties()
+  edgeTypes()
 
   def nodeProperties() = {
     p("// node properties")
@@ -38,20 +38,18 @@ object JsonToScalaDsl extends App {
     }
   }
 
-//  def edgeTypes() = {
-//    p("// edge types")
-//    schema.edgeTypes.foreach { edge =>
-//      p(
-//        s"""val ${Helpers.camelCase(edge.name)} = builder.addEdgeType(
-//           |  name = "${edge.name}",
-//           |  valueType = "${getBaseType(edge.valueType)}",
-//           |  cardinality = Cardinality.${edge.cardinality.capitalize},
-//           |  protoId = ${edge.id},
-//           |  comment = "${escape(edge.comment)}")
-//           |""".stripMargin
-//      )
-//    }
-//  }
+  def edgeTypes() = {
+    p("// edge types")
+    schema.edgeTypes.foreach { edge =>
+      p(
+        s"""val ${Helpers.camelCase(edge.name)} = builder.addEdgeType(
+           |  name = "${edge.name}",
+           |  comment = "${escape(edge.comment)}",
+           |  protoId = ${edge.id})
+           |""".stripMargin
+      )
+    }
+  }
 
   def p(s: String): Unit = {
     println(s)

@@ -109,7 +109,7 @@ object Cardinality {
       .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq` but was $name"))
 }
 
-case class EdgeType(name: String, keys: List[String], comment: Option[String]) {
+case class EdgeType(id: Int, name: String, keys: List[String], comment: Option[String]) {
   lazy val className = Helpers.camelCaseCaps(name)
 }
 
