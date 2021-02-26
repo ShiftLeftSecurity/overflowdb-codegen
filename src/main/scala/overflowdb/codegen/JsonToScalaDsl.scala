@@ -41,11 +41,20 @@ object JsonToScalaDsl extends App {
   def edgeTypes() = {
     p("// edge types")
     schema.edgeTypes.foreach { edge =>
+      val addPropertiesMaybe = {
+        if (edge.keys.isEmpty) ""
+        else {
+          val properties = edge.keys.map(Helpers.camelCase).mkString(", ")
+          s".addProperties($properties)"
+        }
+      }
+
       p(
         s"""val ${Helpers.camelCase(edge.name)} = builder.addEdgeType(
            |  name = "${edge.name}",
            |  comment = "${escape(edge.comment)}",
-           |  protoId = ${edge.id})
+           |  protoId = ${edge.id}
+           |)$addPropertiesMaybe
            |""".stripMargin
       )
     }
