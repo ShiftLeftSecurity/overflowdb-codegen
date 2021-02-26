@@ -1,0 +1,309 @@
+{
+  "nodeKeys" : [
+    {
+      "id" : 5,
+      "name" : "NAME",
+      "comment" : "Name of represented object, e.g., method name (e.g. \"run\")",
+      "valueType" : "string",
+      "cardinality" : "one"
+    },
+    {
+      "id" : 4,
+      "name" : "ORDER",
+      "comment" : "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code",
+      "valueType" : "int",
+      "cardinality" : "one"
+    },
+    {
+      "id" : 120,
+      "name" : "HASH",
+      "comment" : "Hash value of the artifact that this CPG is built from.",
+      "valueType" : "string",
+      "cardinality" : "zeroOrOne"
+    },
+    {
+      "id" : 53,
+      "name" : "INHERITS_FROM_TYPE_FULL_NAME",
+      "comment" : "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME",
+      "valueType" : "string",
+      "cardinality" : "list"
+    }
+  ],
+  "edgeKeys" : [
+    {
+      "id" : 1,
+      "name" : "ALIAS",
+      "comment" : "Defines whether a PROPAGATE edge creates an alias",
+      "valueType" : "boolean",
+      "cardinality" : "one"
+    },
+    {
+      "id" : 6,
+      "name" : "LOCAL_NAME",
+      "comment" : "Local name of referenced CONTAINED node. This key is deprecated.",
+      "valueType" : "string",
+      "cardinality" : "zeroOrOne"
+    },
+    {
+      "id" : 6999,
+      "name" : "EDGEKEY_1_LST",
+      "comment" : "test list edge key",
+      "valueType" : "int",
+      "cardinality" : "list"
+    }
+  ],
+  "nodeTypes" : [
+    {
+      "id" : 41,
+      "name" : "NAMESPACE_BLOCK",
+      "keys" : ["NAME", "ORDER"],
+      "comment" : "A reference to a namespace",
+      "is" : ["AST_NODE"],
+      "outEdges" : []
+    },
+    {
+      "id" : 38,
+      "name" : "FILE",
+      "keys" : ["NAME", "HASH", "INHERITS_FROM_TYPE_FULL_NAME", "ORDER"],
+      "comment" : "Node representing a source file - the root of the AST",
+      "outEdges" : [
+        {"edgeName" : "AST",
+         "inNodes" : [
+           {"name" : "NAMESPACE_BLOCK", "cardinality" : "0-1:n"}
+         ]
+        }
+      ],
+      "is" : ["AST_NODE"]
+    }
+  ],
+  "nodeBaseTraits" : [
+    {
+      "name" : "AST_NODE",
+      "comment" : "Any node that can exist in an abstract syntax tree",
+      "hasKeys" : [
+        "ORDER"
+      ]
+    }
+  ],
+  "edgeTypes" : [
+    {
+      "id" : 3,
+      "name" : "AST",
+      "comment" : "Syntax tree edge",
+      "keys" : []
+    }
+  ],
+  "languages" : [
+    {
+      "id" : 1,
+      "name" : "JAVA",
+      "comment" : ""
+    },
+    {
+      "id" : 2,
+      "name" : "JAVASCRIPT",
+      "comment" : ""
+    },
+    {
+      "id" : 3,
+      "name" : "GOLANG",
+      "comment" : ""
+    },
+    {
+      "id" : 4,
+      "name" : "CSHARP",
+      "comment" : ""
+    },
+    {
+      "id" : 5,
+      "name" : "C",
+      "comment" : ""
+    },
+    {
+      "id" : 6,
+      "name" : "PYTHON",
+      "comment" : ""
+    },
+    {
+      "id" : 7,
+      "name" : "LLVM",
+      "comment" : ""
+    },
+    {
+      "id" : 8,
+      "name" : "PHP",
+      "comment" : ""
+    }
+  ],
+  "modifierTypes" : [
+    {
+      "id" : 1,
+      "name" : "STATIC",
+      "comment" : "The static modifier"
+    },
+    {
+      "id" : 2,
+      "name" : "PUBLIC",
+      "comment" : "The public modifier"
+    },
+    {
+      "id" : 3,
+      "name" : "PROTECTED",
+      "comment" : "The protected modifier"
+    },
+    {
+      "id" : 4,
+      "name" : "PRIVATE",
+      "comment" : "The private modifier"
+    },
+    {
+      "id" : 5,
+      "name" : "ABSTRACT",
+      "comment" : "The abstract modifier"
+    },
+    {
+      "id" : 6,
+      "name" : "NATIVE",
+      "comment" : "The native modifier"
+    },
+    {
+      "id" : 7,
+      "name" : "CONSTRUCTOR",
+      "comment" : "The constructor modifier"
+    },
+    {
+      "id" : 8,
+      "name" : "VIRTUAL",
+      "comment" : "The virtual modifier"
+    }
+  ],
+  "frameworks" : [
+    {
+      "id" : 3,
+      "name" : "SPRING",
+      "comment" : "Java spring framework"
+    },
+    {
+      "id" : 11,
+      "name" : "ASP_NET_MVC",
+      "comment" : "Microsoft ASP.NET MVC"
+    },
+    {
+      "id" : 12,
+      "name" : "JAXWS",
+      "comment" : "JAX-WS"
+    },
+    {
+      "id" : 14,
+      "name" : "JAVA_INTERNAL",
+      "comment" : "Framework facilities directly provided by Java"
+    },
+    {
+      "id" : 13,
+      "name" : "ASP_NET_WEB_UI",
+      "comment" : "Microsoft ASP.NET Web UI"
+    },
+    {
+      "id" : 7,
+      "name" : "JAXRS",
+      "comment" : "JAX-RS"
+    },
+    {
+      "id" : 15,
+      "name" : "DROPWIZARD",
+      "comment" : "Dropwizard framework"
+    },
+    {
+      "id" : 1,
+      "name" : "PLAY",
+      "comment" : "Play framework"
+    },
+    {
+      "id" : 8,
+      "name" : "SPARK",
+      "comment" : "Spark micro web framework"
+    },
+    {
+      "id" : 4,
+      "name" : "VERTX",
+      "comment" : "Polyglot event-driven framework"
+    },
+    {
+      "id" : 5,
+      "name" : "JSF",
+      "comment" : "JavaServer Faces"
+    },
+    {
+      "id" : 10,
+      "name" : "ASP_NET_WEB_API",
+      "comment" : "Microsoft ASP.NET Web API"
+    },
+    {
+      "id" : 16,
+      "name" : "WCF",
+      "comment" : "WCF HTTP and REST"
+    },
+    {
+      "id" : 2,
+      "name" : "GWT",
+      "comment" : "Google web toolkit"
+    },
+    {
+      "id" : 6,
+      "name" : "SERVLET",
+      "comment" : "Java Servlet based frameworks"
+    },
+    {
+      "id" : 9,
+      "name" : "ASP_NET_CORE",
+      "comment" : "Microsoft ASP.NET Core"
+    }
+  ],
+  "operatorNames" : [
+    {
+      "operator" : "addition",
+      "name" : "<operator>.addition"
+    },
+    {
+      "operator" : "pointerShift",
+      "name" : "<operator>.pointerShift",
+      "comment" : "Shifts a pointer. In terms of CPG, the first argument is the pointer and the second argument is the index. The index selection works the same way as for indirectIndexAccess. This operator is currently only used directly by the LLVM language, but it is also used internally for C. For example, pointerShift(ptr, 7) is equivalent to &(ptr[7]). Handling of this operator is special-cased in the back-end"
+    }
+  ],
+  "dispatchTypes" : [
+    {
+      "id" : 1,
+      "name" : "STATIC_DISPATCH",
+      "comment" : "For statically dispatched calls the call target is known before program execution"
+    },
+    {
+      "id" : 2,
+      "name" : "DYNAMIC_DISPATCH",
+      "comment" : "For dynamically dispatched calls the target is determined during runtime"
+    }
+  ],
+  "evaluationStrategies" : [
+    {
+      "id" : 1,
+      "name" : "BY_REFERENCE",
+      "comment" : "A parameter or return of a function is passed by reference which means an address is used behind the scenes"
+    },
+    {
+      "id" : 2,
+      "name" : "BY_SHARING",
+      "comment" : "Only applicable to object parameter or return values. The pointer to the object is passed by value but the object itself is not copied and changes to it are thus propagated out of the method context"
+    },
+    {
+      "id" : 3,
+      "name" : "BY_VALUE",
+      "comment" : "A parameter or return of a function passed by value which means a flat copy is used"
+    }
+  ],
+  "controlStructureTypes" : [
+    {
+      "id" : 1,
+      "name" : "BREAK",
+      "comment" : "Represents a break statement"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+// node properties
+val name = builder.addNodeProperty("NAME", "String", Cardinality.One,
+        "Name of represented object, e.g., method name (e.g. "run")")
+val order = builder.addNodeProperty("ORDER", "String", Cardinality.One,
+        "Name of represented object, e.g., method name (e.g. "run")")
+val hash = builder.addNodeProperty("HASH", "String", Cardinality.One,
+        "Name of represented object, e.g., method name (e.g. "run")")
+val inheritsFromTypeFullName = builder.addNodeProperty("INHERITS_FROM_TYPE_FULL_NAME", "String", Cardinality.One,
+        "Name of represented object, e.g., method name (e.g. "run")")
