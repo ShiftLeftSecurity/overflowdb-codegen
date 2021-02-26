@@ -14,7 +14,7 @@ object JsonToScalaDsl extends App {
     p("// node properties")
     schema.nodeKeys.foreach { key =>
       p(
-        s"""val ${Helpers.camelCase(key.name)} = builder.addNodeProperty(
+        s"""val ${camelCase(key.name)} = builder.addNodeProperty(
            |  name = "${key.name}",
            |  valueType = "${getBaseType(key.valueType)}",
            |  cardinality = Cardinality.${key.cardinality.capitalize},
@@ -29,7 +29,7 @@ object JsonToScalaDsl extends App {
     p("// edge properties")
     schema.edgeKeys.foreach { key =>
       p(
-        s"""val ${Helpers.camelCase(key.name)} = builder.addEdgeProperty(
+        s"""val ${camelCase(key.name)} = builder.addEdgeProperty(
            |  name = "${key.name}",
            |  valueType = "${getBaseType(key.valueType)}",
            |  cardinality = Cardinality.${key.cardinality.capitalize},
@@ -46,13 +46,13 @@ object JsonToScalaDsl extends App {
       val addPropertiesMaybe = {
         if (edge.keys.isEmpty) ""
         else {
-          val properties = edge.keys.map(Helpers.camelCase).mkString(", ")
+          val properties = edge.keys.map(camelCase).mkString(", ")
           s".addProperties($properties)"
         }
       }
 
       p(
-        s"""val ${Helpers.camelCase(edge.name)} = builder.addEdgeType(
+        s"""val ${camelCase(edge.name)} = builder.addEdgeType(
            |  name = "${edge.name}",
            |  comment = "${escape(edge.comment)}",
            |  protoId = ${edge.id}
@@ -68,13 +68,13 @@ object JsonToScalaDsl extends App {
       val addPropertiesMaybe = {
         if (nodeBaseType.hasKeys.isEmpty) ""
         else {
-          val properties = nodeBaseType.hasKeys.map(Helpers.camelCase).mkString(", ")
+          val properties = nodeBaseType.hasKeys.map(camelCase).mkString(", ")
           s".addProperties($properties)"
         }
       }
 
       p(
-        s"""val ${Helpers.camelCase(nodeBaseType.name)} = builder.addNodeBaseType(
+        s"""val ${camelCase(nodeBaseType.name)} = builder.addNodeBaseType(
            |  name = "${nodeBaseType.name}",
            |  comment = "${escape(nodeBaseType.comment)}"
            |)$addPropertiesMaybe
@@ -89,26 +89,44 @@ object JsonToScalaDsl extends App {
       val addPropertiesMaybe = {
         if (nodeType.keys.isEmpty) ""
         else {
-          val properties = nodeType.keys.map(Helpers.camelCase).mkString(", ")
+          val properties = nodeType.keys.map(camelCase).mkString(", ")
           s".addProperties($properties)"
         }
       }
-
       val extendsMaybe = {
         if (nodeType.is.getOrElse(Nil).isEmpty) ""
         else {
-          val extendz = nodeType.is.get.map(Helpers.camelCase).mkString(", ")
+          val extendz = nodeType.is.get.map(camelCase).mkString(", ")
           s".extendz($extendz)"
         }
       }
+      val outEdgesMaybe = nodeType.outEdges.flatMap { outEdge =>
+        val edgeName = camelCase(outEdge.edgeName)
+        outEdge.inNodes.map { inNode =>
+          val cardinalityOut = inNode.cardinality match {
+            case Some(c) if c.endsWith(":1") => "Cardinality.One"
+            case Some(c) if c.endsWith(":0-1") => "Cardinality.ZeroOrOne"
+            case _ => "Cardinality.List"
+          }
+
+          val cardinalityIn = inNode.cardinality match {
+            case Some(c) if c.startsWith("1:") => "Cardinality.One"
+            case Some(c) if c.startsWith("0-1:") => "Cardinality.ZeroOrOne"
+            case _ => "Cardinality.List"
+          }
+
+          s".addOutEdge(edge = $edgeName, inNode = ${camelCase(inNode.name)}, cardinalityOut = $cardinalityOut, cardinalityIn = $cardinalityIn)"
+        }
+      }.mkString("\n")
 
       p(
-        s"""val ${Helpers.camelCase(nodeType.name)} = builder.addNodeType(
+        s"""val ${camelCase(nodeType.name)} = builder.addNodeType(
            |  name = "${nodeType.name}",
            |  comment = "${escape(nodeType.comment)}",
            |  protoId = ${nodeType.id}
            |)$addPropertiesMaybe
            |$extendsMaybe
+           |$outEdgesMaybe
            |""".stripMargin
       )
     }
