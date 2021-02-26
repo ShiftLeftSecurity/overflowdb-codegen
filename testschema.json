@@ -73,7 +73,8 @@
          ]
         }
       ],
-      "is" : ["AST_NODE"]
+      "is" : ["AST_NODE"],
+      "containedNodes" : [{"localName" : "tags", "nodeType" : "NAMESPACE_BLOCK", "cardinality" : "list" }]
     }
   ],
   "nodeBaseTraits" : [

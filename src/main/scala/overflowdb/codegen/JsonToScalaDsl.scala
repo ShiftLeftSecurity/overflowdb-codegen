@@ -108,15 +108,17 @@ object JsonToScalaDsl extends App {
             case Some(c) if c.endsWith(":0-1") => "Cardinality.ZeroOrOne"
             case _ => "Cardinality.List"
           }
-
           val cardinalityIn = inNode.cardinality match {
             case Some(c) if c.startsWith("1:") => "Cardinality.One"
             case Some(c) if c.startsWith("0-1:") => "Cardinality.ZeroOrOne"
             case _ => "Cardinality.List"
           }
-
           s".addOutEdge(edge = $edgeName, inNode = ${camelCase(inNode.name)}, cardinalityOut = $cardinalityOut, cardinalityIn = $cardinalityIn)"
         }
+      }.mkString("\n")
+
+      val containedNodesMaybe = nodeType.containedNodesList.map { containedNode =>
+        s""".addContainedNode(${camelCase(containedNode.nodeType)}, "${containedNode.localName}", Cardinality.${containedNode.cardinality.capitalize})"""
       }.mkString("\n")
 
       p(
@@ -127,6 +129,7 @@ object JsonToScalaDsl extends App {
            |)$addPropertiesMaybe
            |$extendsMaybe
            |$outEdgesMaybe
+           |$containedNodesMaybe
            |""".stripMargin
       )
     }
