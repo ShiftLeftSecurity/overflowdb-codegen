@@ -144,10 +144,10 @@ object TestSchema1 extends App {
     Constant(name = "BY_VALUE", value = "BY_VALUE", valueType = "String", comment = "A parameter or return of a function passed by value which means a flat copy is used"),
   )
 
-//  val List(Constant(addition,<operator>.addition,None,None,None), Constant(pointerShift,<operator>.pointerShift,Some(Shifts a pointer. In terms of CPG, the first argument is the pointer and the second argument is the index. The index selection works the same way as for indirectIndexAccess. This operator is currently only used directly by the LLVM language, but it is also used internally for C. For example, pointerShift(ptr, 7) is equivalent to &(ptr[7]). Handling of this operator is special-cased in the back-end),None,None)) = builder.addConstants(category = "Operators",
-//    Constant(name = "addition", value = "<operator>.addition", valueType = "String", comment = ""),
-//    Constant(name = "pointerShift", value = "<operator>.pointerShift", valueType = "String", comment = "Shifts a pointer. In terms of CPG, the first argument is the pointer and the second argument is the index. The index selection works the same way as for indirectIndexAccess. This operator is currently only used directly by the LLVM language, but it is also used internally for C. For example, pointerShift(ptr, 7) is equivalent to &(ptr[7]). Handling of this operator is special-cased in the back-end"),
-//  )
+  val operators = builder.addConstants(category = "Operators",
+    Constant(name = "addition", value = "<operator>.addition", valueType = "String", comment = ""),
+    Constant(name = "pointerShift", value = "<operator>.pointerShift", valueType = "String", comment = "Shifts a pointer. In terms of CPG, the first argument is the pointer and the second argument is the index. The index selection works the same way as for indirectIndexAccess. This operator is currently only used directly by the LLVM language, but it is also used internally for C. For example, pointerShift(ptr, 7) is equivalent to &(ptr[7]). Handling of this operator is special-cased in the back-end"),
+  )
 
   new CodeGen(builder.build).run(new File("target"))
 }
