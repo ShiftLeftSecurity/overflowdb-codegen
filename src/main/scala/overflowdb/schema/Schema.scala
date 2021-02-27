@@ -165,6 +165,24 @@ class NodeBaseType(val name: String,
   // TODO add ability for outEdge/inEdge etc.
 }
 
+class Constant(val name: String,
+               val value: String,
+               val valueType: String,
+               val comment: Option[String]) {
+  protected var _protoId: Option[Int] = None
+
+  def protoId: Option[Int] = _protoId
+
+  def protoId(id: Int): Constant = {
+    _protoId = Some(id)
+    this
+  }
+}
+object Constant {
+  def apply(name: String, value: String, valueType: String, comment: String = ""): Constant =
+    new Constant(name, value, valueType, stringToOption(comment))
+}
+
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
 case class NeighborInfo(accessorNameForEdge: String, nodeInfo: NeighborNodeInfo, offsetPosition: Int)
 
@@ -179,13 +197,9 @@ object Direction extends Enumeration {
 }
 
 object DefaultEdgeTypes {
+  // TODO define this in actual schema, not here
   val ContainsNode = new EdgeType("CONTAINS_NODE", None).protoId(9)
 }
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)
 
-case class Constant(name: String, value: String, valueType: String, comment: Option[String])
-object Constant {
-  def apply(name: String, value: String, valueType: String, comment: String = ""): Constant =
-    Constant(name, value, valueType, stringToOption(comment))
-}
