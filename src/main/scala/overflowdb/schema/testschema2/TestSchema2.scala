@@ -21,23 +21,23 @@ object Base{
       name = "NAME",
       valueType = "String",
       cardinality = Cardinality.One,
-      protoId = 5,
       comment = "Name of represented object, e.g., method name (e.g. \"run\")")
+      .protoId(5)
 
     val order = builder.addNodeProperty(
       name = "ORDER",
       valueType = "Integer",
       cardinality = Cardinality.One,
-      protoId = 4,
       comment = "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code")
+    .protoId(4)
 
     // edge properties
     val localName = builder.addEdgeProperty(
       name = "LOCAL_NAME",
       valueType = "String",
       cardinality = Cardinality.ZeroOrOne,
-      protoId = 6,
       comment = "Local name of referenced CONTAINED node. This key is deprecated.")
+      .protoId(6)
 
     // edge types
     val ast = builder.addEdgeType("AST", "Syntax tree edge")
@@ -47,10 +47,10 @@ object Base{
       .addProperties(order)
 
     // node types
-    val namespaceBlock = builder.addNodeType("NAMESPACE_BLOCK", "A reference to a namespace", 41)
+    val namespaceBlock = builder.addNodeType("NAMESPACE_BLOCK", "A reference to a namespace").protoId(41)
       .extendz(astNode)
 
-    val file = builder.addNodeType("FILE", "Node representing a source file - the root of the AST", 38)
+    val file = builder.addNodeType("FILE", "Node representing a source file - the root of the AST").protoId(38)
       .extendz(astNode)
     //    .addProperties(name, order)
     //    .addOutEdge(ast, InNode(namespaceBlock, "0-1:n"))
@@ -73,7 +73,7 @@ object Base{
 object JavaSpecific {
   def apply(builder: SchemaBuilder, base: Base.Schema) = new Schema(builder, base)
   class Schema(builder: SchemaBuilder, base: Base.Schema) {
-    val annotation = builder.addNodeType(name = "ANNOTATION", "A method annotation", 5)
+    val annotation = builder.addNodeType(name = "ANNOTATION", "A method annotation").protoId(5)
       .extendz(base.astNode)
       .addProperties(base.name)
   }
