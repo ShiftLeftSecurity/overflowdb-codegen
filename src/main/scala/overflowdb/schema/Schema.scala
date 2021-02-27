@@ -16,15 +16,23 @@ class Schema(val basePackage: String,
              val constantsByCategory: Map[String, Seq[Constant]])
 
 class NodeType(val name: String,
-               val comment: Option[String],
-               val protoId: Int,
-               protected val _outEdges: mutable.Set[OutEdge] = mutable.Set.empty,
-               protected val _inEdges: mutable.Set[InEdge] = mutable.Set.empty) {
-  lazy val className = camelCaseCaps(name)
-  lazy val classNameDb = s"${className}Db"
+               val comment: Option[String]) {
+  protected var _protoId: Option[Int] = None
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
+  protected val _outEdges: mutable.Set[OutEdge] = mutable.Set.empty
+  protected val _inEdges: mutable.Set[InEdge] = mutable.Set.empty
   protected val _containedNodes: mutable.Set[ContainedNode] = mutable.Set.empty
+
+  lazy val className = camelCaseCaps(name)
+  lazy val classNameDb = s"${className}Db"
+
+  def protoId: Option[Int] = _protoId
+
+  def protoId(id: Int): NodeType = {
+    _protoId = Some(id)
+    this
+  }
 
   def properties: Seq[Property] =
     (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name)
@@ -97,10 +105,18 @@ object Cardinality {
 }
 
 class EdgeType(val name: String,
-               val comment: Option[String],
-               val protoId: Int) {
+               val comment: Option[String]) {
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
+  protected var _protoId: Option[Int] = None
+
   lazy val className = camelCaseCaps(name)
+
+  def protoId: Option[Int] = _protoId
+
+  def protoId(id: Int): EdgeType = {
+    _protoId = Some(id)
+    this
+  }
 
   def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
 
@@ -110,12 +126,19 @@ class EdgeType(val name: String,
   }
 }
 
-case class Property(name: String,
-                    comment: Option[String],
-                    valueType: String,
-                    cardinality: Cardinality,
-                    protoId: Int) {
+class Property(val name: String,
+               val comment: Option[String],
+               val valueType: String,
+               val cardinality: Cardinality) {
+  protected var _protoId: Option[Int] = None
   lazy val className = camelCaseCaps(name)
+
+  def protoId: Option[Int] = _protoId
+
+  def protoId(id: Int): Property = {
+    _protoId = Some(id)
+    this
+  }
 }
 
 class NodeBaseType(val name: String,
@@ -156,7 +179,7 @@ object Direction extends Enumeration {
 }
 
 object DefaultEdgeTypes {
-  val ContainsNode = new EdgeType("CONTAINS_NODE", None, 9)
+  val ContainsNode = new EdgeType("CONTAINS_NODE", None).protoId(9)
 }
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)
