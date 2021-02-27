@@ -143,8 +143,11 @@ object JsonToScalaDsl extends App {
       if (constants.nonEmpty) {
         p(s"""val $jsonName = builder.addConstants(category = "${jsonName.capitalize}", """)
         constants.foreach { constant =>
+          val protoIdMaybe = constant.id.map { id =>
+            s".protoId($id)"
+          }.getOrElse("")
           p(
-            s"""  Constant(name = "${constant.name}", value = "${constant.value}", valueType = "String", comment = "${escape(constant.comment)}"),""".stripMargin
+            s"""  Constant(name = "${constant.name}", value = "${constant.value}", valueType = "String", comment = "${escape(constant.comment)}")$protoIdMaybe,""".stripMargin
           )
         }
         p(")\n")
