@@ -7,7 +7,7 @@ object JsonToScalaDsl extends App {
 //  nodeProperties()
 //  edgeProperties()
 //  edgeTypes()
-//    nodeBaseTypes()
+//  nodeBaseTypes()
 //  nodeTypes()
   constants()
 
@@ -19,8 +19,8 @@ object JsonToScalaDsl extends App {
            |  name = "${key.name}",
            |  valueType = "${getBaseType(key.valueType)}",
            |  cardinality = Cardinality.${key.cardinality.capitalize},
-           |  comment = "${escape(key.comment)}",
-           |  protoId = ${key.id})
+           |  comment = "${escape(key.comment)}"
+           |).protoId(${key.id})
            |""".stripMargin
       )
     }
@@ -34,8 +34,8 @@ object JsonToScalaDsl extends App {
            |  name = "${key.name}",
            |  valueType = "${getBaseType(key.valueType)}",
            |  cardinality = Cardinality.${key.cardinality.capitalize},
-           |  comment = "${escape(key.comment)}",
-           |  protoId = ${key.id})
+           |  comment = "${escape(key.comment)}"
+           |).protoId(${key.id})
            |""".stripMargin
       )
     }
@@ -55,9 +55,9 @@ object JsonToScalaDsl extends App {
       p(
         s"""val ${camelCase(edge.name)} = builder.addEdgeType(
            |  name = "${edge.name}",
-           |  comment = "${escape(edge.comment)}",
-           |  protoId = ${edge.id}
-           |)$addPropertiesMaybe
+           |  comment = "${escape(edge.comment)}"
+           |).protoId(${edge.id})
+           |$addPropertiesMaybe
            |""".stripMargin
       )
     }
@@ -125,9 +125,9 @@ object JsonToScalaDsl extends App {
       p(
         s"""val ${camelCase(nodeType.name)} = builder.addNodeType(
            |  name = "${nodeType.name}",
-           |  comment = "${escape(nodeType.comment)}",
-           |  protoId = ${nodeType.id}
-           |)$addPropertiesMaybe
+           |  comment = "${escape(nodeType.comment)}"
+           |).protoId(${nodeType.id})
+           |$addPropertiesMaybe
            |$extendsMaybe
            |$outEdgesMaybe
            |$containedNodesMaybe
@@ -144,8 +144,7 @@ object JsonToScalaDsl extends App {
         p(s"""val $jsonName = builder.addConstants(category = "${jsonName.capitalize}", """)
         constants.foreach { constant =>
           p(
-            s"""  Constant(name = "${constant.name}", value = "${constant.value}", valueType = "String",
-               |    comment = "${escape(constant.comment)}"),""".stripMargin
+            s"""  Constant(name = "${constant.name}", value = "${constant.value}", valueType = "String", comment = "${escape(constant.comment)}"),""".stripMargin
           )
         }
         p(")\n")
@@ -153,17 +152,15 @@ object JsonToScalaDsl extends App {
     }
     val operators = schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name"))
     if (operators.nonEmpty) {
-      p(s"""val $operators = builder.addConstants(category = "Operators", """)
+      p(s"""val operators = builder.addConstants(category = "Operators", """)
       operators.foreach { operator =>
         p(
-          s"""  Constant(name = "${operator.name}", value = "${operator.value}", valueType = "String",
-             |    comment = "${escape(operator.comment)}"),""".stripMargin
+          s"""  Constant(name = "${operator.name}", value = "${operator.value}", valueType = "String", comment = "${escape(operator.comment)}"),""".stripMargin
         )
       }
       p(")\n")
     }
   }
-
 
   def p(s: String): Unit = {
     println(s)
