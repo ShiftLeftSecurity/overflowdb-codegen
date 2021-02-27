@@ -8,7 +8,8 @@ object JsonToScalaDsl extends App {
 //  edgeProperties()
 //  edgeTypes()
 //    nodeBaseTypes()
-  nodeTypes()
+//  nodeTypes()
+  constants()
 
   def nodeProperties() = {
     p("// node properties")
@@ -134,6 +135,35 @@ object JsonToScalaDsl extends App {
       )
     }
   }
+
+  def constants() = {
+    p("// constants")
+    Seq("dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").map { jsonName =>
+      val constants = schema.constantsFromElement(jsonName)
+      if (constants.nonEmpty) {
+        p(s"""val $jsonName = builder.addConstants(category = "${jsonName.capitalize}", """)
+        constants.foreach { constant =>
+          p(
+            s"""  Constant(name = "${constant.name}", value = "${constant.value}", valueType = "String",
+               |    comment = "${escape(constant.comment)}"),""".stripMargin
+          )
+        }
+        p(")\n")
+      }
+    }
+    val operators = schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name"))
+    if (operators.nonEmpty) {
+      p(s"""val $operators = builder.addConstants(category = "Operators", """)
+      operators.foreach { operator =>
+        p(
+          s"""  Constant(name = "${operator.name}", value = "${operator.value}", valueType = "String",
+             |    comment = "${escape(operator.comment)}"),""".stripMargin
+        )
+      }
+      p(")\n")
+    }
+  }
+
 
   def p(s: String): Unit = {
     println(s)
