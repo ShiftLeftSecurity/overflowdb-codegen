@@ -15,7 +15,6 @@ class CodeGen(schema: Schema) {
 
   def run(outputDir: java.io.File): Seq[java.io.File] = {
     val _outputDir = outputDir.toScala
-
     val results = writeConstants(_outputDir) ++ writeEdgeFiles(_outputDir) ++ writeNodeFiles(_outputDir) :+ writeNewNodeFile(_outputDir)
     println(s"generated ${results.size} files in ${_outputDir}")
     results.map(_.toJava)
@@ -136,12 +135,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefs = properties.map { p =>
-        val baseType = p.valueType match {
-          case "string"  => "String"
-          case "int"     => "Integer"
-          case "boolean" => "Boolean"
-        }
-        propertyKeyDef(p.name, baseType, p.cardinality)
+        propertyKeyDef(p.name, p.valueType, p.cardinality)
       }.mkString("\n|    ")
 
       val companionObject =

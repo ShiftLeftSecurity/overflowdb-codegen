@@ -31,8 +31,8 @@ class SchemaBuilder(basePackage: String) {
   def addEdgeType(name: String, comment: String = "", protoId: Int = nextProtoId): EdgeType =
     addAndReturn(edgeTypes, new EdgeType(name, stringToOption(comment), protoId))
 
-  def addNodeType(name: String, id: Int, comment: String = "", protoId: Int = nextProtoId): NodeType =
-    addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), id, protoId))
+  def addNodeType(name: String, comment: String = "", protoId: Int = nextProtoId): NodeType =
+    addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), protoId))
 
   def addConstants(category: String, constants: Constant*): Seq[Constant] = {
     val previousEntries = constantsByCategory.getOrElse(category, Seq.empty)
