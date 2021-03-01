@@ -38,7 +38,7 @@ class Schema(schemaFile: String) {
     val tuples: Seq[NeighborContext] =
       for {
         nodeType <- nodeTypes
-        outEdge <- nodeType.outEdges
+        outEdge <- nodeType.outEdges.getOrElse(Nil)
         inNode <- outEdge.inNodes
       } yield NeighborContext(inNode.name, outEdge.edgeName, OutNode(nodeType.name, inNode.cardinality))
 
@@ -82,7 +82,7 @@ case class NodeType(
     name: String,
     comment: Option[String],
     keys: List[String],
-    outEdges: List[OutEdgeEntry],
+    outEdges: Option[List[OutEdgeEntry]],
     is: Option[List[String]],
     containedNodes: Option[List[ContainedNode]],
     id: Int) {

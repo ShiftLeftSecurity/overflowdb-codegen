@@ -101,7 +101,7 @@ object JsonToScalaDsl extends App {
           s".extendz($extendz)"
         }
       }
-      val outEdgesMaybe = nodeType.outEdges.flatMap { outEdge =>
+      val outEdgesMaybe = nodeType.outEdges.getOrElse(Nil).flatMap { outEdge =>
         val edgeName = camelCase(outEdge.edgeName)
         outEdge.inNodes.map { inNode =>
           val cardinalityOut = inNode.cardinality match {
