@@ -6,8 +6,8 @@
 
     "nodeTypes" : [
 
-        // New node types introduced for annotations
-        // This is only intended for Java.
+
+
 
         {"id" : 5, "name" : "ANNOTATION",
          "keys": ["CODE", "NAME", "FULL_NAME", "ORDER"],
@@ -55,7 +55,7 @@
          "is" : ["EXPRESSION"]
         },
 
-        // Modifications to existing node types
+
 
         {"name" : "METHOD", "keys" : ["BINARY_SIGNATURE"],
          "outEdges" : [ {"edgeName": "AST", "inNodes": [{"name": "ANNOTATION"}]} ]
@@ -73,7 +73,7 @@
          "outEdges" : [ {"edgeName": "AST", "inNodes": [{"name": "ANNOTATION"}]} ]
         },
 
-        // Node to store config files.
+
         { "id":50,
           "name": "CONFIG_FILE",
           "keys": ["NAME", "CONTENT"],

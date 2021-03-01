@@ -1,6 +1,6 @@
 {
-    // enhancement nodes/edges that will automatically be derived from the cpg
-    // note: these should *NOT* be written by the language frontend.
+
+
 
     "nodeKeys" : [
       {"id" : 8, "name": "VALUE", "comment" : "Tag value", "valueType" : "string", "cardinality" : "one"},
@@ -314,7 +314,7 @@
 	{"id" : 155, "name": "BINDS", "comment" : "Relation between TYPE_DECL and BINDING node", "keys": []}
     ],
 
-    // Enums
+
 
     "dispatchTypes" : [
         {"id" : 1, "name" : "STATIC_DISPATCH", "comment": "For statically dispatched calls the call target is known before program execution"},

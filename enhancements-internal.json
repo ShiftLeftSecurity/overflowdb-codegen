@@ -1,6 +1,6 @@
 {
 
-    // New node keys introduced by enhancements
+
 
     "nodeKeys" : [
         {"id": 17, "name" : "DEPTH_FIRST_ORDER", "comment" : "The depth first ordering number used to detect back edges in reducible CFGs", "valueType" : "int", "cardinality" : "zeroOrOne"},
@@ -8,14 +8,14 @@
         {"id": 78, "name": "INTERNAL_FLAGS", "comment": "Internal flags", "valueType" : "int", "cardinality" : "zeroOrOne"}
     ],
 
-    // New edge keys introduced by enhancements
+
 
     "edgeKeys" : [
     ],
 
     "nodeTypes" : [
 
-        // New node types introduced by enhancements
+
 
         {
          "id":301,"name" : "TAGS",
@@ -24,7 +24,7 @@
          "outEdges" : [],
          "containedNodes" : [{"localName" : "tags", "nodeType" : "TAG", "cardinality" : "list" }]
         },
-        // deprecated, c.f. CONFIG_FILE
+
         {
             "id":42,
             "name": "FRAMEWORK",
@@ -34,7 +34,7 @@
               {"edgeName": "ATTACHED_DATA", "inNodes": [{"name": "FRAMEWORK_DATA"}]}
             ]
         },
-        // deprecated, c.f. CONFIG_FILE
+
         {
             "id":43,
             "name": "FRAMEWORK_DATA",
@@ -43,7 +43,7 @@
             "outEdges": []
         },
 
-        // Modifications to existing node types
+
 
         {"name" : "METHOD", "keys" : ["HAS_MAPPING", "DEPTH_FIRST_ORDER", "INTERNAL_FLAGS"],
          "outEdges" : [ 
@@ -637,7 +637,7 @@
 
     "edgeTypes" : [
 
-        // New edge types introduced by enhancements
+
 
         {"id" : 17, "name": "TAINT_REMOVE", "keys" : [], "comment" : "Indicates taint removal. Only present between corresponding METHOD_PARAMETER_IN and METHOD_PARAMETER_OUT nodes"},
         {"id" : 20, "name" : "DYNAMIC_TYPE", "keys": [], "comment" : "Indicates the dynamic type(s) of an entity. This comes initially from the frontend provided DYNAMIC_TYPE_HINT_FULL_NAME property and is extended by our type resolution" },
@@ -645,13 +645,13 @@
         {"id" : 181, "name": "DOMINATE", "keys" : [], "comment" : "Points to dominated node in DOM tree"},
         {"id" : 182, "name": "POST_DOMINATE", "keys" : [], "comment" : "Points to dominated node in post DOM tree"},
         {"id" : 183, "name": "CDG", "keys" : [], "comment" : "Control dependency graph"},
-        // deprecated, c.f. CONFIG_FILE
+
         {"id" : 18, "name": "ATTACHED_DATA", "keys" : [], "comment" : "Link between FRAMEWORK and FRAMEWORK_DATA nodes"}
 
-        // Modifications to existing edge types
+
     ],
 
-    // deprecated, c.f. CONFIG_FILE
+
     "frameworks" : [
         {"id" : 1, "name" : "PLAY", "comment" : "Play framework"},
         {"id" : 2, "name" : "GWT", "comment" : "Google web toolkit"},

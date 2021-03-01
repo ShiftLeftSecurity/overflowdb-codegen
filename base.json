@@ -1,19 +1,19 @@
-// Schema for the base code property graph
-// Language modules are required to produce graphs adhering to this schema
+
+
 {
 
-    // Keys for node properties
+
 
   "nodeKeys" : [
 
-        // Properties of the MetaData block
+
 
         { "id": 19, "name" : "LANGUAGE", "comment" : "The programming language this graph originates from", "valueType" : "string", "cardinality" : "one"},
         { "id" : 13, "name": "VERSION", "comment" : "A version, given as a string", "valueType" : "string", "cardinality" : "one"},
 	      { "id" : 118, "name" : "OVERLAYS", "comment" : "Names of overlays applied to this graph, in order of application", "valueType" : "string", "cardinality" : "list"},
 	      { "id" : 120, "name" : "HASH", "comment" : "Hash value of the artifact that this CPG is built from.", "valueType": "string", "cardinality" : "zeroOrOne"},
 
-        // Properties that indicate where the code can be found
+
 
         {"id" : 2, "name": "LINE_NUMBER", "comment": "Line where the code starts", "valueType" : "int", "cardinality" : "zeroOrOne"},
         {"id" : 11, "name": "COLUMN_NUMBER", "comment" : "Column where the code starts", "valueType" : "int", "cardinality" : "zeroOrOne" },
@@ -26,7 +26,7 @@
 
         {"id" : 7, "name": "IS_EXTERNAL", "comment" : "Indicates that the construct (METHOD or TYPE_DECL) is external, that is, it is referenced but not defined in the code (applies both to insular parsing and to library functions where we have header files only)", "valueType" : "boolean", "cardinality" : "one"},
 
-        // String properties for various types of nodes
+
 
         {"id" : 5, "name": "NAME", "comment": "Name of represented object, e.g., method name (e.g. \"run\")", "valueType" : "string", "cardinality" : "one"},
         {"id" : 6, "name": "FULL_NAME", "comment" : "Full name of an element, e.g., the class name along, including its package (e.g. \"io.shiftleft.dataflowenging.layers.dataflows.DataFlowRunner.run\"). In theory, the FULL_NAME just needs to be unique and is used for linking references, so a consecutive integer would be valid. In practice, this should be human readable", "valueType" : "string", "cardinality" : "one"},
@@ -36,7 +36,7 @@
         {"id": 26, "name" : "MODIFIER_TYPE", "comment" : "Indicates the modifier which is represented by a MODIFIER node. See modifierTypes", "valueType" : "string", "cardinality" : "one"},
         {"id": 27, "name" : "CONTROL_STRUCTURE_TYPE", "comment" : "Indicates the control structure type. See controlStructureTypes", "valueType" : "string", "cardinality" : "one"},
 
-        // Properties used to link nodes in the backend
+
 
         {"id": 51, "name" : "TYPE_FULL_NAME", "comment" : "The static type of an entity. E.g. expressions, local, parameters etc. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME", "valueType" : "string", "cardinality" : "one"},
         {"id": 52, "name" : "TYPE_DECL_FULL_NAME", "comment" : "The static type decl of a TYPE. This property is matched against the FULL_NAME of TYPE_DECL nodes. It is required to have exactly one TYPE_DECL for each different TYPE_DECL_FULL_NAME", "valueType" : "string", "cardinality" : "one"},
@@ -46,18 +46,18 @@
         {"id": 158, "name" : "ALIAS_TYPE_FULL_NAME", "comment" : "Type full name of which a TYPE_DECL is an alias of", "valueType" : "string", "cardinality" : "zeroOrOne"},
         {"id" : 106, "name" : "FILENAME", "comment" : "Full path of canonical file that contained this node; will be linked into corresponding FILE nodes. Possible for METHOD, TYPE_DECL and NAMESPACE_BLOCK", "valueType" : "string", "cardinality" : "one"},
 
-        // special properties
+
         {"id": 2007161, "name": "CONTAINED_REF", "comment": "References to other nodes. This is not a real property; it exists here for the sake of proto serialization only. valueType and cardinality are meaningless.", "valueType": "string", "cardinality": "one"}
     ],
 
-    // Keys for edge properties
+
 
     "edgeKeys" : [
       {"id" : 6, "name" : "LOCAL_NAME", "comment" : "Local name of referenced CONTAINED node. This key is deprecated.", "valueType" : "string", "cardinality" : "zeroOrOne"},
       {"id" : 8, "name" : "INDEX", "comment" : "Index of referenced CONTAINED node (0 based) - used together with cardinality=list. This key is deprecated.", "valueType" : "int", "cardinality" : "zeroOrOne"}
     ],
 
-    // Types of nodes
+
 
     "nodeTypes" : [
         {
@@ -68,7 +68,7 @@
             "outEdges" : []
         },
 
-      // Nodes describing program structure
+
 
         {"id" : 38,
          "name": "FILE",
@@ -78,7 +78,7 @@
          "is" : ["AST_NODE"]
         },
 
-        // Nodes of method declarations
+
 
         {"id" : 1, "name" : "METHOD",
          "keys": ["CODE", "NAME", "FULL_NAME", "IS_EXTERNAL", "SIGNATURE",
@@ -133,7 +133,7 @@
 	 "is" : ["AST_NODE"]
         },
 
-        // Types
+
 
         {"id" : 45, "name" : "TYPE",
          "keys" : ["NAME", "FULL_NAME", "TYPE_DECL_FULL_NAME"],
@@ -185,7 +185,7 @@
 	    "is" : ["AST_NODE"]
         },
 
-        // Nodes that describe method content
+
 
         {"id" : 8, "name" : "LITERAL",
          "keys" : ["CODE", "ORDER", "ARGUMENT_INDEX", "TYPE_FULL_NAME", "LINE_NUMBER", "COLUMN_NUMBER"],
@@ -379,7 +379,7 @@
              ]}
          ]
         },
-        // METHOD_INST is deprecated.
+
 
        {"id":32, "name":"METHOD_INST",
          "keys":["NAME", "SIGNATURE", "FULL_NAME", "METHOD_FULL_NAME", "ORDER"],
@@ -551,7 +551,7 @@
 	 ]
 	},
 
-        // This is the "catch-all-others" node type.
+
 
         {"id" : 44, "name": "UNKNOWN",
          "keys" : ["CODE", "PARSER_TYPE_NAME", "ORDER", "ARGUMENT_INDEX", "TYPE_FULL_NAME", "LINE_NUMBER", "COLUMN_NUMBER"],
@@ -590,7 +590,7 @@
         }
     ],
 
-    // common base traits for nodes
+
     "nodeBaseTraits" : [
       { "name" : "DECLARATION", "comment" : "", "hasKeys" : ["NAME"]},
       { "name" : "EXPRESSION", "comment" : "Expression as a specialisation of tracking point", "hasKeys" : ["CODE", "ORDER", "ARGUMENT_INDEX"], "extends" : ["TRACKING_POINT", "CFG_NODE", "AST_NODE"]},
@@ -610,11 +610,11 @@
         {"id" : 9, "name" : "CONTAINS_NODE", "keys" : ["LOCAL_NAME", "INDEX"], "comment" : "Membership relation for a compound object. This edge is deprecated."},
         {"id" : 41, "name": "CAPTURED_BY", "comment" : "Connection between a captured LOCAL and the corresponding CLOSURE_BINDING", "keys": []},
 
-        // Edges to represent type relations
+
 
         {"id" : 22, "name" : "BINDS_TO", "comment" : "Type argument binding to a type parameter", "keys" : [] },
         {"id" : 10, "name" : "REF", "keys" : [], "comment" : "A reference to e.g. a LOCAL" },
-        // VTABLE edge is deprecated.
+
         {"id" : 30, "name": "VTABLE", "comment" : "Indicates that a method is part of the vtable of a certain type declaration", "keys": []},
         {"id" : 55, "name": "RECEIVER", "comment" : "The receiver of a method call which is either an object or a pointer", "keys": []},
         {"id" : 56, "name": "CONDITION", "comment" : "Edge from control structure node to the expression that holds the condition", "keys" : []},
@@ -623,9 +623,9 @@
 
     ],
 
-    // Enums
 
-    // TODO rename to "frontends"
+
+
     "languages" : [
         {"id" : 1, "name" : "JAVA", "comment" : ""},
         {"id" : 2, "name" : "JAVASCRIPT", "comment" : ""},
@@ -662,7 +662,7 @@
     ],
 
 
-  // used in extensions
+
     "frameworks" : [],
     "operatorNames" : []
 
