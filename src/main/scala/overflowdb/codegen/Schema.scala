@@ -73,7 +73,9 @@ class Schema(schemaFile: String) {
     )(Constant.apply _)
 
   def constantsFromElement(rootElementName: String)(implicit reads: Reads[Constant] = defaultConstantReads): List[Constant] =
-    (jsonRoot \ rootElementName).get.validate[List[Constant]].get
+    (jsonRoot \ rootElementName).toOption
+      .map(_.validate[List[Constant]].get)
+      .getOrElse(Nil)
 }
 
 case class NodeType(
