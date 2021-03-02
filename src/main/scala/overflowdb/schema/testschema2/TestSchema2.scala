@@ -2,7 +2,6 @@ package overflowdb.schema.testschema2
 
 import java.io.File
 import overflowdb.codegen.CodeGen
-import overflowdb.schema.testschema1.TestSchema1.builder
 import overflowdb.schema.{Cardinality, Constant, SchemaBuilder}
 
 // TODO create integration test from this
