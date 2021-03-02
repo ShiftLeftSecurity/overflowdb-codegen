@@ -297,7 +297,7 @@ object Base {
     val cfgNode = builder.addNodeBaseType(
       name = "CFG_NODE",
       comment = "Any node that can occur as part of a control flow graph"
-    ).addProperties(lineNumber, columnNumber /** TODO add back in ,internalFlags */, code)
+    ).addProperties(lineNumber, columnNumber, code)
 
     val trackingPoint = builder.addNodeBaseType(
       name = "TRACKING_POINT",
@@ -534,7 +534,7 @@ object Base {
       comment = "A local variable"
     ).protoId(23)
 
-      .addProperties(code, name/*, TODO closureBindingId */, typeFullName, lineNumber, columnNumber, order)
+      .addProperties(code, name, typeFullName, lineNumber, columnNumber, order)
       .extendz(declaration, localLike, astNode)
 
 
@@ -755,7 +755,7 @@ object Base {
       comment = "A jump target made explicit in the code using a label"
     ).protoId(340)
 
-      .addProperties(code, name, columnNumber, lineNumber, order, parserTypeName, argumentIndex/* TODO, internalFlags*/)
+      .addProperties(code, name, columnNumber, lineNumber, order, parserTypeName, argumentIndex)
       .extendz(cfgNode, astNode)
       .addOutEdge(edge = cfg, inNode = callNode)
       .addOutEdge(edge = cfg, inNode = identifier)
@@ -768,42 +768,6 @@ object Base {
       .addOutEdge(edge = cfg, inNode = jumpTarget)
       .addOutEdge(edge = cfg, inNode = controlStructure)
       .addOutEdge(edge = cfg, inNode = unknown)
-      /* TODO
-      .addOutEdge(edge = dominate, inNode = call)
-      .addOutEdge(edge = dominate, inNode = identifier)
-      .addOutEdge(edge = dominate, inNode = fieldIdentifier)
-      .addOutEdge(edge = dominate, inNode = literal)
-      .addOutEdge(edge = dominate, inNode = ret)
-      .addOutEdge(edge = dominate, inNode = methodRef)
-      .addOutEdge(edge = dominate, inNode = typeRef)
-      .addOutEdge(edge = dominate, inNode = block)
-      .addOutEdge(edge = dominate, inNode = jumpTarget)
-      .addOutEdge(edge = dominate, inNode = controlStructure)
-      .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
-      .addOutEdge(edge = postDominate, inNode = identifier)
-      .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
-      .addOutEdge(edge = postDominate, inNode = literal)
-      .addOutEdge(edge = postDominate, inNode = ret)
-      .addOutEdge(edge = postDominate, inNode = methodRef)
-      .addOutEdge(edge = postDominate, inNode = typeRef)
-      .addOutEdge(edge = postDominate, inNode = block)
-      .addOutEdge(edge = postDominate, inNode = jumpTarget)
-      .addOutEdge(edge = postDominate, inNode = controlStructure)
-      .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
-      .addOutEdge(edge = cdg, inNode = identifier)
-      .addOutEdge(edge = cdg, inNode = fieldIdentifier)
-      .addOutEdge(edge = cdg, inNode = literal)
-      .addOutEdge(edge = cdg, inNode = methodRef)
-      .addOutEdge(edge = cdg, inNode = typeRef)
-      .addOutEdge(edge = cdg, inNode = ret)
-      .addOutEdge(edge = cdg, inNode = block)
-      .addOutEdge(edge = cdg, inNode = methodReturn)
-      .addOutEdge(edge = cdg, inNode = controlStructure)
-      .addOutEdge(edge = cdg, inNode = jumpTarget)
-      .addOutEdge(edge = cdg, inNode = unknown)
-       */
 
 
     lazy val unknown: NodeType = builder.addNodeType(

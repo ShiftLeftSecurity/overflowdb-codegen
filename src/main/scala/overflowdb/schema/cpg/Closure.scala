@@ -33,15 +33,15 @@ object Closure {
 
     // node types
     methodRef
-
-
       .addOutEdge(edge = capture, inNode = closureBinding)
 
 
     typeRef
-
-
       .addOutEdge(edge = capture, inNode = closureBinding)
+
+    local
+      .addProperties(closureBindingId)
+      .addOutEdge(edge = capturedBy, inNode = closureBinding)
 
 
     lazy val closureBinding: NodeType = builder.addNodeType(

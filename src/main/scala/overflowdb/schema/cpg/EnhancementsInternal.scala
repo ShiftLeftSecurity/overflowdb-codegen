@@ -77,6 +77,48 @@ object EnhancementsInternal {
 
 
     // node types
+    cfgNode.addProperties(internalFlags)
+
+    jumpTarget
+      .addProperties(internalFlags)
+      .addOutEdge(edge = dominate, inNode = callNode)
+      .addOutEdge(edge = dominate, inNode = identifier)
+      .addOutEdge(edge = dominate, inNode = fieldIdentifier)
+      .addOutEdge(edge = dominate, inNode = literal)
+      .addOutEdge(edge = dominate, inNode = ret)
+      .addOutEdge(edge = dominate, inNode = methodRef)
+      .addOutEdge(edge = dominate, inNode = typeRef)
+      .addOutEdge(edge = dominate, inNode = block)
+      .addOutEdge(edge = dominate, inNode = jumpTarget)
+      .addOutEdge(edge = dominate, inNode = controlStructure)
+      .addOutEdge(edge = dominate, inNode = unknown)
+      .addOutEdge(edge = postDominate, inNode = callNode)
+      .addOutEdge(edge = postDominate, inNode = identifier)
+      .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
+      .addOutEdge(edge = postDominate, inNode = literal)
+      .addOutEdge(edge = postDominate, inNode = ret)
+      .addOutEdge(edge = postDominate, inNode = methodRef)
+      .addOutEdge(edge = postDominate, inNode = typeRef)
+      .addOutEdge(edge = postDominate, inNode = block)
+      .addOutEdge(edge = postDominate, inNode = jumpTarget)
+      .addOutEdge(edge = postDominate, inNode = controlStructure)
+      .addOutEdge(edge = postDominate, inNode = unknown)
+      .addOutEdge(edge = cdg, inNode = callNode)
+      .addOutEdge(edge = cdg, inNode = identifier)
+      .addOutEdge(edge = cdg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cdg, inNode = literal)
+      .addOutEdge(edge = cdg, inNode = methodRef)
+      .addOutEdge(edge = cdg, inNode = typeRef)
+      .addOutEdge(edge = cdg, inNode = ret)
+      .addOutEdge(edge = cdg, inNode = block)
+      .addOutEdge(edge = cdg, inNode = methodReturn)
+      .addOutEdge(edge = cdg, inNode = controlStructure)
+      .addOutEdge(edge = cdg, inNode = jumpTarget)
+      .addOutEdge(edge = cdg, inNode = unknown)
+
+
+
+
     lazy val tags: NodeType = builder.addNodeType(
       name = "TAGS",
       comment = "Multiple tags"
@@ -100,8 +142,7 @@ object EnhancementsInternal {
       comment = "Data used by a framework"
     ).protoId(43)
 
-      .addProperties(name)/* TODO, content) */
-
+      .addProperties(name, content)
 
     method
       .addProperties(hasMapping, depthFirstOrder, internalFlags)

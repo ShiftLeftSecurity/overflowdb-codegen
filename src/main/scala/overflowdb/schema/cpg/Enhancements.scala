@@ -369,7 +369,6 @@ object Enhancements {
       .addProperties(dynamicTypeHintFullName)
 
       .addOutEdge(edge = evalType, inNode = tpe)
-//      .addOutEdge(edge = capturedBy, inNode = closureBinding) TODO
 
 
     identifier
