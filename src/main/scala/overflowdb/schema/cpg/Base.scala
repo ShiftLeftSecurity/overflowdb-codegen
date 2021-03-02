@@ -319,101 +319,113 @@ object Base {
       comment = "Call representation"
     ).addProperties(code, name, signature)
 
+
+
     // node types
-    lazy val metaData = builder.addNodeType(
+    lazy val metaData: NodeType = builder.addNodeType(
       name = "META_DATA",
       comment = "Node to save meta data about the graph on its properties. Exactly one node of this type per graph"
     ).protoId(39)
+
       .addProperties(language, version, overlays, hash)
 
 
 
 
-    lazy val file = builder.addNodeType(
+    lazy val file: NodeType = builder.addNodeType(
       name = "FILE",
       comment = "Node representing a source file - the root of the AST"
     ).protoId(38)
+
       .addProperties(name, order, hash)
       .extendz(astNode)
-      .addOutEdge(edge = ast, inNode = namespaceBlock, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = ast, inNode = namespaceBlock, cardinalityIn = Cardinality.ZeroOrOne)
 
 
-    lazy val method = builder.addNodeType(
+    lazy val method: NodeType = builder.addNodeType(
       name = "METHOD",
       comment = "A method/function/procedure"
     ).protoId(1)
+
       .addProperties(code, name, fullName, isExternal, signature, lineNumber, columnNumber, lineNumberEnd, columnNumberEnd, order, filename)
       .extendz(declaration, cfgNode, astNode)
       .addOutEdge(edge = ast, inNode = methodReturn, cardinalityOut = Cardinality.One, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = methodParameterIn, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = modifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = ast, inNode = methodParameterIn, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = ast, inNode = modifier, cardinalityIn = Cardinality.One)
       .addOutEdge(edge = ast, inNode = block, cardinalityOut = Cardinality.One, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = typeParameter, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = ast, inNode = typeParameter, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
       .addOutEdge(edge = cfg, inNode = methodReturn, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
 
 
-    lazy val methodParameterIn = builder.addNodeType(
+    lazy val methodParameterIn: NodeType = builder.addNodeType(
       name = "METHOD_PARAMETER_IN",
       comment = "This node represents a formal parameter going towards the callee side"
     ).protoId(34)
+
       .addProperties(code, order, name, typeFullName, lineNumber, columnNumber)
       .extendz(declaration, localLike, trackingPoint, astNode)
 
 
 
-    lazy val methodReturn = builder.addNodeType(
+    lazy val methodReturn: NodeType = builder.addNodeType(
       name = "METHOD_RETURN",
       comment = "A formal method return"
     ).protoId(3)
+
       .addProperties(code, typeFullName, lineNumber, columnNumber, order)
       .extendz(cfgNode, trackingPoint)
 
 
 
-    lazy val modifier = builder.addNodeType(
+    lazy val modifier: NodeType = builder.addNodeType(
       name = "MODIFIER",
       comment = "A modifier, e.g., static, public, private"
     ).protoId(300)
+
       .addProperties(modifierType, order)
       .extendz(astNode)
 
 
 
-    lazy val tpe = builder.addNodeType(
+    lazy val tpe: NodeType = builder.addNodeType(
       name = "TYPE",
       comment = "A type which always has to reference a type declaration and may have type argument children if the referred to type declaration is a template"
     ).protoId(45)
+
       .addProperties(name, fullName, typeDeclFullName)
-      .addOutEdge(edge = ast, inNode = typeArgument, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+
+      .addOutEdge(edge = ast, inNode = typeArgument)
 
 
-    lazy val typeDecl = builder.addNodeType(
+    lazy val typeDecl: NodeType = builder.addNodeType(
       name = "TYPE_DECL",
       comment = "A type declaration"
     ).protoId(46)
+
       .addProperties(name, fullName, isExternal, inheritsFromTypeFullName, aliasTypeFullName, order, filename)
       .extendz(astNode)
-      .addOutEdge(edge = ast, inNode = typeParameter, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = member, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = modifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = vtable, inNode = method, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = ast, inNode = typeParameter)
+      .addOutEdge(edge = ast, inNode = member, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = ast, inNode = modifier, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = vtable, inNode = method)
 
 
-    lazy val typeParameter = builder.addNodeType(
+    lazy val typeParameter: NodeType = builder.addNodeType(
       name = "TYPE_PARAMETER",
       comment = "Type parameter of TYPE_DECL or METHOD"
     ).protoId(47)
+
       .addProperties(name, order)
       .extendz(astNode)
 
@@ -423,25 +435,28 @@ object Base {
       name = "TYPE_ARGUMENT",
       comment = "Argument for a TYPE_PARAMETER that belongs to a TYPE. It binds another TYPE to a TYPE_PARAMETER"
     ).protoId(48)
+
       .addProperties(order)
       .extendz(astNode)
-      .addOutEdge(edge = ref, inNode = tpe, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-    .addOutEdge(edge = bindsTo, inNode = typeParameter, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = ref, inNode = tpe)
+      .addOutEdge(edge = bindsTo, inNode = typeParameter)
 
 
-    lazy val member = builder.addNodeType(
+    lazy val member: NodeType = builder.addNodeType(
       name = "MEMBER",
       comment = "Member of a class struct or union"
     ).protoId(9)
+
       .addProperties(code, name, typeFullName, order)
       .extendz(declaration, astNode)
 
 
 
-    lazy val namespaceBlock = builder.addNodeType(
+    lazy val namespaceBlock: NodeType = builder.addNodeType(
       name = "NAMESPACE_BLOCK",
       comment = "A reference to a namespace"
     ).protoId(41)
+
       .addProperties(name, fullName, order, filename)
       .extendz(astNode)
 
@@ -451,72 +466,75 @@ object Base {
       name = "LITERAL",
       comment = "Literal/Constant"
     ).protoId(8)
+
       .addProperties(code, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
 
 
     lazy val call: NodeType = builder.addNodeType(
       name = "CALL",
       comment = "A (method)-call"
     ).protoId(15)
+
       .addProperties(code, name, order, methodFullName, argumentIndex, signature, lineNumber, columnNumber)
       .extendz(expression, callRepr)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
+      .addOutEdge(edge = ast, inNode = call)
+      .addOutEdge(edge = ast, inNode = identifier)
+      .addOutEdge(edge = ast, inNode = fieldIdentifier, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = ast, inNode = literal)
+      .addOutEdge(edge = ast, inNode = methodRef)
+      .addOutEdge(edge = ast, inNode = typeRef)
+      .addOutEdge(edge = ast, inNode = ret)
+      .addOutEdge(edge = ast, inNode = block)
+      .addOutEdge(edge = ast, inNode = controlStructure)
       .addOutEdge(edge = receiver, inNode = call, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
       .addOutEdge(edge = receiver, inNode = identifier, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
       .addOutEdge(edge = receiver, inNode = literal, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
       .addOutEdge(edge = receiver, inNode = methodRef, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = receiver, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = receiver, inNode = typeRef)
       .addOutEdge(edge = receiver, inNode = block, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = receiver, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = receiver, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = argument, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = argument, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = argument, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = argument, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = argument, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = argument, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = argument, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = argument, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = argument, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = argument, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = receiver, inNode = controlStructure)
+      .addOutEdge(edge = receiver, inNode = unknown)
+      .addOutEdge(edge = argument, inNode = call, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = argument, inNode = identifier, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = argument, inNode = fieldIdentifier, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = argument, inNode = literal, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = argument, inNode = methodRef, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = argument, inNode = typeRef)
+      .addOutEdge(edge = argument, inNode = block, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = argument, inNode = jumpTarget)
+      .addOutEdge(edge = argument, inNode = controlStructure)
+      .addOutEdge(edge = argument, inNode = unknown)
 
 
-    lazy val local = builder.addNodeType(
+    lazy val local: NodeType = builder.addNodeType(
       name = "LOCAL",
       comment = "A local variable"
     ).protoId(23)
-      .addProperties(code, name, /** TODO add back in closureBindingId,*/ typeFullName, lineNumber, columnNumber, order)
+
+      .addProperties(code, name/*, TODO closureBindingId */, typeFullName, lineNumber, columnNumber, order)
       .extendz(declaration, localLike, astNode)
 
 
@@ -525,254 +543,266 @@ object Base {
       name = "IDENTIFIER",
       comment = "An arbitrary identifier/reference"
     ).protoId(27)
+
       .addProperties(code, name, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression, localLike)
-      .addOutEdge(edge = ref, inNode = local, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ref, inNode = methodParameterIn, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodReturn, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = ref, inNode = local, cardinalityOut = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = ref, inNode = methodParameterIn, cardinalityOut = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = methodReturn)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
 
 
     lazy val fieldIdentifier: NodeType = builder.addNodeType(
       name = "FIELD_IDENTIFIER",
       comment = "A node that represents which field is accessed in a <operator>.fieldAccess, in e.g. obj.field. The CODE part is used for human display and matching to MEMBER nodes. The CANONICAL_NAME is used for dataflow tracking; typically both coincide. However, suppose that two fields foo and bar are a C-style union; then CODE refers to whatever the programmer wrote (obj.foo or obj.bar), but both share the same CANONICAL_NAME (e.g. GENERATED_foo_bar)"
     ).protoId(2001081)
+
       .addProperties(code, canonicalName, order, argumentIndex, lineNumber, columnNumber)
       .extendz(expression)
       .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.One, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
 
 
-    lazy val returnNode: NodeType = builder.addNodeType(
+    lazy val ret: NodeType = builder.addNodeType(
       name = "RETURN",
       comment = "A return instruction"
     ).protoId(30)
+
       .addProperties(lineNumber, columnNumber, order, argumentIndex, code)
       .extendz(expression)
-      .addOutEdge(edge = ast, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = ast, inNode = call)
+      .addOutEdge(edge = ast, inNode = identifier)
+      .addOutEdge(edge = ast, inNode = literal)
+      .addOutEdge(edge = ast, inNode = methodRef)
+      .addOutEdge(edge = ast, inNode = typeRef)
+      .addOutEdge(edge = ast, inNode = ret)
+      .addOutEdge(edge = ast, inNode = block)
+      .addOutEdge(edge = ast, inNode = unknown)
+      .addOutEdge(edge = ast, inNode = jumpTarget)
+      .addOutEdge(edge = ast, inNode = controlStructure)
       .addOutEdge(edge = cfg, inNode = methodReturn, cardinalityOut = Cardinality.One, cardinalityIn = Cardinality.ZeroOrOne)
       .addOutEdge(edge = argument, inNode = call, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
       .addOutEdge(edge = argument, inNode = identifier, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
       .addOutEdge(edge = argument, inNode = literal, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
       .addOutEdge(edge = argument, inNode = methodRef, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = argument, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = argument, inNode = returnNode, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = argument, inNode = typeRef)
+      .addOutEdge(edge = argument, inNode = ret, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
       .addOutEdge(edge = argument, inNode = block, cardinalityOut = Cardinality.ZeroOrOne, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = argument, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = argument, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = argument, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = argument, inNode = jumpTarget)
+      .addOutEdge(edge = argument, inNode = controlStructure)
+      .addOutEdge(edge = argument, inNode = unknown)
 
 
     lazy val block: NodeType = builder.addNodeType(
       name = "BLOCK",
       comment = "A structuring block in the AST"
     ).protoId(31)
+
       .addProperties(code, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression)
-      .addOutEdge(edge = ast, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = local, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = ast, inNode = call)
+      .addOutEdge(edge = ast, inNode = identifier)
+      .addOutEdge(edge = ast, inNode = literal)
+      .addOutEdge(edge = ast, inNode = methodRef)
+      .addOutEdge(edge = ast, inNode = typeRef)
+      .addOutEdge(edge = ast, inNode = ret)
+      .addOutEdge(edge = ast, inNode = block, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = ast, inNode = local)
+      .addOutEdge(edge = ast, inNode = unknown)
+      .addOutEdge(edge = ast, inNode = jumpTarget)
+      .addOutEdge(edge = ast, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
 
 
-    lazy val methodInst = builder.addNodeType(
+    lazy val methodInst: NodeType = builder.addNodeType(
       name = "METHOD_INST",
       comment = "A method instance which always has to reference a method and may have type argument children if the referred to method is a template"
     ).protoId(32)
+
       .addProperties(name, signature, fullName, methodFullName, order)
       .extendz(astNode)
-      .addOutEdge(edge = ast, inNode = typeArgument, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = ast, inNode = typeArgument)
 
 
-    lazy val arrayInitializer = builder.addNodeType(
+    lazy val arrayInitializer: NodeType = builder.addNodeType(
       name = "ARRAY_INITIALIZER",
       comment = "Initialization construct for arrays"
     ).protoId(14)
 
+      .addProperties()
       .extendz(astNode)
+
+
 
     lazy val methodRef: NodeType = builder.addNodeType(
       name = "METHOD_REF",
       comment = "Reference to a method instance"
     ).protoId(333)
+
       .addProperties(code, order, argumentIndex, typeFullName, methodInstFullName, methodFullName, lineNumber, columnNumber)
       .extendz(expression)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodReturn, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = methodReturn)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
 
 
     lazy val typeRef: NodeType = builder.addNodeType(
       name = "TYPE_REF",
       comment = "Reference to a type/class"
     ).protoId(335)
+
       .addProperties(code, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodReturn, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = methodReturn)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
 
 
     lazy val controlStructure: NodeType = builder.addNodeType(
       name = "CONTROL_STRUCTURE",
       comment = "A control structure such as if, while, or for"
     ).protoId(339)
+
       .addProperties(code, columnNumber, lineNumber, order, parserTypeName, controlStructureType, argumentIndex)
       .extendz(expression)
-      .addOutEdge(edge = ast, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = modifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = arrayInitializer, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = local, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = ast, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = ast, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = ast, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.One)
-      .addOutEdge(edge = ast, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = condition, inNode = arrayInitializer, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = ast, inNode = literal, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = ast, inNode = modifier)
+      .addOutEdge(edge = ast, inNode = arrayInitializer)
+      .addOutEdge(edge = ast, inNode = call, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = ast, inNode = local)
+      .addOutEdge(edge = ast, inNode = identifier, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = ast, inNode = ret, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = ast, inNode = block, cardinalityIn = Cardinality.ZeroOrOne)
+      .addOutEdge(edge = ast, inNode = jumpTarget)
+      .addOutEdge(edge = ast, inNode = unknown)
+      .addOutEdge(edge = ast, inNode = controlStructure)
+      .addOutEdge(edge = ast, inNode = methodRef, cardinalityIn = Cardinality.One)
+      .addOutEdge(edge = ast, inNode = typeRef)
+      .addOutEdge(edge = condition, inNode = literal)
+      .addOutEdge(edge = condition, inNode = call)
+      .addOutEdge(edge = condition, inNode = identifier)
+      .addOutEdge(edge = condition, inNode = ret)
+      .addOutEdge(edge = condition, inNode = block)
+      .addOutEdge(edge = condition, inNode = methodRef)
+      .addOutEdge(edge = condition, inNode = typeRef)
+      .addOutEdge(edge = condition, inNode = controlStructure)
+      .addOutEdge(edge = condition, inNode = jumpTarget)
+      .addOutEdge(edge = condition, inNode = unknown)
+      .addOutEdge(edge = condition, inNode = controlStructure)
+      .addOutEdge(edge = condition, inNode = arrayInitializer)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
 
 
     lazy val jumpTarget: NodeType = builder.addNodeType(
       name = "JUMP_TARGET",
       comment = "A jump target made explicit in the code using a label"
     ).protoId(340)
-      .addProperties(code, name, columnNumber, lineNumber, order, parserTypeName, argumentIndex /** TODO add back in ,internalFlags */)
+
+      .addProperties(code, name, columnNumber, lineNumber, order, parserTypeName, argumentIndex/* TODO, internalFlags*/)
       .extendz(cfgNode, astNode)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      /** TODO add back in
-      .addOutEdge(edge = dominate, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = dominate, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = postDominate, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = methodReturn, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cdg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
+      /* TODO
+      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = identifier)
+      .addOutEdge(edge = dominate, inNode = fieldIdentifier)
+      .addOutEdge(edge = dominate, inNode = literal)
+      .addOutEdge(edge = dominate, inNode = ret)
+      .addOutEdge(edge = dominate, inNode = methodRef)
+      .addOutEdge(edge = dominate, inNode = typeRef)
+      .addOutEdge(edge = dominate, inNode = block)
+      .addOutEdge(edge = dominate, inNode = jumpTarget)
+      .addOutEdge(edge = dominate, inNode = controlStructure)
+      .addOutEdge(edge = dominate, inNode = unknown)
+      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = identifier)
+      .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
+      .addOutEdge(edge = postDominate, inNode = literal)
+      .addOutEdge(edge = postDominate, inNode = ret)
+      .addOutEdge(edge = postDominate, inNode = methodRef)
+      .addOutEdge(edge = postDominate, inNode = typeRef)
+      .addOutEdge(edge = postDominate, inNode = block)
+      .addOutEdge(edge = postDominate, inNode = jumpTarget)
+      .addOutEdge(edge = postDominate, inNode = controlStructure)
+      .addOutEdge(edge = postDominate, inNode = unknown)
+      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = identifier)
+      .addOutEdge(edge = cdg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cdg, inNode = literal)
+      .addOutEdge(edge = cdg, inNode = methodRef)
+      .addOutEdge(edge = cdg, inNode = typeRef)
+      .addOutEdge(edge = cdg, inNode = ret)
+      .addOutEdge(edge = cdg, inNode = block)
+      .addOutEdge(edge = cdg, inNode = methodReturn)
+      .addOutEdge(edge = cdg, inNode = controlStructure)
+      .addOutEdge(edge = cdg, inNode = jumpTarget)
+      .addOutEdge(edge = cdg, inNode = unknown)
        */
 
 
@@ -780,35 +810,40 @@ object Base {
       name = "UNKNOWN",
       comment = "A language-specific node"
     ).protoId(44)
+
       .addProperties(code, parserTypeName, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression)
-      .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = methodRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = typeRef, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = literal, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = member, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = modifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = arrayInitializer, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = local, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = returnNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = block, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
-      .addOutEdge(edge = ast, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      .addOutEdge(edge = cfg, inNode = call)
+      .addOutEdge(edge = cfg, inNode = identifier)
+      .addOutEdge(edge = cfg, inNode = fieldIdentifier)
+      .addOutEdge(edge = cfg, inNode = literal)
+      .addOutEdge(edge = cfg, inNode = ret)
+      .addOutEdge(edge = cfg, inNode = methodRef)
+      .addOutEdge(edge = cfg, inNode = typeRef)
+      .addOutEdge(edge = cfg, inNode = block)
+      .addOutEdge(edge = cfg, inNode = jumpTarget)
+      .addOutEdge(edge = cfg, inNode = controlStructure)
+      .addOutEdge(edge = cfg, inNode = unknown)
+      .addOutEdge(edge = ast, inNode = literal)
+      .addOutEdge(edge = ast, inNode = member)
+      .addOutEdge(edge = ast, inNode = modifier)
+      .addOutEdge(edge = ast, inNode = arrayInitializer)
+      .addOutEdge(edge = ast, inNode = call)
+      .addOutEdge(edge = ast, inNode = local)
+      .addOutEdge(edge = ast, inNode = identifier)
+      .addOutEdge(edge = ast, inNode = fieldIdentifier)
+      .addOutEdge(edge = ast, inNode = ret)
+      .addOutEdge(edge = ast, inNode = block)
+      .addOutEdge(edge = ast, inNode = jumpTarget)
+      .addOutEdge(edge = ast, inNode = unknown)
+      .addOutEdge(edge = ast, inNode = controlStructure)
+
+
+
 
 
     // constants
+    // TODO rename to "frontends"
     val languages = builder.addConstants(category = "Languages",
       Constant(name = "JAVA", value = "JAVA", valueType = "String", comment = "").protoId(1),
       Constant(name = "JAVASCRIPT", value = "JAVASCRIPT", valueType = "String", comment = "").protoId(2),
