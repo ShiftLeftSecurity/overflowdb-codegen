@@ -2,6 +2,10 @@ package overflowdb.schema.cpg
 
 import overflowdb.schema._
 
+/**
+ * enhancement nodes/edges that will automatically be derived from the cpg
+ * note: these should *NOT* be written by the language frontend.
+ */
 object Enhancements {
   def apply(builder: SchemaBuilder, base: Base.Schema) = new Schema(builder, base)
 

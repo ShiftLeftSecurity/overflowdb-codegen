@@ -70,6 +70,7 @@ object EnhancementsInternal {
     ).protoId(183)
 
 
+    // deprecated, c.f. CONFIG_FILE
     val attachedData = builder.addEdgeType(
       name = "ATTACHED_DATA",
       comment = "Link between FRAMEWORK and FRAMEWORK_DATA nodes"
@@ -127,6 +128,7 @@ object EnhancementsInternal {
       .addProperties()
       .addContainedNode(tag, "tags", Cardinality.List)
 
+    // deprecated, c.f. CONFIG_FILE
     lazy val framework: NodeType = builder.addNodeType(
       name = "FRAMEWORK",
       comment = "Indicates the usage of a framework. E.g. java spring. The name key is one of the values from frameworks list"
@@ -136,7 +138,7 @@ object EnhancementsInternal {
 
       .addOutEdge(edge = attachedData, inNode = frameworkData)
 
-
+    // deprecated, c.f. CONFIG_FILE
     lazy val frameworkData: NodeType = builder.addNodeType(
       name = "FRAMEWORK_DATA",
       comment = "Data used by a framework"
@@ -666,6 +668,7 @@ object EnhancementsInternal {
 
 
     // constants
+    // deprecated, c.f. CONFIG_FILE
     val frameworks = builder.addConstants(category = "Frameworks",
       Constant(name = "PLAY", value = "PLAY", valueType = "String", comment = "Play framework").protoId(1),
       Constant(name = "GWT", value = "GWT", valueType = "String", comment = "Google web toolkit").protoId(2),

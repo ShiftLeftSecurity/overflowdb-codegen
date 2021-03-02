@@ -2,6 +2,9 @@ package overflowdb.schema.cpg
 
 import overflowdb.schema._
 
+/**
+ * This is only intended for Java.
+ */
 object JavaSpecific {
   def apply(builder: SchemaBuilder, base: Base.Schema, enhancements: Enhancements.Schema) =
     new Schema(builder, base, enhancements)
