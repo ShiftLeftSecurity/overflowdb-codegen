@@ -18,6 +18,10 @@ class SchemaBuilder(basePackage: String) {
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
 
+  /** root node trait for all nodes - use if you want to be explicitly unspecific */
+  lazy val anyNode: NodeBaseType =
+    addNodeBaseType("NODE", "generic node base trait - use if you want to be explicitly unspecific")
+
   def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(nodePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
 

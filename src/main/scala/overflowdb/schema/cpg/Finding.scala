@@ -27,7 +27,7 @@ object Finding {
       .addProperties()
 
 
-      .addContainedNode(cpgNode, "evidence", Cardinality.List)
+      .addContainedNode(builder.anyNode, "evidence", Cardinality.List)
       .addContainedNode(keyValuePair, "keyValuePairs", Cardinality.List)
 
     lazy val keyValuePair: NodeType = builder.addNodeType(
