@@ -4,12 +4,12 @@ import Helpers._
 
 object JsonToScalaDsl extends App {
   val schema = new Schema("base.json")
-//  nodeProperties()
-//  edgeProperties()
-//  edgeTypes()
-//  nodeBaseTypes()
+  nodeProperties()
+  edgeProperties()
+  edgeTypes()
+  nodeBaseTypes()
   nodeTypes()
-//  constants()
+  constants()
 
   def nodeProperties() = {
     p("// node properties")
