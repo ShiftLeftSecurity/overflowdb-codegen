@@ -11,7 +11,23 @@ import java.io.File
  */
 object CpgSchema extends App{
   val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
+
+  // the foundation
   val base = Base(builder)
-//  val javaSpecific = JavaSpecific(builder, base)
+  val enhancements = Enhancements(builder, base)
+  val javaSpecific = JavaSpecific(builder, base, enhancements)
+
+  // everything else
+  val closure = Closure(builder, base, enhancements)
+  val dependency = Dependency(builder, base)
+  val deprecated = Deprecated(builder, base)
+  val dom = Dom(builder, base, enhancements, javaSpecific)
+  val enhancementsInternal = EnhancementsInternal(builder, base, enhancements, javaSpecific)
+  val finding = Finding(builder, base, enhancements)
+  val operators = Operators(builder)
+  val sourceSpecific = SourceSpecific(builder, base)
+  val splitting = Splitting(builder, enhancements)
+  val tagsAndLocation = TagsAndLocation(builder, base, enhancements)
+
   new CodeGen(builder.build).run(new File("target"))
 }
