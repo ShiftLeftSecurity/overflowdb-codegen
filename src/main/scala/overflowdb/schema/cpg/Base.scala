@@ -297,7 +297,7 @@ object Base {
     val cfgNode = builder.addNodeBaseType(
       name = "CFG_NODE",
       comment = "Any node that can occur as part of a control flow graph"
-    ).addProperties(lineNumber, columnNumber, internalFlags, code)
+    ).addProperties(lineNumber, columnNumber /** TODO add back in ,internalFlags */, code)
 
     val trackingPoint = builder.addNodeBaseType(
       name = "TRACKING_POINT",
@@ -395,7 +395,6 @@ object Base {
       comment = "A type which always has to reference a type declaration and may have type argument children if the referred to type declaration is a template"
     ).protoId(45)
       .addProperties(name, fullName, typeDeclFullName)
-
       .addOutEdge(edge = ast, inNode = typeArgument, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
@@ -420,7 +419,7 @@ object Base {
 
 
 
-    val typeArgument = builder.addNodeType(
+    val typeArgument: NodeType = builder.addNodeType(
       name = "TYPE_ARGUMENT",
       comment = "Argument for a TYPE_PARAMETER that belongs to a TYPE. It binds another TYPE to a TYPE_PARAMETER"
     ).protoId(48)
@@ -517,7 +516,7 @@ object Base {
       name = "LOCAL",
       comment = "A local variable"
     ).protoId(23)
-      .addProperties(code, name, closureBindingId, typeFullName, lineNumber, columnNumber, order)
+      .addProperties(code, name, /** TODO add back in closureBindingId,*/ typeFullName, lineNumber, columnNumber, order)
       .extendz(declaration, localLike, astNode)
 
 
@@ -563,7 +562,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val returnNode = builder.addNodeType(
+    val returnNode: NodeType = builder.addNodeType(
       name = "RETURN",
       comment = "A return instruction"
     ).protoId(30)
@@ -592,7 +591,7 @@ object Base {
       .addOutEdge(edge = argument, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val block = builder.addNodeType(
+    val block: NodeType = builder.addNodeType(
       name = "BLOCK",
       comment = "A structuring block in the AST"
     ).protoId(31)
@@ -658,7 +657,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val typeRef = builder.addNodeType(
+    val typeRef: NodeType = builder.addNodeType(
       name = "TYPE_REF",
       comment = "Reference to a type/class"
     ).protoId(335)
@@ -678,7 +677,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val controlStructure = builder.addNodeType(
+    val controlStructure: NodeType = builder.addNodeType(
       name = "CONTROL_STRUCTURE",
       comment = "A control structure such as if, while, or for"
     ).protoId(339)
@@ -722,11 +721,11 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val jumpTarget = builder.addNodeType(
+    val jumpTarget: NodeType = builder.addNodeType(
       name = "JUMP_TARGET",
       comment = "A jump target made explicit in the code using a label"
     ).protoId(340)
-      .addProperties(code, name, columnNumber, lineNumber, order, parserTypeName, argumentIndex, internalFlags)
+      .addProperties(code, name, columnNumber, lineNumber, order, parserTypeName, argumentIndex /** TODO add back in ,internalFlags */)
       .extendz(cfgNode, astNode)
       .addOutEdge(edge = cfg, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
       .addOutEdge(edge = cfg, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
@@ -739,6 +738,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
       .addOutEdge(edge = cfg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+      /** TODO add back in
       .addOutEdge(edge = dominate, inNode = call, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
       .addOutEdge(edge = dominate, inNode = identifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
@@ -773,9 +773,10 @@ object Base {
       .addOutEdge(edge = cdg, inNode = controlStructure, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
       .addOutEdge(edge = cdg, inNode = jumpTarget, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
       .addOutEdge(edge = cdg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
+       */
 
 
-    val unknown = builder.addNodeType(
+    val unknown: NodeType = builder.addNodeType(
       name = "UNKNOWN",
       comment = "A language-specific node"
     ).protoId(44)
