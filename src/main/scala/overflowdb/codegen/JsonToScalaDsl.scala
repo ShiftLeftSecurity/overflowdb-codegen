@@ -3,16 +3,17 @@ package overflowdb.codegen
 import Helpers._
 
 object JsonToScalaDsl extends App {
-  val schema = new Schema("base.json")
+//  val schema = new Schema("base.json")
+  val schema = new Schema("enhancements-internal.json")
   nodeProperties()
   edgeProperties()
   edgeTypes()
   nodeBaseTypes()
-  nodeTypes()
-  constants()
+//  nodeTypes()
+//  constants()
 
   def nodeProperties() = {
-    p("// node properties")
+    if (schema.nodeKeys.nonEmpty) p("// node properties")
     schema.nodeKeys.foreach { key =>
       p(
         s"""lazy val ${camelCase(key.name)}: NodeType = builder.addNodeProperty(
@@ -27,7 +28,7 @@ object JsonToScalaDsl extends App {
   }
 
   def edgeProperties() = {
-    p("// edge properties")
+    if (schema.edgeKeys.nonEmpty) p("// edge properties")
     schema.edgeKeys.foreach { key =>
       p(
         s"""val ${camelCase(key.name)} = builder.addEdgeProperty(
@@ -42,7 +43,7 @@ object JsonToScalaDsl extends App {
   }
 
   def edgeTypes() = {
-    p("// edge types")
+    if (schema.edgeTypes.nonEmpty) p("// edge types")
     schema.edgeTypes.foreach { edge =>
       val addPropertiesMaybe = {
         if (edge.keys.isEmpty) ""
@@ -64,7 +65,7 @@ object JsonToScalaDsl extends App {
   }
 
   def nodeBaseTypes() = {
-    p("// node base types")
+    if (schema.nodeBaseTraits.nonEmpty) p("// node base types")
     schema.nodeBaseTraits.foreach { nodeBaseType =>
       val addPropertiesMaybe = {
         if (nodeBaseType.hasKeys.isEmpty) ""
@@ -85,7 +86,7 @@ object JsonToScalaDsl extends App {
   }
 
   def nodeTypes() = {
-    p("// node types")
+    if (schema.nodeTypes.nonEmpty) p("// node types")
     schema.nodeTypes.foreach { nodeType =>
       val addPropertiesMaybe = {
         if (nodeType.keys.isEmpty) ""

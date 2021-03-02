@@ -14,11 +14,11 @@ class Schema(schemaFile: String) {
   implicit private val edgeTypeRead = Json.reads[EdgeType]
 
   lazy val jsonRoot = Json.parse(new FileInputStream(schemaFile))
-  lazy val nodeBaseTraits = (jsonRoot \ "nodeBaseTraits").as[List[NodeBaseTrait]]
-  lazy val nodeTypes = (jsonRoot \ "nodeTypes").as[List[NodeType]]
-  lazy val edgeTypes = (jsonRoot \ "edgeTypes").as[List[EdgeType]]
-  lazy val nodeKeys = (jsonRoot \ "nodeKeys").as[List[Property]]
-  lazy val edgeKeys = (jsonRoot \ "edgeKeys").as[List[Property]]
+  lazy val nodeBaseTraits = (jsonRoot \ "nodeBaseTraits").toOption.map(_.as[List[NodeBaseTrait]]).getOrElse(Nil)
+  lazy val nodeTypes = (jsonRoot \ "nodeTypes").toOption.map(_.as[List[NodeType]]).getOrElse(Nil)
+  lazy val edgeTypes = (jsonRoot \ "edgeTypes").toOption.map(_.as[List[EdgeType]]).getOrElse(Nil)
+  lazy val nodeKeys = (jsonRoot \ "nodeKeys").toOption.map(_.as[List[Property]]).getOrElse(Nil)
+  lazy val edgeKeys = (jsonRoot \ "edgeKeys").toOption.map(_.as[List[Property]]).getOrElse(Nil)
 
   lazy val nodeTypeByName: Map[String, NodeType] =
     nodeTypes.map(node => node.name -> node).toMap
