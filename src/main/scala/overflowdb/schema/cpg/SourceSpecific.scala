@@ -9,20 +9,17 @@ object SourceSpecific {
     import base._
 
     // node types
-    lazy val comment: NodeType = builder.addNodeType(
-      name = "COMMENT",
-      comment = "A comment"
-    ).protoId(511)
-
+    lazy val comment: NodeType = builder
+      .addNodeType(
+        name = "COMMENT",
+        comment = "A comment"
+      )
+      .protoId(511)
       .addProperties(lineNumber, code, filename)
-
       .addOutEdge(edge = sourceFile, inNode = comment)
-
 
     file
       .addOutEdge(edge = ast, inNode = comment)
-
-
 
   }
 

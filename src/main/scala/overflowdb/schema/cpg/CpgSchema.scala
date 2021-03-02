@@ -6,10 +6,10 @@ import overflowdb.schema.SchemaBuilder
 import java.io.File
 
 /**
- * Schema for the base code property graph
- * Language modules are required to produce graphs adhering to this schema
- */
-object CpgSchema extends App{
+  * Schema for the base code property graph
+  * Language modules are required to produce graphs adhering to this schema
+  */
+object CpgSchema extends App {
   val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
 
   // the foundation

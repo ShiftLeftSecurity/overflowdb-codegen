@@ -11,34 +11,33 @@ object Finding {
     import enhancements._
 
     // node properties
-    val key = builder.addNodeProperty(
-      name = "KEY",
-      valueType = "String",
-      cardinality = Cardinality.One,
-      comment = ""
-    ).protoId(131)
+    val key = builder
+      .addNodeProperty(
+        name = "KEY",
+        valueType = "String",
+        cardinality = Cardinality.One,
+        comment = ""
+      )
+      .protoId(131)
 
     // node types
-    lazy val finding: NodeType = builder.addNodeType(
-      name = "FINDING",
-      comment = ""
-    ).protoId(214)
-
+    lazy val finding: NodeType = builder
+      .addNodeType(
+        name = "FINDING",
+        comment = ""
+      )
+      .protoId(214)
       .addProperties()
-
-
       .addContainedNode(builder.anyNode, "evidence", Cardinality.List)
       .addContainedNode(keyValuePair, "keyValuePairs", Cardinality.List)
 
-    lazy val keyValuePair: NodeType = builder.addNodeType(
-      name = "KEY_VALUE_PAIR",
-      comment = ""
-    ).protoId(217)
-
+    lazy val keyValuePair: NodeType = builder
+      .addNodeType(
+        name = "KEY_VALUE_PAIR",
+        comment = ""
+      )
+      .protoId(217)
       .addProperties(key, value)
-
-
-
 
   }
 

@@ -6,10 +6,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 
 /**
- *  TODO future refactorings:
- *  + move lazy val to Helpers, don't import Helpers here
- *  + use valueType: Class[_] ?
- */
+  *  TODO future refactorings:
+  *  + move lazy val to Helpers, don't import Helpers here
+  *  + use valueType: Class[_] ?
+  */
 class SchemaBuilder(basePackage: String) {
   val nodePropertyKeys = mutable.ListBuffer.empty[Property]
   val edgePropertyKeys = mutable.ListBuffer.empty[Property]
@@ -44,7 +44,15 @@ class SchemaBuilder(basePackage: String) {
   }
 
   def build: Schema =
-    new Schema(basePackage, nodePropertyKeys, edgePropertyKeys, nodeBaseTypes, nodeTypes, edgeTypes, constantsByCategory.toMap)
+    new Schema(
+      basePackage,
+      nodePropertyKeys,
+      edgePropertyKeys,
+      nodeBaseTypes,
+      nodeTypes,
+      edgeTypes,
+      constantsByCategory.toMap
+    )
 
   private def addAndReturn[A](buffer: mutable.Buffer[A], a: A): A = {
     buffer.append(a)
