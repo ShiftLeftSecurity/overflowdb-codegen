@@ -3,15 +3,15 @@ package overflowdb.codegen
 import Helpers._
 
 object JsonToScalaDsl extends App {
-  val schema = new Schema("base.json")
-//  val schema = new Schema("enhancements-internal.json")
-  //  val schema = new Schema("enhancements-internal-dbg.json")
-//  nodeProperties()
-//  edgeProperties()
-//  edgeTypes()
-//  nodeBaseTypes()
+  val json = "tagsandlocations.json"
+
+  val schema = new Schema(json)
+  nodeProperties()
+  edgeProperties()
+  edgeTypes()
+  nodeBaseTypes()
   nodeTypes()
-//  constants()
+  constants()
 
   def nodeProperties() = {
     if (schema.nodeKeys.nonEmpty) p("// node properties")
