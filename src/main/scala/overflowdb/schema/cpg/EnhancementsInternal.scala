@@ -3,10 +3,12 @@ package overflowdb.schema.cpg
 import overflowdb.schema._
 
 object EnhancementsInternal {
-  def apply(builder: SchemaBuilder, base: Base.Schema) = new Schema(builder, base)
+  def apply(builder: SchemaBuilder, base: Base.Schema, enhancements: Enhancements.Schema) =
+    new Schema(builder, base, enhancements)
 
-  class Schema(builder: SchemaBuilder, base: Base.Schema) {
+  class Schema(builder: SchemaBuilder, base: Base.Schema, enhancements: Enhancements.Schema) {
     import base._
+    import enhancements._
 
     // node properties
     val depthFirstOrder = builder.addNodeProperty(
@@ -91,13 +93,13 @@ object EnhancementsInternal {
       comment = "Data used by a framework"
     ).protoId(43)
 
-      .addProperties(name, content)
+      .addProperties(name)/* TODO, content) */
 
 
     method
       .addProperties(hasMapping, depthFirstOrder, internalFlags)
       .addOutEdge(edge = taggedBy, inNode = tag)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -115,7 +117,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = taggedBy, inNode = tag)
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method, cardinalityOut = Cardinality.ZeroOrOne)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -135,7 +137,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = taggedBy, inNode = tag)
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -147,7 +149,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -159,7 +161,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -188,13 +190,13 @@ object EnhancementsInternal {
       .addOutEdge(edge = taggedBy, inNode = tag)
 
 
-    call
+    callNode
       .addProperties(depthFirstOrder, internalFlags)
 
       .addOutEdge(edge = taggedBy, inNode = tag)
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -206,7 +208,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -218,7 +220,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -238,7 +240,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = taggedBy, inNode = tag)
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -250,7 +252,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -262,7 +264,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -282,7 +284,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = taggedBy, inNode = tag)
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -294,7 +296,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -306,7 +308,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -332,7 +334,7 @@ object EnhancementsInternal {
     ret
       .addProperties(depthFirstOrder, internalFlags)
 
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -344,7 +346,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -363,7 +365,7 @@ object EnhancementsInternal {
 
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -375,7 +377,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -387,7 +389,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -407,7 +409,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = taggedBy, inNode = tag)
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -419,7 +421,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -431,7 +433,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -451,7 +453,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = taggedBy, inNode = tag)
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -463,7 +465,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -475,7 +477,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -494,7 +496,7 @@ object EnhancementsInternal {
 
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -506,7 +508,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -518,7 +520,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -537,7 +539,7 @@ object EnhancementsInternal {
 
       .addOutEdge(edge = dynamicType, inNode = typeDecl)
       .addOutEdge(edge = dynamicType, inNode = method)
-      .addOutEdge(edge = dominate, inNode = call)
+      .addOutEdge(edge = dominate, inNode = callNode)
       .addOutEdge(edge = dominate, inNode = identifier)
       .addOutEdge(edge = dominate, inNode = fieldIdentifier)
       .addOutEdge(edge = dominate, inNode = literal)
@@ -549,7 +551,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = dominate, inNode = controlStructure)
       .addOutEdge(edge = dominate, inNode = jumpTarget)
       .addOutEdge(edge = dominate, inNode = unknown)
-      .addOutEdge(edge = postDominate, inNode = call)
+      .addOutEdge(edge = postDominate, inNode = callNode)
       .addOutEdge(edge = postDominate, inNode = identifier)
       .addOutEdge(edge = postDominate, inNode = fieldIdentifier)
       .addOutEdge(edge = postDominate, inNode = literal)
@@ -561,7 +563,7 @@ object EnhancementsInternal {
       .addOutEdge(edge = postDominate, inNode = controlStructure)
       .addOutEdge(edge = postDominate, inNode = jumpTarget)
       .addOutEdge(edge = postDominate, inNode = unknown)
-      .addOutEdge(edge = cdg, inNode = call)
+      .addOutEdge(edge = cdg, inNode = callNode)
       .addOutEdge(edge = cdg, inNode = identifier)
       .addOutEdge(edge = cdg, inNode = fieldIdentifier)
       .addOutEdge(edge = cdg, inNode = literal)
@@ -573,12 +575,6 @@ object EnhancementsInternal {
       .addOutEdge(edge = cdg, inNode = controlStructure)
       .addOutEdge(edge = cdg, inNode = jumpTarget)
       .addOutEdge(edge = cdg, inNode = unknown)
-
-
-    closureBinding
-
-
-
 
 
     lazy val detachedTrackingPoint: NodeType = builder.addNodeType(

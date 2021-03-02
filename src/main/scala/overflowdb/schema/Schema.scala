@@ -15,8 +15,9 @@ class Schema(val basePackage: String,
              val edgeTypes: Seq[EdgeType],
              val constantsByCategory: Map[String, Seq[Constant]])
 
-class NodeType(val name: String,
-               val comment: Option[String]) {
+sealed trait Node
+
+class NodeType(val name: String, val comment: Option[String]) extends Node {
   protected var _protoId: Option[Int] = None
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
@@ -54,7 +55,7 @@ class NodeType(val name: String,
     this
   }
 
-  def addContainedNode(node: NodeType, localName: String, cardinality: Cardinality): NodeType = {
+  def addContainedNode(node: Node, localName: String, cardinality: Cardinality): NodeType = {
     _containedNodes.add(ContainedNode(node, localName, cardinality))
     this
   }
@@ -86,10 +87,35 @@ class NodeType(val name: String,
   }
 }
 
+// TODO deduplicate with NodeType - maybe just add a flag `isAbstract` and allow general inheritance?
+class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
+  protected val _properties: mutable.Set[Property] = mutable.Set.empty
+  protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
+  lazy val className = camelCaseCaps(name)
+
+  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
+
+  def extendz: Seq[NodeBaseType] =
+    _extendz.toSeq
+
+  def extendz(additional: NodeBaseType*): NodeBaseType = {
+    additional.foreach(_extendz.add)
+    this
+  }
+
+  def addProperties(additional: Property*): NodeBaseType = {
+    additional.foreach(_properties.add)
+    this
+  }
+
+  // TODO add ability for outEdge/inEdge etc.
+}
+
+
 case class OutEdge(edge: EdgeType, inNode: NodeType, cardinality: Cardinality)
 case class InEdge(edge: EdgeType, outNode: NodeType, cardinality: Cardinality)
 
-case class ContainedNode(nodeType: NodeType, localName: String, cardinality: Cardinality)
+case class ContainedNode(node: Node, localName: String, cardinality: Cardinality)
 
 sealed abstract class Cardinality(val name: String)
 object Cardinality {
@@ -139,30 +165,6 @@ class Property(val name: String,
     _protoId = Some(id)
     this
   }
-}
-
-class NodeBaseType(val name: String,
-                   val comment: Option[String]) {
-  protected val _properties: mutable.Set[Property] = mutable.Set.empty
-  protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
-  lazy val className = camelCaseCaps(name)
-
-  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
-
-  def extendz: Seq[NodeBaseType] =
-    _extendz.toSeq
-
-  def extendz(additional: NodeBaseType*): NodeBaseType = {
-    additional.foreach(_extendz.add)
-    this
-  }
-
-  def addProperties(additional: Property*): NodeBaseType = {
-    additional.foreach(_properties.add)
-    this
-  }
-
-  // TODO add ability for outEdge/inEdge etc.
 }
 
 class Constant(val name: String,
