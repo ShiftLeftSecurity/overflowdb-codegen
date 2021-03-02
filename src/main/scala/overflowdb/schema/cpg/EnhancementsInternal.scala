@@ -3,12 +3,19 @@ package overflowdb.schema.cpg
 import overflowdb.schema._
 
 object EnhancementsInternal {
-  def apply(builder: SchemaBuilder, base: Base.Schema, enhancements: Enhancements.Schema) =
-    new Schema(builder, base, enhancements)
+  def apply(builder: SchemaBuilder,
+            base: Base.Schema,
+            enhancements: Enhancements.Schema,
+            javaSpecific: JavaSpecific.Schema) =
+    new Schema(builder, base, enhancements, javaSpecific)
 
-  class Schema(builder: SchemaBuilder, base: Base.Schema, enhancements: Enhancements.Schema) {
+  class Schema(builder: SchemaBuilder,
+               base: Base.Schema,
+               enhancements: Enhancements.Schema,
+               javaSpecific: JavaSpecific.Schema) {
     import base._
     import enhancements._
+    import javaSpecific._
 
     // node properties
     val depthFirstOrder = builder.addNodeProperty(

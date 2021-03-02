@@ -15,7 +15,9 @@ class Schema(val basePackage: String,
              val edgeTypes: Seq[EdgeType],
              val constantsByCategory: Map[String, Seq[Constant]])
 
-sealed trait Node
+sealed trait Node {
+  def className: String
+}
 
 class NodeType(val name: String, val comment: Option[String]) extends Node {
   protected var _protoId: Option[Int] = None
@@ -115,7 +117,7 @@ class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
 case class OutEdge(edge: EdgeType, inNode: NodeType, cardinality: Cardinality)
 case class InEdge(edge: EdgeType, outNode: NodeType, cardinality: Cardinality)
 
-case class ContainedNode(node: Node, localName: String, cardinality: Cardinality)
+case class ContainedNode(nodeType: Node, localName: String, cardinality: Cardinality)
 
 sealed abstract class Cardinality(val name: String)
 object Cardinality {

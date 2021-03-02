@@ -58,7 +58,7 @@ object Helpers {
     }
 
   def getCompleteType(containedNode: ContainedNode): String = {
-    val tpe = if (containedNode.nodeType.name != DefaultNodeTypes.Node) {
+    val tpe = if (containedNode.nodeType.className != DefaultNodeTypes.NodeClassname) {
       containedNode.nodeType.className + "Base"
     } else {
       containedNode.nodeType.className
