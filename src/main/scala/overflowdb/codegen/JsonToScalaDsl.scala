@@ -107,16 +107,16 @@ object JsonToScalaDsl extends App {
         val edgeName = camelCase(outEdge.edgeName)
         outEdge.inNodes.map { inNode =>
           val cardinalityOut = inNode.cardinality match {
-            case Some(c) if c.endsWith(":1") => "Cardinality.One"
-            case Some(c) if c.endsWith(":0-1") => "Cardinality.ZeroOrOne"
-            case _ => "Cardinality.List"
+            case Some(c) if c.endsWith(":1")   => ", cardinalityOut = Cardinality.One"
+            case Some(c) if c.endsWith(":0-1") => ", cardinalityOut = Cardinality.ZeroOrOne"
+            case _ => ""
           }
           val cardinalityIn = inNode.cardinality match {
-            case Some(c) if c.startsWith("1:") => "Cardinality.One"
-            case Some(c) if c.startsWith("0-1:") => "Cardinality.ZeroOrOne"
-            case _ => "Cardinality.List"
+            case Some(c) if c.startsWith("1:")   => ", cardinalityIn = Cardinality.One"
+            case Some(c) if c.startsWith("0-1:") => ", cardinalityIn = Cardinality.ZeroOrOne"
+            case _ => ""
           }
-          s".addOutEdge(edge = $edgeName, inNode = ${ensureNoReservedName(camelCase(inNode.name))}, cardinalityOut = $cardinalityOut, cardinalityIn = $cardinalityIn)"
+          s".addOutEdge(edge = $edgeName, inNode = ${ensureNoReservedName(camelCase(inNode.name))}$cardinalityOut$cardinalityIn)"
         }
       }.mkString("\n")
 
