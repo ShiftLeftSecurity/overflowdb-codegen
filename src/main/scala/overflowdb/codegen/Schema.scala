@@ -81,11 +81,11 @@ class Schema(schemaFile: String) {
 case class NodeType(
     name: String,
     comment: Option[String],
-    keys: List[String],
+    keys: Option[List[String]],
     outEdges: Option[List[OutEdgeEntry]],
     is: Option[List[String]],
     containedNodes: Option[List[ContainedNode]],
-    id: Int) {
+    id: Option[Int]) {
   lazy val className = Helpers.camelCaseCaps(name)
   lazy val classNameDb = s"${className}Db"
   lazy val containedNodesList = containedNodes.getOrElse(Nil)

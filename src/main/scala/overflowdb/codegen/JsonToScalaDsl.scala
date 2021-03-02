@@ -3,20 +3,21 @@ package overflowdb.codegen
 import Helpers._
 
 object JsonToScalaDsl extends App {
-//  val schema = new Schema("base.json")
-  val schema = new Schema("enhancements-internal.json")
-  nodeProperties()
-  edgeProperties()
-  edgeTypes()
-  nodeBaseTypes()
-//  nodeTypes()
+  val schema = new Schema("base.json")
+//  val schema = new Schema("enhancements-internal.json")
+  //  val schema = new Schema("enhancements-internal-dbg.json")
+//  nodeProperties()
+//  edgeProperties()
+//  edgeTypes()
+//  nodeBaseTypes()
+  nodeTypes()
 //  constants()
 
   def nodeProperties() = {
     if (schema.nodeKeys.nonEmpty) p("// node properties")
     schema.nodeKeys.foreach { key =>
       p(
-        s"""lazy val ${camelCase(key.name)}: NodeType = builder.addNodeProperty(
+        s"""val ${camelCase(key.name)} = builder.addNodeProperty(
            |  name = "${key.name}",
            |  valueType = "${getBaseType(key.valueType)}",
            |  cardinality = Cardinality.${key.cardinality.capitalize},
@@ -91,7 +92,7 @@ object JsonToScalaDsl extends App {
       val addPropertiesMaybe = {
         if (nodeType.keys.isEmpty) ""
         else {
-          val properties = nodeType.keys.map(camelCase).mkString(", ")
+          val properties = nodeType.keys.getOrElse(Nil).map(camelCase).mkString(", ")
           s".addProperties($properties)"
         }
       }
@@ -115,7 +116,7 @@ object JsonToScalaDsl extends App {
             case Some(c) if c.startsWith("0-1:") => "Cardinality.ZeroOrOne"
             case _ => "Cardinality.List"
           }
-          s".addOutEdge(edge = $edgeName, inNode = ${camelCase(inNode.name)}, cardinalityOut = $cardinalityOut, cardinalityIn = $cardinalityIn)"
+          s".addOutEdge(edge = $edgeName, inNode = ${ensureNoReservedName(camelCase(inNode.name))}, cardinalityOut = $cardinalityOut, cardinalityIn = $cardinalityIn)"
         }
       }.mkString("\n")
 
@@ -123,12 +124,20 @@ object JsonToScalaDsl extends App {
         s""".addContainedNode(${camelCase(containedNode.nodeType)}, "${containedNode.localName}", Cardinality.${containedNode.cardinality.capitalize})"""
       }.mkString("\n")
 
+      val nodeName = ensureNoReservedName(camelCase(nodeType.name))
+      nodeType.id match {
+        case Some(protoId) =>
+          p( s"""lazy val $nodeName: NodeType = builder.addNodeType(
+               |  name = "${nodeType.name}",
+               |  comment = "${escape(nodeType.comment)}"
+               |).protoId($protoId)
+               |""".stripMargin
+          )
+        case None => p(nodeName)
+      }
+
       p(
-        s"""val ${camelCase(nodeType.name)} = builder.addNodeType(
-           |  name = "${nodeType.name}",
-           |  comment = "${escape(nodeType.comment)}"
-           |).protoId(${nodeType.id})
-           |$addPropertiesMaybe
+        s"""$addPropertiesMaybe
            |$extendsMaybe
            |$outEdgesMaybe
            |$containedNodesMaybe
@@ -175,4 +184,11 @@ object JsonToScalaDsl extends App {
 
   def escape(s: Option[String]): String =
     s.map(escape).getOrElse("")
+
+  def ensureNoReservedName(s: String): String =
+    s match {
+      case "return" => "ret"
+      case "type" => "tpe"
+      case s => s
+    }
 }

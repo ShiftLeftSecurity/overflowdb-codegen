@@ -1,0 +1,12 @@
+{
+    "nodeTypes" : [
+        {"name" : "LOCAL",
+         "outEdges" : [
+             {"edgeName": "DYNAMIC_TYPE", "inNodes": [
+              {"name": "TYPE_DECL"},
+              {"name": "METHOD"}
+             ]}
+         ]
+        }
+    ]
+}
