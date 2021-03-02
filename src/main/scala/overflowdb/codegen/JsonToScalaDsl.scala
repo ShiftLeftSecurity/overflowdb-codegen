@@ -15,7 +15,7 @@ object JsonToScalaDsl extends App {
     p("// node properties")
     schema.nodeKeys.foreach { key =>
       p(
-        s"""val ${camelCase(key.name)} = builder.addNodeProperty(
+        s"""lazy val ${camelCase(key.name)}: NodeType = builder.addNodeProperty(
            |  name = "${key.name}",
            |  valueType = "${getBaseType(key.valueType)}",
            |  cardinality = Cardinality.${key.cardinality.capitalize},
