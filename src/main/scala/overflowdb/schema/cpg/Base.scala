@@ -320,7 +320,7 @@ object Base {
     ).addProperties(code, name, signature)
 
     // node types
-    val metaData = builder.addNodeType(
+    lazy val metaData = builder.addNodeType(
       name = "META_DATA",
       comment = "Node to save meta data about the graph on its properties. Exactly one node of this type per graph"
     ).protoId(39)
@@ -329,7 +329,7 @@ object Base {
 
 
 
-    val file = builder.addNodeType(
+    lazy val file = builder.addNodeType(
       name = "FILE",
       comment = "Node representing a source file - the root of the AST"
     ).protoId(38)
@@ -338,7 +338,7 @@ object Base {
       .addOutEdge(edge = ast, inNode = namespaceBlock, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.ZeroOrOne)
 
 
-    val method = builder.addNodeType(
+    lazy val method = builder.addNodeType(
       name = "METHOD",
       comment = "A method/function/procedure"
     ).protoId(1)
@@ -363,7 +363,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val methodParameterIn = builder.addNodeType(
+    lazy val methodParameterIn = builder.addNodeType(
       name = "METHOD_PARAMETER_IN",
       comment = "This node represents a formal parameter going towards the callee side"
     ).protoId(34)
@@ -372,7 +372,7 @@ object Base {
 
 
 
-    val methodReturn = builder.addNodeType(
+    lazy val methodReturn = builder.addNodeType(
       name = "METHOD_RETURN",
       comment = "A formal method return"
     ).protoId(3)
@@ -381,7 +381,7 @@ object Base {
 
 
 
-    val modifier = builder.addNodeType(
+    lazy val modifier = builder.addNodeType(
       name = "MODIFIER",
       comment = "A modifier, e.g., static, public, private"
     ).protoId(300)
@@ -390,7 +390,7 @@ object Base {
 
 
 
-    val tpe = builder.addNodeType(
+    lazy val tpe = builder.addNodeType(
       name = "TYPE",
       comment = "A type which always has to reference a type declaration and may have type argument children if the referred to type declaration is a template"
     ).protoId(45)
@@ -398,7 +398,7 @@ object Base {
       .addOutEdge(edge = ast, inNode = typeArgument, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val typeDecl = builder.addNodeType(
+    lazy val typeDecl = builder.addNodeType(
       name = "TYPE_DECL",
       comment = "A type declaration"
     ).protoId(46)
@@ -410,7 +410,7 @@ object Base {
       .addOutEdge(edge = vtable, inNode = method, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val typeParameter = builder.addNodeType(
+    lazy val typeParameter = builder.addNodeType(
       name = "TYPE_PARAMETER",
       comment = "Type parameter of TYPE_DECL or METHOD"
     ).protoId(47)
@@ -419,7 +419,7 @@ object Base {
 
 
 
-    val typeArgument: NodeType = builder.addNodeType(
+    lazy val typeArgument: NodeType = builder.addNodeType(
       name = "TYPE_ARGUMENT",
       comment = "Argument for a TYPE_PARAMETER that belongs to a TYPE. It binds another TYPE to a TYPE_PARAMETER"
     ).protoId(48)
@@ -429,7 +429,7 @@ object Base {
     .addOutEdge(edge = bindsTo, inNode = typeParameter, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val member = builder.addNodeType(
+    lazy val member = builder.addNodeType(
       name = "MEMBER",
       comment = "Member of a class struct or union"
     ).protoId(9)
@@ -438,7 +438,7 @@ object Base {
 
 
 
-    val namespaceBlock = builder.addNodeType(
+    lazy val namespaceBlock = builder.addNodeType(
       name = "NAMESPACE_BLOCK",
       comment = "A reference to a namespace"
     ).protoId(41)
@@ -447,7 +447,7 @@ object Base {
 
 
 
-    val literal: NodeType = builder.addNodeType(
+    lazy val literal: NodeType = builder.addNodeType(
       name = "LITERAL",
       comment = "Literal/Constant"
     ).protoId(8)
@@ -466,7 +466,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val call: NodeType = builder.addNodeType(
+    lazy val call: NodeType = builder.addNodeType(
       name = "CALL",
       comment = "A (method)-call"
     ).protoId(15)
@@ -512,7 +512,7 @@ object Base {
       .addOutEdge(edge = argument, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val local = builder.addNodeType(
+    lazy val local = builder.addNodeType(
       name = "LOCAL",
       comment = "A local variable"
     ).protoId(23)
@@ -521,7 +521,7 @@ object Base {
 
 
 
-    val identifier: NodeType = builder.addNodeType(
+    lazy val identifier: NodeType = builder.addNodeType(
       name = "IDENTIFIER",
       comment = "An arbitrary identifier/reference"
     ).protoId(27)
@@ -543,7 +543,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val fieldIdentifier: NodeType = builder.addNodeType(
+    lazy val fieldIdentifier: NodeType = builder.addNodeType(
       name = "FIELD_IDENTIFIER",
       comment = "A node that represents which field is accessed in a <operator>.fieldAccess, in e.g. obj.field. The CODE part is used for human display and matching to MEMBER nodes. The CANONICAL_NAME is used for dataflow tracking; typically both coincide. However, suppose that two fields foo and bar are a C-style union; then CODE refers to whatever the programmer wrote (obj.foo or obj.bar), but both share the same CANONICAL_NAME (e.g. GENERATED_foo_bar)"
     ).protoId(2001081)
@@ -562,7 +562,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val returnNode: NodeType = builder.addNodeType(
+    lazy val returnNode: NodeType = builder.addNodeType(
       name = "RETURN",
       comment = "A return instruction"
     ).protoId(30)
@@ -591,7 +591,7 @@ object Base {
       .addOutEdge(edge = argument, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val block: NodeType = builder.addNodeType(
+    lazy val block: NodeType = builder.addNodeType(
       name = "BLOCK",
       comment = "A structuring block in the AST"
     ).protoId(31)
@@ -621,7 +621,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val methodInst = builder.addNodeType(
+    lazy val methodInst = builder.addNodeType(
       name = "METHOD_INST",
       comment = "A method instance which always has to reference a method and may have type argument children if the referred to method is a template"
     ).protoId(32)
@@ -630,14 +630,14 @@ object Base {
       .addOutEdge(edge = ast, inNode = typeArgument, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val arrayInitializer = builder.addNodeType(
+    lazy val arrayInitializer = builder.addNodeType(
       name = "ARRAY_INITIALIZER",
       comment = "Initialization construct for arrays"
     ).protoId(14)
 
       .extendz(astNode)
 
-    val methodRef: NodeType = builder.addNodeType(
+    lazy val methodRef: NodeType = builder.addNodeType(
       name = "METHOD_REF",
       comment = "Reference to a method instance"
     ).protoId(333)
@@ -657,7 +657,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val typeRef: NodeType = builder.addNodeType(
+    lazy val typeRef: NodeType = builder.addNodeType(
       name = "TYPE_REF",
       comment = "Reference to a type/class"
     ).protoId(335)
@@ -677,7 +677,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val controlStructure: NodeType = builder.addNodeType(
+    lazy val controlStructure: NodeType = builder.addNodeType(
       name = "CONTROL_STRUCTURE",
       comment = "A control structure such as if, while, or for"
     ).protoId(339)
@@ -721,7 +721,7 @@ object Base {
       .addOutEdge(edge = cfg, inNode = unknown, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)
 
 
-    val jumpTarget: NodeType = builder.addNodeType(
+    lazy val jumpTarget: NodeType = builder.addNodeType(
       name = "JUMP_TARGET",
       comment = "A jump target made explicit in the code using a label"
     ).protoId(340)
@@ -776,7 +776,7 @@ object Base {
        */
 
 
-    val unknown: NodeType = builder.addNodeType(
+    lazy val unknown: NodeType = builder.addNodeType(
       name = "UNKNOWN",
       comment = "A language-specific node"
     ).protoId(44)
