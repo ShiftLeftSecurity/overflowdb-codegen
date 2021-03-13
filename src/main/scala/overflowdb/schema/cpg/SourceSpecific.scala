@@ -8,18 +8,26 @@ object SourceSpecific {
   class Schema(builder: SchemaBuilder, base: Base.Schema) {
     import base._
 
-    // node types
-    lazy val comment: NodeType = builder
-      .addNodeType(
-        name = "COMMENT",
-        comment = "A comment"
-      )
-      .protoId(511)
-      .addProperties(lineNumber, code, filename)
-      .addOutEdge(edge = sourceFile, inNode = comment)
+// node types
+val comment: NodeType = builder.addNodeType(
+  name = "COMMENT",
+  comment = "A comment"
+).protoId(511)
 
-    file
-      .addOutEdge(edge = ast, inNode = comment)
+.addProperties(lineNumber, code, filename)
+
+
+
+// node relations
+comment
+.addOutEdge(edge = sourceFile, inNode = comment)
+
+
+file
+.addOutEdge(edge = ast, inNode = comment)
+
+
+// constants
 
   }
 
