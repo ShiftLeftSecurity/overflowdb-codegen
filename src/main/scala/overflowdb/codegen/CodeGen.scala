@@ -768,8 +768,8 @@ class CodeGen(schema: Schema) {
            |
            |
            |  object Edges {
-           |    val In: Array[String] = Array(${quoted(inEdges.map(_.edge.name).distinct).mkString(",")})
-           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.edge.name).distinct).mkString(",")})
+           |    val In: Array[String] = Array(${quoted(inEdges.map(_.edge.name)).mkString(",")})
+           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.edge.name)).mkString(",")})
            |  }
            |
            |  val factory = new NodeFactory[$classNameDb] {
