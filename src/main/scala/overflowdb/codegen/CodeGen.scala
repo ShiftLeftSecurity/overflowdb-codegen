@@ -1001,28 +1001,32 @@ class CodeGen(schema: Schema) {
         }
 
         val neighborOutInfos =
-          nodeType.outEdges.map { case OutEdge(edge, inNode, cardinality) =>
+          nodeType.outEdges.map { case OutEdge(edge, inNodeMaybe, cardinality) =>
             val viaEdgeAndDirection = edge.className + "Out"
-            val neighborNodeInfo = createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
+            val neighborNodeInfo = inNodeMaybe.map { inNode =>
+              createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
+            }
             NeighborInfo(neighborAccessorNameForEdge(edge, Direction.OUT), neighborNodeInfo, nextOffsetPos)
           }
 
         val neighborInInfos =
-          nodeType.inEdges.map { case InEdge(edge, outNode, cardinality) =>
+          nodeType.inEdges.map { case InEdge(edge, outNodeMaybe, cardinality) =>
             val viaEdgeAndDirection = edge.className + "In"
-            val neighborNodeInfo = createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
+            val neighborNodeInfo = outNodeMaybe.map { outNode =>
+              createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
+            }
             NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfo, nextOffsetPos)
           }
 
         neighborOutInfos ++ neighborInInfos
       }
 
-      val neighborDelegators = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfo, _) =>
+      val neighborDelegators = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfoMaybe, _) =>
         val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
 
-        val specificNodeBasedDelegators = neighborNodeInfo match {
-          case NeighborNodeInfo(accessorNameForNode, className, cardinality)  =>
+        val specificNodeBasedDelegators = neighborNodeInfoMaybe.map {
+          case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             val returnType = cardinality match {
               case Cardinality.List => s"Iterator[$className]"
               case Cardinality.ZeroOrOne => s"Option[$className]"
@@ -1030,7 +1034,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.ISeq => ???
             }
             s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
-          }
+        }.getOrElse("")
         s"""$specificNodeBasedDelegators
            |$genericEdgeBasedDelegators""".stripMargin
       }.mkString("\n")
@@ -1071,11 +1075,11 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfo, offsetPos) =>
+      val neighborAccessors = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfoMaybe, offsetPos) =>
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        val specificNodeBasedAccessors = neighborNodeInfo match {
+        val specificNodeBasedAccessors = neighborNodeInfoMaybe.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             cardinality match {
               case Cardinality.List =>
@@ -1086,7 +1090,7 @@ class CodeGen(schema: Schema) {
                 s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next()"
               case Cardinality.ISeq => ???
             }
-        }
+        }.getOrElse("")
         s"""$specificNodeBasedAccessors
            |$genericEdgeBasedAccessor""".stripMargin
       }.mkString("\n")

@@ -74,8 +74,16 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
                  inNode: NodeType,
                  cardinalityOut: Cardinality = Cardinality.List,
                  cardinalityIn: Cardinality = Cardinality.List): NodeType = {
-    _outEdges.add(OutEdge(edge, inNode, cardinalityOut))
-    inNode._inEdges.add(InEdge(edge, this, cardinalityIn))
+    // if edgeType is already present in _outEdges, combine the two entries
+    _outEdges.find(_.edge == edge) match {
+      case Some(outEdge) =>
+        _outEdges.remove(outEdge)
+        _outEdges.add(OutEdge(edge, None, Cardinality.List))
+      case None =>
+        _outEdges.add(OutEdge(edge, Some(inNode), cardinalityOut))
+    }
+
+    inNode._inEdges.add(InEdge(edge, Some(this), cardinalityIn))
     this
   }
 
@@ -83,10 +91,20 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
                 outNode: NodeType,
                 cardinalityIn: Cardinality = Cardinality.List,
                 cardinalityOut: Cardinality = Cardinality.List): NodeType = {
-    _inEdges.add(InEdge(edge, outNode, cardinalityIn))
-    outNode._outEdges.add(OutEdge(edge, this, cardinalityOut))
+    // if edgeType is already present in _inEdges, combine the two entries
+    _inEdges.find(_.edge == edge) match {
+      case Some(outEdge) =>
+        _inEdges.remove(outEdge)
+        _inEdges.add(InEdge(edge, None, Cardinality.List))
+      case None =>
+        _inEdges.add(InEdge(edge, Some(outNode), cardinalityIn))
+    }
+
+    outNode._outEdges.add(OutEdge(edge, Some(this), cardinalityOut))
     this
   }
+
+  override def toString = s"NodeType($name)"
 }
 
 // TODO deduplicate with NodeType - maybe just add a flag `isAbstract` and allow general inheritance?
@@ -111,11 +129,13 @@ class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
   }
 
   // TODO add ability for outEdge/inEdge etc.
+
+  override def toString = s"NodeBaseType($name)"
 }
 
 
-case class OutEdge(edge: EdgeType, inNode: NodeType, cardinality: Cardinality)
-case class InEdge(edge: EdgeType, outNode: NodeType, cardinality: Cardinality)
+case class OutEdge(edge: EdgeType, inNode: Option[NodeType], cardinality: Cardinality)
+case class InEdge(edge: EdgeType, outNode: Option[NodeType], cardinality: Cardinality)
 
 case class ContainedNode(nodeType: Node, localName: String, cardinality: Cardinality)
 
@@ -152,6 +172,8 @@ class EdgeType(val name: String,
     additional.foreach(_properties.add)
     this
   }
+
+  override def toString = s"EdgeType($name)"
 }
 
 class Property(val name: String,
@@ -188,7 +210,7 @@ object Constant {
 }
 
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
-case class NeighborInfo(accessorNameForEdge: String, nodeInfo: NeighborNodeInfo, offsetPosition: Int)
+case class NeighborInfo(accessorNameForEdge: String, nodeInfo: Option[NeighborNodeInfo], offsetPosition: Int)
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
