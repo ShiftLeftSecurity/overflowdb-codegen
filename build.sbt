@@ -6,6 +6,7 @@ organization := "io.shiftleft"
 scalaVersion := "2.12.11"
 
 enablePlugins(GitVersioning)
+enablePlugins(JavaAppPackaging)
 
 libraryDependencies ++= Seq(
   "com.github.pathikrit" %% "better-files" % "3.8.0",

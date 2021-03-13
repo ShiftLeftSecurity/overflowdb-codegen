@@ -3,7 +3,8 @@ package overflowdb.codegen
 import Helpers._
 
 object JsonToScalaDsl extends App {
-  val json = "tagsandlocations.json"
+//  val json = "tagsandlocations.json"
+  val json = args.head
 
   val schema = new Schema(json)
   nodeProperties()
