@@ -194,7 +194,7 @@ val namespace: NodeType = builder.addNodeType(
 
 
 
-call
+callNode
 .addProperties(dispatchType, dynamicTypeHintFullName)
 
 

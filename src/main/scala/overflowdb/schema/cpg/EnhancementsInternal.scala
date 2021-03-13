@@ -122,8 +122,7 @@ literal
 
 
 
-call
-.addProperties(depthFirstOrder, internalFlags)
+callNode.addProperties(depthFirstOrder, internalFlags)
 
 
 identifier
