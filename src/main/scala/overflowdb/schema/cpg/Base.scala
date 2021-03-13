@@ -572,6 +572,8 @@ object Base {
       .protoId(8)
       .addProperties(code, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression)
+
+    literal
       .addOutEdge(edge = cfg, inNode = callNode)
       .addOutEdge(edge = cfg, inNode = identifier)
       .addOutEdge(edge = cfg, inNode = fieldIdentifier)
@@ -592,6 +594,7 @@ object Base {
       .protoId(15)
       .addProperties(code, name, order, methodFullName, argumentIndex, signature, lineNumber, columnNumber)
       .extendz(expression, callRepr)
+    callNode
       .addOutEdge(edge = cfg, inNode = callNode)
       .addOutEdge(edge = cfg, inNode = identifier)
       .addOutEdge(edge = cfg, inNode = fieldIdentifier)
@@ -673,6 +676,8 @@ object Base {
       .protoId(27)
       .addProperties(code, name, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression, localLike)
+
+    identifier
       .addOutEdge(edge = ref, inNode = local, cardinalityOut = Cardinality.ZeroOrOne)
       .addOutEdge(edge = ref, inNode = methodParameterIn, cardinalityOut = Cardinality.ZeroOrOne)
       .addOutEdge(edge = cfg, inNode = callNode)
@@ -697,6 +702,8 @@ object Base {
       .protoId(2001081)
       .addProperties(code, canonicalName, order, argumentIndex, lineNumber, columnNumber)
       .extendz(expression)
+
+    fieldIdentifier
       .addOutEdge(
         edge = cfg,
         inNode = callNode,
@@ -722,6 +729,8 @@ object Base {
       .protoId(30)
       .addProperties(lineNumber, columnNumber, order, argumentIndex, code)
       .extendz(expression)
+
+    ret
       .addOutEdge(edge = ast, inNode = callNode)
       .addOutEdge(edge = ast, inNode = identifier)
       .addOutEdge(edge = ast, inNode = literal)
@@ -787,6 +796,8 @@ object Base {
       .protoId(31)
       .addProperties(code, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression)
+
+    block
       .addOutEdge(edge = ast, inNode = callNode)
       .addOutEdge(edge = ast, inNode = identifier)
       .addOutEdge(edge = ast, inNode = literal)
@@ -847,6 +858,8 @@ object Base {
         columnNumber
       )
       .extendz(expression)
+
+    methodRef
       .addOutEdge(edge = cfg, inNode = callNode)
       .addOutEdge(edge = cfg, inNode = identifier)
       .addOutEdge(edge = cfg, inNode = fieldIdentifier)
@@ -868,6 +881,8 @@ object Base {
       .protoId(335)
       .addProperties(code, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression)
+
+    typeRef
       .addOutEdge(edge = cfg, inNode = callNode)
       .addOutEdge(edge = cfg, inNode = identifier)
       .addOutEdge(edge = cfg, inNode = fieldIdentifier)
@@ -934,6 +949,8 @@ object Base {
       .protoId(340)
       .addProperties(code, name, columnNumber, lineNumber, order, parserTypeName, argumentIndex)
       .extendz(cfgNode, astNode)
+
+    jumpTarget
       .addOutEdge(edge = cfg, inNode = callNode)
       .addOutEdge(edge = cfg, inNode = identifier)
       .addOutEdge(edge = cfg, inNode = fieldIdentifier)
@@ -954,6 +971,8 @@ object Base {
       .protoId(44)
       .addProperties(code, parserTypeName, order, argumentIndex, typeFullName, lineNumber, columnNumber)
       .extendz(expression)
+
+    unknown
       .addOutEdge(edge = cfg, inNode = callNode)
       .addOutEdge(edge = cfg, inNode = identifier)
       .addOutEdge(edge = cfg, inNode = fieldIdentifier)
