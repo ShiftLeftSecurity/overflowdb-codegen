@@ -12,6 +12,7 @@ object JsonToScalaDsl extends App {
   edgeTypes()
   nodeBaseTypes()
   nodeTypes()
+  nodeRelations()
   constants()
 
   def nodeProperties() = {
@@ -104,6 +105,31 @@ object JsonToScalaDsl extends App {
           s".extendz($extendz)"
         }
       }
+      val nodeName = ensureNoReservedName(camelCase(nodeType.name))
+      nodeType.id match {
+        case Some(protoId) =>
+          p( s"""val $nodeName: NodeType = builder.addNodeType(
+               |  name = "${nodeType.name}",
+               |  comment = "${escape(nodeType.comment)}"
+               |).protoId($protoId)
+               |""".stripMargin
+          )
+        case None => p(nodeName)
+      }
+
+      p(
+        s"""$addPropertiesMaybe
+           |$extendsMaybe
+           |""".stripMargin
+      )
+    }
+  }
+
+  def nodeRelations() = {
+    if (schema.nodeTypes.nonEmpty) p("// node relations")
+    schema.nodeTypes.foreach { nodeType =>
+      val nodeName = ensureNoReservedName(camelCase(nodeType.name))
+
       val outEdgesMaybe = nodeType.outEdges.getOrElse(Nil).flatMap { outEdge =>
         val edgeName = camelCase(outEdge.edgeName)
         outEdge.inNodes.map { inNode =>
@@ -125,25 +151,13 @@ object JsonToScalaDsl extends App {
         s""".addContainedNode(${camelCase(containedNode.nodeType)}, "${containedNode.localName}", Cardinality.${containedNode.cardinality.capitalize})"""
       }.mkString("\n")
 
-      val nodeName = ensureNoReservedName(camelCase(nodeType.name))
-      nodeType.id match {
-        case Some(protoId) =>
-          p( s"""lazy val $nodeName: NodeType = builder.addNodeType(
-               |  name = "${nodeType.name}",
-               |  comment = "${escape(nodeType.comment)}"
-               |).protoId($protoId)
-               |""".stripMargin
-          )
-        case None => p(nodeName)
+      if (outEdgesMaybe.nonEmpty || containedNodesMaybe.nonEmpty) {
+        p(s"""$nodeName
+             |$outEdgesMaybe
+             |$containedNodesMaybe
+             |""".stripMargin
+        )
       }
-
-      p(
-        s"""$addPropertiesMaybe
-           |$extendsMaybe
-           |$outEdgesMaybe
-           |$containedNodesMaybe
-           |""".stripMargin
-      )
     }
   }
 
