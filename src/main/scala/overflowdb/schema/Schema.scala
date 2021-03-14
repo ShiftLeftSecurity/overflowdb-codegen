@@ -75,8 +75,8 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
                  inNode: NodeType,
                  cardinalityOut: Cardinality = Cardinality.List,
                  cardinalityIn: Cardinality = Cardinality.List): NodeType = {
-    addAdjacentNode(edge, inNode, cardinalityOut, _outEdges)
-    addAdjacentNode(edge, this, cardinalityIn, inNode._inEdges)
+    _outEdges.add(AdjacentNode(edge, inNode, cardinalityOut))
+    inNode._inEdges.add(AdjacentNode(edge, this, cardinalityIn))
     this
   }
 
@@ -84,24 +84,9 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
                 outNode: NodeType,
                 cardinalityIn: Cardinality = Cardinality.List,
                 cardinalityOut: Cardinality = Cardinality.List): NodeType = {
-    addAdjacentNode(edge, outNode, cardinalityIn, _inEdges)
-    addAdjacentNode(edge, this, cardinalityOut, outNode._outEdges)
+    _inEdges.add(AdjacentNode(edge, outNode, cardinalityIn))
+    outNode._outEdges.add(AdjacentNode(edge, this, cardinalityOut))
     this
-  }
-
-  private def addAdjacentNode(edge: EdgeType,
-                              neighborNode: NodeType,
-                              cardinality: Cardinality,
-                              set: mutable.Set[AdjacentNode]): Unit = {
-    // if edgeType is already present in set, combine the two entries
-    set.find(_.viaEdge == edge) match {
-      case Some(adjacentNode) =>
-        set.remove(adjacentNode)
-        set.add(AdjacentNode(edge, None, Cardinality.List))
-      case None =>
-        set.add(AdjacentNode(edge, Some(neighborNode), cardinality))
-    }
-
   }
 
   override def toString = s"NodeType($name)"
@@ -134,7 +119,7 @@ class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
 }
 
 
-case class AdjacentNode(viaEdge: EdgeType, neighbor: Option[NodeType], cardinality: Cardinality)
+case class AdjacentNode(viaEdge: EdgeType, neighbor: NodeType, cardinality: Cardinality)
 
 case class ContainedNode(nodeType: Node, localName: String, cardinality: Cardinality)
 
@@ -209,7 +194,7 @@ object Constant {
 }
 
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
-case class NeighborInfo(accessorNameForEdge: String, nodeInfo: Option[NeighborNodeInfo], offsetPosition: Int)
+case class NeighborInfo(accessorNameForEdge: String, nodeInfo: NeighborNodeInfo, offsetPosition: Int)
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
