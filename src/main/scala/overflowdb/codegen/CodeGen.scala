@@ -974,7 +974,7 @@ class CodeGen(schema: Schema) {
           case Cardinality.ZeroOrOne =>
             s"""  def ${containedNode.localName}: Option[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.List =>
-            s"""  def ${containedNode.localName}: List[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: Seq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.ISeq =>
             s"""  def ${containedNode.localName}: immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
         }
@@ -1110,7 +1110,7 @@ class CodeGen(schema: Schema) {
                  |        case singleValue: $baseType => List(singleValue)
                  |        case null | None | Nil => Nil
                  |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
-                 |        case lst: Seq[_] => value.asInstanceOf[Seq[$baseType]]
+                 |        case lst: List[_] => value.asInstanceOf[List[$baseType]]
                  |      }""".stripMargin
             case Cardinality.ISeq =>
               s"""value match {
