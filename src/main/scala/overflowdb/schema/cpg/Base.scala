@@ -280,45 +280,48 @@ val sourceFile = builder.addEdgeType(
 
 
 // node base types
+val withinMethod = builder.addNodeBaseType(
+  name = "WITHIN_METHOD",
+  comment = "Any node that can exist in a method"
+)
+
+val trackingPoint = builder.addNodeBaseType(
+  name = "TRACKING_POINT",
+  comment = "Any node that can occur in a data flow"
+).extendz(withinMethod)
+
 val declaration = builder.addNodeBaseType(
   name = "DECLARATION",
   comment = ""
 ).addProperties(name)
-
-val expression = builder.addNodeBaseType(
-  name = "EXPRESSION",
-  comment = "Expression as a specialisation of tracking point"
-).addProperties(code, order, argumentIndex)
 
 val localLike = builder.addNodeBaseType(
   name = "LOCAL_LIKE",
   comment = "Formal input parameters, locals, and identifiers"
 ).addProperties(name)
 
-val cfgNode = builder.addNodeBaseType(
-  name = "CFG_NODE",
-  comment = "Any node that can occur as part of a control flow graph"
-).addProperties(lineNumber, columnNumber, code)
-
-val trackingPoint = builder.addNodeBaseType(
-  name = "TRACKING_POINT",
-  comment = "Any node that can occur in a data flow"
-)
-
-val withinMethod = builder.addNodeBaseType(
-  name = "WITHIN_METHOD",
-  comment = "Any node that can exist in a method"
-)
-
 val astNode = builder.addNodeBaseType(
   name = "AST_NODE",
   comment = "Any node that can exist in an abstract syntax tree"
 ).addProperties(order)
 
+val cfgNode = builder.addNodeBaseType(
+  name = "CFG_NODE",
+  comment = "Any node that can occur as part of a control flow graph"
+).addProperties(lineNumber, columnNumber, code)
+.extendz(withinMethod, astNode)
+
+val expression = builder.addNodeBaseType(
+  name = "EXPRESSION",
+  comment = "Expression as a specialisation of tracking point"
+).addProperties(code, order, argumentIndex)
+.extendz(trackingPoint, cfgNode, astNode)
+
 val callRepr = builder.addNodeBaseType(
   name = "CALL_REPR",
   comment = "Call representation"
 ).addProperties(code, name, signature)
+  .extendz(cfgNode)
 
 // node types
 val metaData: NodeType = builder.addNodeType(
