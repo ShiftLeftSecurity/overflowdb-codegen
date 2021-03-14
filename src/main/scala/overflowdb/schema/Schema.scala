@@ -1,6 +1,7 @@
 package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
+import overflowdb.storage.ValueTypes
 
 import scala.collection.mutable
 
@@ -176,7 +177,7 @@ class EdgeType(val name: String,
 
 class Property(val name: String,
                val comment: Option[String],
-               val valueType: String,
+               val valueType: ValueTypes,
                val cardinality: Cardinality) {
   protected var _protoId: Option[Int] = None
   lazy val className = camelCaseCaps(name)
@@ -191,7 +192,7 @@ class Property(val name: String,
 
 class Constant(val name: String,
                val value: String,
-               val valueType: String,
+               val valueType: ValueTypes,
                val comment: Option[String]) {
   protected var _protoId: Option[Int] = None
 
@@ -203,7 +204,7 @@ class Constant(val name: String,
   }
 }
 object Constant {
-  def apply(name: String, value: String, valueType: String, comment: String = ""): Constant =
+  def apply(name: String, value: String, valueType: ValueTypes, comment: String = ""): Constant =
     new Constant(name, value, valueType, stringToOption(comment))
 }
 

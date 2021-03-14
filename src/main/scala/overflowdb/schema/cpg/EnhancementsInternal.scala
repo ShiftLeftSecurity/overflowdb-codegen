@@ -1,6 +1,7 @@
 package overflowdb.schema.cpg
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 object EnhancementsInternal {
   def apply(
@@ -24,21 +25,21 @@ object EnhancementsInternal {
 // node properties
 val depthFirstOrder = builder.addNodeProperty(
   name = "DEPTH_FIRST_ORDER",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.ZeroOrOne,
   comment = "The depth first ordering number used to detect back edges in reducible CFGs"
 ).protoId(17)
 
 val hasMapping = builder.addNodeProperty(
   name = "HAS_MAPPING",
-  valueType = "Boolean",
+  valueType = ValueTypes.BOOLEAN,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Marks that a method has at least one mapping defined from the policies"
 ).protoId(23)
 
 val internalFlags = builder.addNodeProperty(
   name = "INTERNAL_FLAGS",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Internal flags"
 ).protoId(78)
@@ -691,22 +692,22 @@ detachedTrackingPoint
 
 // constants
 val frameworks = builder.addConstants(category = "Frameworks", 
-  Constant(name = "PLAY", value = "PLAY", valueType = "String", comment = "Play framework").protoId(1),
-  Constant(name = "GWT", value = "GWT", valueType = "String", comment = "Google web toolkit").protoId(2),
-  Constant(name = "SPRING", value = "SPRING", valueType = "String", comment = "Java spring framework").protoId(3),
-  Constant(name = "VERTX", value = "VERTX", valueType = "String", comment = "Polyglot event-driven framework").protoId(4),
-  Constant(name = "JSF", value = "JSF", valueType = "String", comment = "JavaServer Faces").protoId(5),
-  Constant(name = "SERVLET", value = "SERVLET", valueType = "String", comment = "Java Servlet based frameworks").protoId(6),
-  Constant(name = "JAXRS", value = "JAXRS", valueType = "String", comment = "JAX-RS").protoId(7),
-  Constant(name = "SPARK", value = "SPARK", valueType = "String", comment = "Spark micro web framework").protoId(8),
-  Constant(name = "ASP_NET_CORE", value = "ASP_NET_CORE", valueType = "String", comment = "Microsoft ASP.NET Core").protoId(9),
-  Constant(name = "ASP_NET_WEB_API", value = "ASP_NET_WEB_API", valueType = "String", comment = "Microsoft ASP.NET Web API").protoId(10),
-  Constant(name = "ASP_NET_MVC", value = "ASP_NET_MVC", valueType = "String", comment = "Microsoft ASP.NET MVC").protoId(11),
-  Constant(name = "JAXWS", value = "JAXWS", valueType = "String", comment = "JAX-WS").protoId(12),
-  Constant(name = "ASP_NET_WEB_UI", value = "ASP_NET_WEB_UI", valueType = "String", comment = "Microsoft ASP.NET Web UI").protoId(13),
-  Constant(name = "JAVA_INTERNAL", value = "JAVA_INTERNAL", valueType = "String", comment = "Framework facilities directly provided by Java").protoId(14),
-  Constant(name = "DROPWIZARD", value = "DROPWIZARD", valueType = "String", comment = "Dropwizard framework").protoId(15),
-  Constant(name = "WCF", value = "WCF", valueType = "String", comment = "WCF HTTP and REST").protoId(16),
+  Constant(name = "PLAY", value = "PLAY", valueType = ValueTypes.STRING, comment = "Play framework").protoId(1),
+  Constant(name = "GWT", value = "GWT", valueType = ValueTypes.STRING, comment = "Google web toolkit").protoId(2),
+  Constant(name = "SPRING", value = "SPRING", valueType = ValueTypes.STRING, comment = "Java spring framework").protoId(3),
+  Constant(name = "VERTX", value = "VERTX", valueType = ValueTypes.STRING, comment = "Polyglot event-driven framework").protoId(4),
+  Constant(name = "JSF", value = "JSF", valueType = ValueTypes.STRING, comment = "JavaServer Faces").protoId(5),
+  Constant(name = "SERVLET", value = "SERVLET", valueType = ValueTypes.STRING, comment = "Java Servlet based frameworks").protoId(6),
+  Constant(name = "JAXRS", value = "JAXRS", valueType = ValueTypes.STRING, comment = "JAX-RS").protoId(7),
+  Constant(name = "SPARK", value = "SPARK", valueType = ValueTypes.STRING, comment = "Spark micro web framework").protoId(8),
+  Constant(name = "ASP_NET_CORE", value = "ASP_NET_CORE", valueType = ValueTypes.STRING, comment = "Microsoft ASP.NET Core").protoId(9),
+  Constant(name = "ASP_NET_WEB_API", value = "ASP_NET_WEB_API", valueType = ValueTypes.STRING, comment = "Microsoft ASP.NET Web API").protoId(10),
+  Constant(name = "ASP_NET_MVC", value = "ASP_NET_MVC", valueType = ValueTypes.STRING, comment = "Microsoft ASP.NET MVC").protoId(11),
+  Constant(name = "JAXWS", value = "JAXWS", valueType = ValueTypes.STRING, comment = "JAX-WS").protoId(12),
+  Constant(name = "ASP_NET_WEB_UI", value = "ASP_NET_WEB_UI", valueType = ValueTypes.STRING, comment = "Microsoft ASP.NET Web UI").protoId(13),
+  Constant(name = "JAVA_INTERNAL", value = "JAVA_INTERNAL", valueType = ValueTypes.STRING, comment = "Framework facilities directly provided by Java").protoId(14),
+  Constant(name = "DROPWIZARD", value = "DROPWIZARD", valueType = ValueTypes.STRING, comment = "Dropwizard framework").protoId(15),
+  Constant(name = "WCF", value = "WCF", valueType = ValueTypes.STRING, comment = "WCF HTTP and REST").protoId(16),
 )
 
 

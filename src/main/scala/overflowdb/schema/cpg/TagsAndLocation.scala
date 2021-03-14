@@ -1,6 +1,7 @@
 package overflowdb.schema.cpg
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 object TagsAndLocation {
   def apply(builder: SchemaBuilder, base: Base.Schema, enhancements: Enhancements.Schema) =
@@ -13,56 +14,56 @@ object TagsAndLocation {
 // node properties
 val symbol = builder.addNodeProperty(
   name = "SYMBOL",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(100)
 
 val methodShortName = builder.addNodeProperty(
   name = "METHOD_SHORT_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(102)
 
 val packageName = builder.addNodeProperty(
   name = "PACKAGE_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(103)
 
 val className = builder.addNodeProperty(
   name = "CLASS_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(104)
 
 val classShortName = builder.addNodeProperty(
   name = "CLASS_SHORT_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(132)
 
 val nodeLabel = builder.addNodeProperty(
   name = "NODE_LABEL",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(105)
 
 val sourceType = builder.addNodeProperty(
   name = "SOURCE_TYPE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(115)
 
 val sinkType = builder.addNodeProperty(
   name = "SINK_TYPE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(116)

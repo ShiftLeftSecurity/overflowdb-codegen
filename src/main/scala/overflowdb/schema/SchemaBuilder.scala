@@ -1,14 +1,13 @@
 package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
+import overflowdb.storage.ValueTypes
 
-import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 
 /**
   *  TODO future refactorings:
   *  + move lazy val to Helpers, don't import Helpers here
-  *  + use valueType: Class[_] ?
   */
 class SchemaBuilder(basePackage: String) {
   val nodePropertyKeys = mutable.ListBuffer.empty[Property]
@@ -22,10 +21,10 @@ class SchemaBuilder(basePackage: String) {
   lazy val anyNode: NodeBaseType =
     addNodeBaseType("NODE", "generic node base trait - use if you want to be explicitly unspecific")
 
-  def addNodeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
+  def addNodeProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(nodePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
 
-  def addEdgeProperty(name: String, valueType: String, cardinality: Cardinality, comment: String = ""): Property =
+  def addEdgeProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(edgePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
 
   def addNodeBaseType(name: String, comment: String = ""): NodeBaseType =

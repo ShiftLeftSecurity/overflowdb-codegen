@@ -1,6 +1,7 @@
 package overflowdb.schema.cpg
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 object Finding {
   def apply(builder: SchemaBuilder, base: Base.Schema, enhancements: Enhancements.Schema) =
@@ -13,7 +14,7 @@ object Finding {
 // node properties
 val key = builder.addNodeProperty(
   name = "KEY",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = ""
 ).protoId(131)

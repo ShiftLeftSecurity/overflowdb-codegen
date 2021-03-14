@@ -3,6 +3,7 @@ package overflowdb.schema.testschema2
 import java.io.File
 import overflowdb.codegen.CodeGen
 import overflowdb.schema.{Cardinality, Constant, SchemaBuilder}
+import overflowdb.storage.ValueTypes
 
 // TODO create integration test from this
 object TestSchema2 extends App {
@@ -19,7 +20,7 @@ object Base {
     val name = builder
       .addNodeProperty(
         name = "NAME",
-        valueType = "String",
+        valueType = ValueTypes.STRING,
         cardinality = Cardinality.One,
         comment = "Name of represented object, e.g., method name (e.g. \"run\")"
       )
@@ -28,7 +29,7 @@ object Base {
     val order = builder
       .addNodeProperty(
         name = "ORDER",
-        valueType = "Integer",
+        valueType = ValueTypes.INTEGER,
         cardinality = Cardinality.One,
         comment =
           "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code"
@@ -39,7 +40,7 @@ object Base {
     val localName = builder
       .addEdgeProperty(
         name = "LOCAL_NAME",
-        valueType = "String",
+        valueType = ValueTypes.STRING,
         cardinality = Cardinality.ZeroOrOne,
         comment = "Local name of referenced CONTAINED node. This key is deprecated."
       )
@@ -71,24 +72,24 @@ object Base {
       Constant(
         name = "STATIC_DISPATCH",
         value = "STATIC_DISPATCH",
-        valueType = "String",
+        valueType = ValueTypes.STRING,
         comment = "For statically dispatched calls the call target is known before program execution"
       ),
       Constant(
         name = "DYNAMIC_DISPATCH",
         value = "DYNAMIC_DISPATCH",
-        valueType = "String",
+        valueType = ValueTypes.STRING,
         comment = "For dynamically dispatched calls the target is determined during runtime "
       )
     )
 
     val operators = builder.addConstants(
       category = "Operators",
-      Constant(name = "addition", value = "<operator>.addition", valueType = "String"),
+      Constant(name = "addition", value = "<operator>.addition", valueType = ValueTypes.STRING),
       Constant(
         name = "pointerShift",
         value = "<operator>.pointerShift",
-        valueType = "String",
+        valueType = ValueTypes.STRING,
         comment =
           "Shifts a pointer. In terms of CPG, the first argument is the pointer and the second argument is the index. The index selection works the same way as for indirectIndexAccess. This operator is currently only used directly by the LLVM language, but it is also used internally for C. For example, pointerShift(ptr, 7) is equivalent to &(ptr[7]). Handling of this operator is special-cased in the back-end"
       )

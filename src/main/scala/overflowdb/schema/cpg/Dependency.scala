@@ -1,6 +1,7 @@
 package overflowdb.schema.cpg
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 object Dependency {
   def apply(builder: SchemaBuilder, base: Base.Schema) = new Schema(builder, base)
@@ -11,7 +12,7 @@ object Dependency {
 // node properties
 val dependencyGroupId = builder.addNodeProperty(
   name = "DEPENDENCY_GROUP_ID",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.ZeroOrOne,
   comment = "The group ID for a dependency"
 ).protoId(58)

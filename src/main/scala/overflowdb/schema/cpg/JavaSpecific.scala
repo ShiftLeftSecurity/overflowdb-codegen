@@ -1,6 +1,7 @@
 package overflowdb.schema.cpg
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 /**
   * This is only intended for Java.
@@ -16,14 +17,14 @@ object JavaSpecific {
 // node properties
 val binarySignature = builder.addNodeProperty(
   name = "BINARY_SIGNATURE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Binary type signature"
 ).protoId(14)
 
 val content = builder.addNodeProperty(
   name = "CONTENT",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Content of CONFIG_FILE node"
 ).protoId(20)

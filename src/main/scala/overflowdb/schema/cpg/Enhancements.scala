@@ -1,6 +1,7 @@
 package overflowdb.schema.cpg
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 /**
   * enhancement nodes/edges that will automatically be derived from the cpg
@@ -15,56 +16,56 @@ object Enhancements {
 // node properties
 val value = builder.addNodeProperty(
   name = "VALUE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Tag value"
 ).protoId(8)
 
 val isMethodNeverOverridden = builder.addNodeProperty(
   name = "IS_METHOD_NEVER_OVERRIDDEN",
-  valueType = "Boolean",
+  valueType = ValueTypes.BOOLEAN,
   cardinality = Cardinality.ZeroOrOne,
   comment = "True if the referenced method is never overridden by the subclasses and false otherwise"
 ).protoId(1002)
 
 val policyDirectories = builder.addNodeProperty(
   name = "POLICY_DIRECTORIES",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.List,
   comment = "Sub directories of the policy directory that should be loaded when processing the CPG"
 ).protoId(119)
 
 val evaluationStrategy = builder.addNodeProperty(
   name = "EVALUATION_STRATEGY",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Evaluation strategy for function parameters and return values. One of the values in \"evaluationStrategies\""
 ).protoId(15)
 
 val dispatchType = builder.addNodeProperty(
   name = "DISPATCH_TYPE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "The dispatch type of a call, which is either static or dynamic. See dispatchTypes"
 ).protoId(25)
 
 val dynamicTypeHintFullName = builder.addNodeProperty(
   name = "DYNAMIC_TYPE_HINT_FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.List,
   comment = "Type hint for the dynamic type"
 ).protoId(1591)
 
 val astParentType = builder.addNodeProperty(
   name = "AST_PARENT_TYPE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "The type of the AST parent. Since this is only used in some parts of the graph the list does not include all possible parents by intention. Possible parents: METHOD, TYPE_DECL, NAMESPACE_BLOCK"
 ).protoId(56)
 
 val astParentFullName = builder.addNodeProperty(
   name = "AST_PARENT_FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "The FULL_NAME of a the AST parent of an entity"
 ).protoId(57)
@@ -72,14 +73,14 @@ val astParentFullName = builder.addNodeProperty(
 // edge properties
 val alias = builder.addEdgeProperty(
   name = "ALIAS",
-  valueType = "Boolean",
+  valueType = ValueTypes.BOOLEAN,
   cardinality = Cardinality.One,
   comment = "Defines whether a PROPAGATE edge creates an alias"
 ).protoId(1)
 
 val variable = builder.addEdgeProperty(
   name = "VARIABLE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "A variable propagated by a reaching-def edge"
 ).protoId(11)
@@ -441,14 +442,14 @@ unknown
 
 // constants
 val dispatchTypes = builder.addConstants(category = "DispatchTypes", 
-  Constant(name = "STATIC_DISPATCH", value = "STATIC_DISPATCH", valueType = "String", comment = "For statically dispatched calls the call target is known before program execution").protoId(1),
-  Constant(name = "DYNAMIC_DISPATCH", value = "DYNAMIC_DISPATCH", valueType = "String", comment = "For dynamically dispatched calls the target is determined during runtime").protoId(2),
+  Constant(name = "STATIC_DISPATCH", value = "STATIC_DISPATCH", valueType = ValueTypes.STRING, comment = "For statically dispatched calls the call target is known before program execution").protoId(1),
+  Constant(name = "DYNAMIC_DISPATCH", value = "DYNAMIC_DISPATCH", valueType = ValueTypes.STRING, comment = "For dynamically dispatched calls the target is determined during runtime").protoId(2),
 )
 
 val evaluationStrategies = builder.addConstants(category = "EvaluationStrategies", 
-  Constant(name = "BY_REFERENCE", value = "BY_REFERENCE", valueType = "String", comment = "A parameter or return of a function is passed by reference which means an address is used behind the scenes").protoId(1),
-  Constant(name = "BY_SHARING", value = "BY_SHARING", valueType = "String", comment = "Only applicable to object parameter or return values. The pointer to the object is passed by value but the object itself is not copied and changes to it are thus propagated out of the method context").protoId(2),
-  Constant(name = "BY_VALUE", value = "BY_VALUE", valueType = "String", comment = "A parameter or return of a function passed by value which means a flat copy is used").protoId(3),
+  Constant(name = "BY_REFERENCE", value = "BY_REFERENCE", valueType = ValueTypes.STRING, comment = "A parameter or return of a function is passed by reference which means an address is used behind the scenes").protoId(1),
+  Constant(name = "BY_SHARING", value = "BY_SHARING", valueType = ValueTypes.STRING, comment = "Only applicable to object parameter or return values. The pointer to the object is passed by value but the object itself is not copied and changes to it are thus propagated out of the method context").protoId(2),
+  Constant(name = "BY_VALUE", value = "BY_VALUE", valueType = ValueTypes.STRING, comment = "A parameter or return of a function passed by value which means a flat copy is used").protoId(3),
 )
 
 

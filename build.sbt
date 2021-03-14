@@ -8,6 +8,7 @@ scalaVersion := "2.12.11"
 enablePlugins(GitVersioning)
 
 libraryDependencies ++= Seq(
+  "io.shiftleft" % "overflowdb-core" % "1.31",
   "com.github.pathikrit" %% "better-files" % "3.8.0",
   "com.lihaoyi" %% "ujson" % "0.9.5",
   "com.typesafe.play" %% "play-json" % "2.8.1",

@@ -3,6 +3,7 @@ package overflowdb.codegen
 import better.files._
 import overflowdb.codegen.CodeGen.ConstantContext
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 import scala.collection.mutable
 
@@ -80,7 +81,7 @@ class CodeGen(schema: Schema) {
 
     def toConstantContext(property: Property): ConstantContext = {
       val src = {
-        val valueType = property.valueType
+        val valueType = typeFor(property.valueType)
         val cardinality = property.cardinality
         val completeType = cardinality match {
           case Cardinality.One => valueType
@@ -135,7 +136,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefs = properties.map { p =>
-        propertyKeyDef(p.name, p.valueType, p.cardinality)
+        propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
 
       val companionObject =
@@ -335,7 +336,7 @@ class CodeGen(schema: Schema) {
     def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
-        val baseType = property.valueType
+        val baseType = typeFor(property.valueType)
         val cardinality = property.cardinality
 
         val mapOrFlatMap = cardinality match {
@@ -654,12 +655,12 @@ class CodeGen(schema: Schema) {
 
         val filterSteps = (cardinality, property.valueType) match {
           case (Cardinality.List | Cardinality.ISeq, _) => ""
-          case (Cardinality.One, "string") => filterStepsForSingleString(property.name)
-          case (Cardinality.ZeroOrOne, "string") => filterStepsForOptionalString(property.name)
-          case (Cardinality.One, "boolean") => filterStepsForSingleBoolean(property.name)
-          case (Cardinality.ZeroOrOne, "boolean") => filterStepsForOptionalBoolean(property.name)
-          case (Cardinality.One, "int") => filterStepsForSingleInt(property.name)
-          case (Cardinality.ZeroOrOne, "int") => filterStepsForOptionalInt(property.name)
+          case (Cardinality.One, ValueTypes.STRING) => filterStepsForSingleString(property.name)
+          case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString(property.name)
+          case (Cardinality.One, ValueTypes.BOOLEAN) => filterStepsForSingleBoolean(property.name)
+          case (Cardinality.ZeroOrOne, ValueTypes.BOOLEAN) => filterStepsForOptionalBoolean(property.name)
+          case (Cardinality.One, ValueTypes.INTEGER) => filterStepsForSingleInt(property.name)
+          case (Cardinality.ZeroOrOne, ValueTypes.INTEGER) => filterStepsForOptionalInt(property.name)
           case (Cardinality.One, _) => filterStepsGenericSingle(property.name)
           case (Cardinality.ZeroOrOne, _) => filterStepsGenericOption(property.name)
           case _ => ""
@@ -727,7 +728,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefs = properties.map { p =>
-        propertyKeyDef(p.name, p.valueType, p.cardinality)
+        propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
 
       val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
@@ -1124,7 +1125,7 @@ class CodeGen(schema: Schema) {
           s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, p.valueType)).mkString("\n")
+        val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, typeFor(p.valueType))).mkString("\n")
 
         val forContaintedNodes = nodeType.containedNodes.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeType.className)
@@ -1275,10 +1276,10 @@ class CodeGen(schema: Schema) {
       for (key <- keys) {
         val optionalDefault =
           if (getHigherType(key.cardinality) == HigherValueType.Option) Some("None")
-          else if (key.valueType == "int") Some("-1")
-          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == "string")
+          else if (key.valueType == ValueTypes.INTEGER) Some("-1")
+          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.STRING)
             Some("\"\"")
-          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == "boolean")
+          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.BOOLEAN)
             Some("false")
           else if (getHigherType(key.cardinality) == HigherValueType.List)
             Some("List()")

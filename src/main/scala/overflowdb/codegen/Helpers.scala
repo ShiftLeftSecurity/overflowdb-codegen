@@ -1,6 +1,7 @@
 package overflowdb.codegen
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 // TODO drop
 object DefaultNodeTypes {
@@ -23,6 +24,21 @@ object Helpers {
   def stringToOption(s: String): Option[String] = s.trim match {
     case "" => None
     case nonEmptyString => Some(nonEmptyString)
+  }
+
+  def typeFor(valueType: ValueTypes): String = valueType match {
+    case ValueTypes.BOOLEAN => "java.lang.Boolean"
+    case ValueTypes.STRING => "String"
+    case ValueTypes.BYTE => "java.lang.Byte"
+    case ValueTypes.SHORT => "java.lang.Short"
+    case ValueTypes.INTEGER => "java.lang.Integer"
+    case ValueTypes.LONG => "java.lang.Long"
+    case ValueTypes.FLOAT => "java.lang.Float"
+    case ValueTypes.DOUBLE => "java.lang.Double"
+    case ValueTypes.LIST => "java.lang.List[_]"
+    case ValueTypes.NODE_REF => "overflowdb.NodeRef[_]"
+    case ValueTypes.UNKNOWN => "java.lang.Object"
+    case ValueTypes.CHARACTER => "java.lang.Character"
   }
 
   def isNodeBaseTrait(baseTraits: List[NodeBaseType], nodeName: String): Boolean =
@@ -50,12 +66,14 @@ object Helpers {
       case  Cardinality.ISeq => ???
     }
 
-  def getCompleteType(property: Property): String =
+  def getCompleteType(property: Property): String = {
+    val valueType = typeFor(property.valueType)
     getHigherType(property.cardinality) match {
-      case HigherValueType.None   => property.valueType
-      case HigherValueType.Option => s"Option[${property.valueType}]"
-      case HigherValueType.List   => s"List[${property.valueType}]"
+      case HigherValueType.None   => valueType
+      case HigherValueType.Option => s"Option[$valueType]"
+      case HigherValueType.List   => s"List[$valueType]"
     }
+  }
 
   def getCompleteType(containedNode: ContainedNode): String = {
     val tpe = if (containedNode.nodeType.className != DefaultNodeTypes.NodeClassname) {
@@ -94,7 +112,7 @@ object Helpers {
       case Cardinality.One       => baseType
       case Cardinality.ZeroOrOne => baseType
       case Cardinality.List      => s"Seq[$baseType]"
-      case Cardinality.ISeq=> s"IndexedSeq[${baseType}]"
+      case Cardinality.ISeq=> s"IndexedSeq[$baseType]"
     }
     s"""val ${camelCaseCaps(name)} = new PropertyKey[$completeType]("$name") """
   }

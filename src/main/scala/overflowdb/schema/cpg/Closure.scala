@@ -1,6 +1,7 @@
 package overflowdb.schema.cpg
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 object Closure {
   def apply(builder: SchemaBuilder, base: Base.Schema, enhancements: Enhancements.Schema) =
@@ -13,14 +14,14 @@ object Closure {
 // node properties
 val closureBindingId = builder.addNodeProperty(
   name = "CLOSURE_BINDING_ID",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Identifier which uniquely describes a CLOSURE_BINDING. This property is used to match captured LOCAL nodes with the corresponding CLOSURE_BINDING nodes"
 ).protoId(50)
 
 val closureOriginalName = builder.addNodeProperty(
   name = "CLOSURE_ORIGINAL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.ZeroOrOne,
   comment = "The original name of the (potentially mangled) captured variable"
 ).protoId(159)

@@ -1,6 +1,7 @@
 package overflowdb.schema.cpg
 
 import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
 object Base {
   def apply(builder: SchemaBuilder) = new Schema(builder)
@@ -9,189 +10,189 @@ object Base {
 // node properties
 val language = builder.addNodeProperty(
   name = "LANGUAGE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "The programming language this graph originates from"
 ).protoId(19)
 
 val version = builder.addNodeProperty(
   name = "VERSION",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "A version, given as a string"
 ).protoId(13)
 
 val overlays = builder.addNodeProperty(
   name = "OVERLAYS",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.List,
   comment = "Names of overlays applied to this graph, in order of application"
 ).protoId(118)
 
 val hash = builder.addNodeProperty(
   name = "HASH",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Hash value of the artifact that this CPG is built from."
 ).protoId(120)
 
 val lineNumber = builder.addNodeProperty(
   name = "LINE_NUMBER",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Line where the code starts"
 ).protoId(2)
 
 val columnNumber = builder.addNodeProperty(
   name = "COLUMN_NUMBER",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Column where the code starts"
 ).protoId(11)
 
 val lineNumberEnd = builder.addNodeProperty(
   name = "LINE_NUMBER_END",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Line where the code ends"
 ).protoId(12)
 
 val columnNumberEnd = builder.addNodeProperty(
   name = "COLUMN_NUMBER_END",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Column where the code ends"
 ).protoId(16)
 
 val parserTypeName = builder.addNodeProperty(
   name = "PARSER_TYPE_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Type name emitted by parser, only present for logical type UNKNOWN"
 ).protoId(3)
 
 val order = builder.addNodeProperty(
   name = "ORDER",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.One,
   comment = "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code"
 ).protoId(4)
 
 val argumentIndex = builder.addNodeProperty(
   name = "ARGUMENT_INDEX",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.One,
   comment = "AST-children of CALL nodes have an argument index, that is used to match call-site arguments with callee parameters. Explicit parameters are numbered from 1 to N, while index 0 is reserved for implicit self / this parameter. CALLs without implicit parameter therefore have arguments starting with index 1. AST-children of BLOCK nodes may have an argument index as well; in this case, the last argument index determines the return-value of a BLOCK expression"
 ).protoId(40)
 
 val isExternal = builder.addNodeProperty(
   name = "IS_EXTERNAL",
-  valueType = "Boolean",
+  valueType = ValueTypes.BOOLEAN,
   cardinality = Cardinality.One,
   comment = "Indicates that the construct (METHOD or TYPE_DECL) is external, that is, it is referenced but not defined in the code (applies both to insular parsing and to library functions where we have header files only)"
 ).protoId(7)
 
 val name = builder.addNodeProperty(
   name = "NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Name of represented object, e.g., method name (e.g. \"run\")"
 ).protoId(5)
 
 val fullName = builder.addNodeProperty(
   name = "FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Full name of an element, e.g., the class name along, including its package (e.g. \"io.shiftleft.dataflowenging.layers.dataflows.DataFlowRunner.run\"). In theory, the FULL_NAME just needs to be unique and is used for linking references, so a consecutive integer would be valid. In practice, this should be human readable"
 ).protoId(6)
 
 val canonicalName = builder.addNodeProperty(
   name = "CANONICAL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Canonical token of a FIELD_IDENTIFIER. Typically identical to the CODE field, but canonicalized according to source language semantics. Human readable names are preferable. FIELD_IDENTIFIERs must share identical CANONICAL_NAME if and only if they alias, e.g. in C-style unions (if the aliasing relationship is unknown or there are partial overlaps, then one must make a reasonable guess, and trade off between false negatives and false positives)"
 ).protoId(2001092)
 
 val code = builder.addNodeProperty(
   name = "CODE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "The code snippet the node represents"
 ).protoId(21)
 
 val signature = builder.addNodeProperty(
   name = "SIGNATURE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Method signature. The format is defined by the language front-end, and the backend simply compares strings to resolve function overloading, i.e. match call-sites to METHODs. In theory, consecutive integers would be valid, but in practice this should be human readable"
 ).protoId(22)
 
 val modifierType = builder.addNodeProperty(
   name = "MODIFIER_TYPE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Indicates the modifier which is represented by a MODIFIER node. See modifierTypes"
 ).protoId(26)
 
 val controlStructureType = builder.addNodeProperty(
   name = "CONTROL_STRUCTURE_TYPE",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Indicates the control structure type. See controlStructureTypes"
 ).protoId(27)
 
 val typeFullName = builder.addNodeProperty(
   name = "TYPE_FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "The static type of an entity. E.g. expressions, local, parameters etc. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME"
 ).protoId(51)
 
 val typeDeclFullName = builder.addNodeProperty(
   name = "TYPE_DECL_FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "The static type decl of a TYPE. This property is matched against the FULL_NAME of TYPE_DECL nodes. It is required to have exactly one TYPE_DECL for each different TYPE_DECL_FULL_NAME"
 ).protoId(52)
 
 val inheritsFromTypeFullName = builder.addNodeProperty(
   name = "INHERITS_FROM_TYPE_FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.List,
   comment = "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME"
 ).protoId(53)
 
 val methodFullName = builder.addNodeProperty(
   name = "METHOD_FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "The FULL_NAME of a method. Used to link CALL and METHOD nodes. It is required to have exactly one METHOD node for each METHOD_FULL_NAME"
 ).protoId(54)
 
 val methodInstFullName = builder.addNodeProperty(
   name = "METHOD_INST_FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Deprecated"
 ).protoId(55)
 
 val aliasTypeFullName = builder.addNodeProperty(
   name = "ALIAS_TYPE_FULL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Type full name of which a TYPE_DECL is an alias of"
 ).protoId(158)
 
 val filename = builder.addNodeProperty(
   name = "FILENAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "Full path of canonical file that contained this node; will be linked into corresponding FILE nodes. Possible for METHOD, TYPE_DECL and NAMESPACE_BLOCK"
 ).protoId(106)
 
 val containedRef = builder.addNodeProperty(
   name = "CONTAINED_REF",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.One,
   comment = "References to other nodes. This is not a real property; it exists here for the sake of proto serialization only. valueType and cardinality are meaningless."
 ).protoId(2007161)
@@ -199,14 +200,14 @@ val containedRef = builder.addNodeProperty(
 // edge properties
 val localName = builder.addEdgeProperty(
   name = "LOCAL_NAME",
-  valueType = "String",
+  valueType = ValueTypes.STRING,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Local name of referenced CONTAINED node. This key is deprecated."
 ).protoId(6)
 
 val index = builder.addEdgeProperty(
   name = "INDEX",
-  valueType = "Integer",
+  valueType = ValueTypes.INTEGER,
   cardinality = Cardinality.ZeroOrOne,
   comment = "Index of referenced CONTAINED node (0 based) - used together with cardinality=list. This key is deprecated."
 ).protoId(8)
@@ -820,25 +821,25 @@ unknown
 
 // constants
 val languages = builder.addConstants(category = "Languages", 
-  Constant(name = "JAVA", value = "JAVA", valueType = "String", comment = "").protoId(1),
-  Constant(name = "JAVASCRIPT", value = "JAVASCRIPT", valueType = "String", comment = "").protoId(2),
-  Constant(name = "GOLANG", value = "GOLANG", valueType = "String", comment = "").protoId(3),
-  Constant(name = "CSHARP", value = "CSHARP", valueType = "String", comment = "").protoId(4),
-  Constant(name = "C", value = "C", valueType = "String", comment = "").protoId(5),
-  Constant(name = "PYTHON", value = "PYTHON", valueType = "String", comment = "").protoId(6),
-  Constant(name = "LLVM", value = "LLVM", valueType = "String", comment = "").protoId(7),
-  Constant(name = "PHP", value = "PHP", valueType = "String", comment = "").protoId(8),
+  Constant(name = "JAVA", value = "JAVA", valueType = ValueTypes.STRING, comment = "").protoId(1),
+  Constant(name = "JAVASCRIPT", value = "JAVASCRIPT", valueType = ValueTypes.STRING, comment = "").protoId(2),
+  Constant(name = "GOLANG", value = "GOLANG", valueType = ValueTypes.STRING, comment = "").protoId(3),
+  Constant(name = "CSHARP", value = "CSHARP", valueType = ValueTypes.STRING, comment = "").protoId(4),
+  Constant(name = "C", value = "C", valueType = ValueTypes.STRING, comment = "").protoId(5),
+  Constant(name = "PYTHON", value = "PYTHON", valueType = ValueTypes.STRING, comment = "").protoId(6),
+  Constant(name = "LLVM", value = "LLVM", valueType = ValueTypes.STRING, comment = "").protoId(7),
+  Constant(name = "PHP", value = "PHP", valueType = ValueTypes.STRING, comment = "").protoId(8),
 )
 
 val modifierTypes = builder.addConstants(category = "ModifierTypes", 
-  Constant(name = "STATIC", value = "STATIC", valueType = "String", comment = "The static modifier").protoId(1),
-  Constant(name = "PUBLIC", value = "PUBLIC", valueType = "String", comment = "The public modifier").protoId(2),
-  Constant(name = "PROTECTED", value = "PROTECTED", valueType = "String", comment = "The protected modifier").protoId(3),
-  Constant(name = "PRIVATE", value = "PRIVATE", valueType = "String", comment = "The private modifier").protoId(4),
-  Constant(name = "ABSTRACT", value = "ABSTRACT", valueType = "String", comment = "The abstract modifier").protoId(5),
-  Constant(name = "NATIVE", value = "NATIVE", valueType = "String", comment = "The native modifier").protoId(6),
-  Constant(name = "CONSTRUCTOR", value = "CONSTRUCTOR", valueType = "String", comment = "The constructor modifier").protoId(7),
-  Constant(name = "VIRTUAL", value = "VIRTUAL", valueType = "String", comment = "The virtual modifier").protoId(8),
+  Constant(name = "STATIC", value = "STATIC", valueType = ValueTypes.STRING, comment = "The static modifier").protoId(1),
+  Constant(name = "PUBLIC", value = "PUBLIC", valueType = ValueTypes.STRING, comment = "The public modifier").protoId(2),
+  Constant(name = "PROTECTED", value = "PROTECTED", valueType = ValueTypes.STRING, comment = "The protected modifier").protoId(3),
+  Constant(name = "PRIVATE", value = "PRIVATE", valueType = ValueTypes.STRING, comment = "The private modifier").protoId(4),
+  Constant(name = "ABSTRACT", value = "ABSTRACT", valueType = ValueTypes.STRING, comment = "The abstract modifier").protoId(5),
+  Constant(name = "NATIVE", value = "NATIVE", valueType = ValueTypes.STRING, comment = "The native modifier").protoId(6),
+  Constant(name = "CONSTRUCTOR", value = "CONSTRUCTOR", valueType = ValueTypes.STRING, comment = "The constructor modifier").protoId(7),
+  Constant(name = "VIRTUAL", value = "VIRTUAL", valueType = ValueTypes.STRING, comment = "The virtual modifier").protoId(8),
 )
 
   }
