@@ -17,9 +17,12 @@ class SchemaBuilder(basePackage: String) {
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
 
-  /** root node trait for all nodes - use if you want to be explicitly unspecific */
+  /** root node trait for all nodes - use if you want to be explicitly unspecific
+   * TODO handle differently - it's a cpg-specific special type at the moment, which isn't nice.
+   * it's not even part of the regular base types, but instead defined in the RootTypes.scala
+   * */
   lazy val anyNode: NodeBaseType =
-    addNodeBaseType("NODE", "generic node base trait - use if you want to be explicitly unspecific")
+    new NodeBaseType("CPG_NODE", Some("generic node base trait - use if you want to be explicitly unspecific"))
 
   def addNodeProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(nodePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))

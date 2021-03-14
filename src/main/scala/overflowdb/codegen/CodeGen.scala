@@ -39,7 +39,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n").stripSuffix("\n")
       val allConstantsSet =
         s"""
-           | public static Set<$allConstantsSetType> ALL = new HashSet<>() {{
+           | public static Set<$allConstantsSetType> ALL = new HashSet<$allConstantsSetType>() {{
            |$allConstantsBody
            | }};
            |""".stripMargin
@@ -103,9 +103,7 @@ class CodeGen(schema: Schema) {
     val staticHeader =
       s"""package $edgesPackage
          |
-         |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Set => JSet}
-         |import java.util.{List => JList}
          |import overflowdb._
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
@@ -216,15 +214,11 @@ class CodeGen(schema: Schema) {
     val staticHeader =
       s"""package $nodesPackage
          |
-         |import $basePackage.{EdgeKeys, NodeKeys}
          |import $edgesPackage
-         |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import overflowdb._
-         |import overflowdb.traversal.filter.P
          |import overflowdb.traversal.Traversal
          |import scala.jdk.CollectionConverters._
-         |import scala.collection.immutable
          |""".stripMargin
 
     val rootTypeImpl = {
@@ -242,10 +236,10 @@ class CodeGen(schema: Schema) {
         }.mkString("\n") + "\n"
 
       val factories = {
-        val nodeFactories: Seq[String] =
-          schema.nodeTypes.map(nodeType => nodeType.className + ".factory")
+        val nodeFactories =
+          schema.nodeTypes.map(nodeType => nodeType.className + ".factory").mkString(", ")
         s"""object Factories {
-           |  lazy val all: Seq[NodeFactory[_]] = $nodeFactories
+           |  lazy val all: Seq[NodeFactory[_]] = Seq($nodeFactories)
            |  lazy val allAsJava: java.util.List[NodeFactory[_]] = all.asJava
            |}
            |""".stripMargin
@@ -702,10 +696,7 @@ class CodeGen(schema: Schema) {
 
       s"""package $nodesPackage
          |
-         |import io.shiftleft.codepropertygraph.generated.NodeKeys
-         |import overflowdb.traversal.filter.P
          |import overflowdb.traversal.Traversal
-         |import scala.collection.immutable
          |
          |trait ${className}Base extends CpgNode
          |$mixins
@@ -1254,10 +1245,6 @@ class CodeGen(schema: Schema) {
   protected def writeNewNodeFile(outputDir: File): File = {
     val staticHeader =
       s"""package $nodesPackage
-         |
-         |import java.lang.{Boolean => JBoolean, Long => JLong}
-         |import java.util.{Map => JMap, Set => JSet}
-         |import scala.collection.immutable
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
          |trait NewNode extends CpgNode {

@@ -85,7 +85,7 @@ object Helpers {
     containedNode.cardinality match {
       case Cardinality.ZeroOrOne => s"Option[$tpe]"
       case Cardinality.One       => tpe
-      case Cardinality.List      => s"List[$tpe]"
+      case Cardinality.List      => s"Seq[$tpe]"
       case Cardinality.ISeq => s"IndexedSeq[$tpe]"
     }
   }
