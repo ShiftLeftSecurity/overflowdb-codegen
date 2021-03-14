@@ -111,9 +111,9 @@ class CodeGen(schema: Schema) {
 
     val packageObject = {
       val factories = {
-        val edgeFactories: Seq[String] = schema.edgeTypes.map(edgeType => edgeType.className + ".factory")
+        val edgeFactories = schema.edgeTypes.map(edgeType => edgeType.className + ".factory").mkString(", ")
         s"""object Factories {
-           |  lazy val all: List[EdgeFactory[_]] = $edgeFactories
+           |  lazy val all: List[EdgeFactory[_]] = List($edgeFactories)
            |  lazy val allAsJava: java.util.List[EdgeFactory[_]] = all.asJava
            |}
            |""".stripMargin
