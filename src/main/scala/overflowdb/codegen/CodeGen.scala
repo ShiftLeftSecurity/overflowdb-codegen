@@ -734,11 +734,11 @@ class CodeGen(schema: Schema) {
         propertyKeyDef(containedNode.localName, containedNode.nodeType.className, containedNode.cardinality)
       }.mkString("\n|    ")
 
-      val outEdges: Seq[OutEdge] = nodeType.outEdges
-      val inEdges: Seq[InEdge] = nodeType.inEdges
+      val outEdges: Seq[AdjacentNode] = nodeType.outEdges
+      val inEdges: Seq[AdjacentNode] = nodeType.inEdges
 
-      val outEdgeLayouts = outEdges.map(outEdge => s"edges.${outEdge.edge.className}.layoutInformation").mkString(", ")
-      val inEdgeLayouts = inEdges.map(inEdge => s"edges.${inEdge.edge.className}.layoutInformation").mkString(", ")
+      val outEdgeLayouts = outEdges.map(outEdge => s"edges.${outEdge.viaEdge.className}.layoutInformation").mkString(", ")
+      val inEdgeLayouts = inEdges.map(inEdge => s"edges.${inEdge.viaEdge.className}.layoutInformation").mkString(", ")
 
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
@@ -768,8 +768,8 @@ class CodeGen(schema: Schema) {
            |
            |
            |  object Edges {
-           |    val In: Array[String] = Array(${quoted(inEdges.map(_.edge.name)).mkString(",")})
-           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.edge.name)).mkString(",")})
+           |    val In: Array[String] = Array(${quoted(inEdges.map(_.viaEdge.name)).mkString(",")})
+           |    val Out: Array[String] = Array(${quoted(outEdges.map(_.viaEdge.name)).mkString(",")})
            |  }
            |
            |  val factory = new NodeFactory[$classNameDb] {
@@ -1001,7 +1001,7 @@ class CodeGen(schema: Schema) {
         }
 
         val neighborOutInfos =
-          nodeType.outEdges.map { case OutEdge(edge, inNodeMaybe, cardinality) =>
+          nodeType.outEdges.map { case AdjacentNode(edge, inNodeMaybe, cardinality) =>
             val viaEdgeAndDirection = edge.className + "Out"
             val neighborNodeInfo = inNodeMaybe.map { inNode =>
               createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
@@ -1010,7 +1010,7 @@ class CodeGen(schema: Schema) {
           }
 
         val neighborInInfos =
-          nodeType.inEdges.map { case InEdge(edge, outNodeMaybe, cardinality) =>
+          nodeType.inEdges.map { case AdjacentNode(edge, outNodeMaybe, cardinality) =>
             val viaEdgeAndDirection = edge.className + "In"
             val neighborNodeInfo = outNodeMaybe.map { outNode =>
               createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)

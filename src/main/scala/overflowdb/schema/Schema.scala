@@ -23,8 +23,8 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
   protected var _protoId: Option[Int] = None
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
-  protected val _outEdges: mutable.Set[OutEdge] = mutable.Set.empty
-  protected val _inEdges: mutable.Set[InEdge] = mutable.Set.empty
+  protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
+  protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _containedNodes: mutable.Set[ContainedNode] = mutable.Set.empty
 
   lazy val className = camelCaseCaps(name)
@@ -43,10 +43,10 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
   def extendz: Seq[NodeBaseType] =
     _extendz.toSeq
 
-  def outEdges: Seq[OutEdge] =
+  def outEdges: Seq[AdjacentNode] =
     _outEdges.toSeq
 
-  def inEdges: Seq[InEdge] =
+  def inEdges: Seq[AdjacentNode] =
     _inEdges.toSeq
 
   def containedNodes: Seq[ContainedNode] =
@@ -74,16 +74,8 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
                  inNode: NodeType,
                  cardinalityOut: Cardinality = Cardinality.List,
                  cardinalityIn: Cardinality = Cardinality.List): NodeType = {
-    // if edgeType is already present in _outEdges, combine the two entries
-    _outEdges.find(_.edge == edge) match {
-      case Some(outEdge) =>
-        _outEdges.remove(outEdge)
-        _outEdges.add(OutEdge(edge, None, Cardinality.List))
-      case None =>
-        _outEdges.add(OutEdge(edge, Some(inNode), cardinalityOut))
-    }
-
-    inNode._inEdges.add(InEdge(edge, Some(this), cardinalityIn))
+    addAdjacentNode(edge, inNode, cardinalityOut, _outEdges)
+    addAdjacentNode(edge, this, cardinalityIn, inNode._inEdges)
     this
   }
 
@@ -91,17 +83,24 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
                 outNode: NodeType,
                 cardinalityIn: Cardinality = Cardinality.List,
                 cardinalityOut: Cardinality = Cardinality.List): NodeType = {
-    // if edgeType is already present in _inEdges, combine the two entries
-    _inEdges.find(_.edge == edge) match {
-      case Some(outEdge) =>
-        _inEdges.remove(outEdge)
-        _inEdges.add(InEdge(edge, None, Cardinality.List))
+    addAdjacentNode(edge, outNode, cardinalityIn, _inEdges)
+    addAdjacentNode(edge, this, cardinalityOut, outNode._outEdges)
+    this
+  }
+
+  private def addAdjacentNode(edge: EdgeType,
+                              neighborNode: NodeType,
+                              cardinality: Cardinality,
+                              set: mutable.Set[AdjacentNode]): Unit = {
+    // if edgeType is already present in set, combine the two entries
+    set.find(_.viaEdge == edge) match {
+      case Some(adjacentNode) =>
+        set.remove(adjacentNode)
+        set.add(AdjacentNode(edge, None, Cardinality.List))
       case None =>
-        _inEdges.add(InEdge(edge, Some(outNode), cardinalityIn))
+        set.add(AdjacentNode(edge, Some(neighborNode), cardinality))
     }
 
-    outNode._outEdges.add(OutEdge(edge, Some(this), cardinalityOut))
-    this
   }
 
   override def toString = s"NodeType($name)"
@@ -134,8 +133,7 @@ class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
 }
 
 
-case class OutEdge(edge: EdgeType, inNode: Option[NodeType], cardinality: Cardinality)
-case class InEdge(edge: EdgeType, outNode: Option[NodeType], cardinality: Cardinality)
+case class AdjacentNode(viaEdge: EdgeType, neighbor: Option[NodeType], cardinality: Cardinality)
 
 case class ContainedNode(nodeType: Node, localName: String, cardinality: Cardinality)
 
