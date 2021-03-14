@@ -984,8 +984,8 @@ class CodeGen(schema: Schema) {
         /** the offsetPos determines the index into the adjacent nodes array of a given node type
          * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
          * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
-        var offsetPos = -1
-        def nextOffsetPos = { offsetPos += 1; offsetPos }
+        var _currOffsetPos = -1
+        def nextOffsetPos = { _currOffsetPos += 1; _currOffsetPos }
 
         def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
           val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
@@ -993,27 +993,31 @@ class CodeGen(schema: Schema) {
         }
 
         val neighborOutInfos =
-          nodeType.outEdges.map { case AdjacentNode(edge, inNode, cardinality) =>
+          nodeType.outEdges.groupBy(_.viaEdge).map { case (edge, outEdges) =>
             val viaEdgeAndDirection = edge.className + "Out"
-            val neighborNodeInfo = createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
-            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.OUT), neighborNodeInfo, nextOffsetPos)
+            val neighborNodeInfos = outEdges.map { case AdjacentNode(_, inNode, cardinality) =>
+              createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
+            }
+            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.OUT), neighborNodeInfos, nextOffsetPos)
           }
 
         val neighborInInfos =
-          nodeType.inEdges.map { case AdjacentNode(edge, outNode, cardinality) =>
+          nodeType.inEdges.groupBy(_.viaEdge).map { case (edge, inEdges) =>
             val viaEdgeAndDirection = edge.className + "In"
-            val neighborNodeInfo = createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
-            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfo, nextOffsetPos)
+            val neighborNodeInfos = inEdges.map { case AdjacentNode(_, outNode, cardinality) =>
+              createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
+            }
+            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfos, nextOffsetPos)
           }
 
         neighborOutInfos ++ neighborInInfos
-      }
+      }.toSeq
 
-      val neighborDelegators = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfoMaybe, _) =>
+      val neighborDelegators = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfos, _) =>
         val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
 
-        val specificNodeBasedDelegators = neighborNodeInfoMaybe match {
+        val specificNodeBasedDelegators = neighborNodeInfos.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             val returnType = cardinality match {
               case Cardinality.List => s"Iterator[$className]"
@@ -1022,7 +1026,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.ISeq => ???
             }
             s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
-        }
+        }.mkString("\n")
         s"""$specificNodeBasedDelegators
            |$genericEdgeBasedDelegators""".stripMargin
       }.mkString("\n")
@@ -1067,7 +1071,7 @@ class CodeGen(schema: Schema) {
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        val specificNodeBasedAccessors = neighborNodeInfo match {
+        val specificNodeBasedAccessors = neighborNodeInfo.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             cardinality match {
               case Cardinality.List =>
@@ -1078,7 +1082,7 @@ class CodeGen(schema: Schema) {
                 s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next()"
               case Cardinality.ISeq => ???
             }
-        }
+        }.mkString("\n")
         s"""$specificNodeBasedAccessors
            |$genericEdgeBasedAccessor""".stripMargin
       }.mkString("\n")

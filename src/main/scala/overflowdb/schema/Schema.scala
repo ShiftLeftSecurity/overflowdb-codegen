@@ -194,7 +194,7 @@ object Constant {
 }
 
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
-case class NeighborInfo(accessorNameForEdge: String, nodeInfo: NeighborNodeInfo, offsetPosition: Int)
+case class NeighborInfo(accessorNameForEdge: String, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int)
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
