@@ -3,8 +3,8 @@ package overflowdb.codegen
 import Helpers._
 
 object JsonToScalaDsl extends App {
-//  val json = "tagsandlocations.json"
-  val json = args.head
+  val json = "base.json"
+//  val json = args.head
 
   val schema = new Schema(json)
   nodeProperties()
@@ -163,7 +163,7 @@ object JsonToScalaDsl extends App {
 
   def constants() = {
     p("// constants")
-    Seq("dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").map { jsonName =>
+    Seq("dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies", "controlStructureTypes").map { jsonName =>
       val constants = schema.constantsFromElement(jsonName)
       if (constants.nonEmpty) {
         p(s"""val $jsonName = builder.addConstants(category = "${jsonName.capitalize}", """)
