@@ -729,8 +729,50 @@ class CodeGen(schema: Schema) {
       val outEdges: Seq[AdjacentNode] = nodeType.outEdges
       val inEdges: Seq[AdjacentNode] = nodeType.inEdges
 
-      val outEdgeLayouts = outEdges.map(outEdge => s"edges.${outEdge.viaEdge.className}.layoutInformation").mkString(", ")
-      val inEdgeLayouts = inEdges.map(inEdge => s"edges.${inEdge.viaEdge.className}.layoutInformation").mkString(", ")
+      val (neighborOutInfos, neighborInInfos) = {
+        /** the offsetPos determines the index into the adjacent nodes array of a given node type
+         * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
+         * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
+        var _currOffsetPos = -1
+        def nextOffsetPos = { _currOffsetPos += 1; _currOffsetPos }
+
+        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
+          val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
+          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), neighborClassName, cardinality)
+        }
+
+        val neighborOutInfos =
+          nodeType.outEdges.groupBy(_.viaEdge).map { case (edge, outEdges) =>
+            val viaEdgeAndDirection = edge.className + "Out"
+            val neighborNodeInfos = outEdges.map { case AdjacentNode(_, inNode, cardinality) =>
+              createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
+            }
+            NeighborInfo(edge, neighborNodeInfos, nextOffsetPos)
+          }.toSeq
+
+        val neighborInInfos =
+          nodeType.inEdges.groupBy(_.viaEdge).map { case (edge, inEdges) =>
+            val viaEdgeAndDirection = edge.className + "In"
+            val neighborNodeInfos = inEdges.map { case AdjacentNode(_, outNode, cardinality) =>
+              createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
+            }
+            NeighborInfo(edge, neighborNodeInfos, nextOffsetPos)
+          }.toSeq
+
+        (neighborOutInfos, neighborInInfos)
+      }
+      val neighborInfos: Seq[(NeighborInfo, Direction.Value)] =
+        neighborOutInfos.map((_, Direction.OUT)) ++ neighborInInfos.map((_, Direction.IN))
+
+      // TODO extract method
+      val outEdgeLayouts = neighborOutInfos.sortBy(_.offsetPosition).map { neighborInfo =>
+        val edgeClass = neighborInfo.edge.className
+        s"edges.$edgeClass.layoutInformation"
+      }.mkString(", ")
+      val inEdgeLayouts = neighborInInfos.sortBy(_.offsetPosition).map { neighborInfo =>
+        val edgeClass = neighborInfo.edge.className
+        s"edges.$edgeClass.layoutInformation"
+      }.mkString(", ")
 
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
@@ -980,40 +1022,8 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      val neighborInfos: Seq[NeighborInfo] = {
-        /** the offsetPos determines the index into the adjacent nodes array of a given node type
-         * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
-         * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
-        var _currOffsetPos = -1
-        def nextOffsetPos = { _currOffsetPos += 1; _currOffsetPos }
-
-        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
-          val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
-          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), neighborClassName, cardinality)
-        }
-
-        val neighborOutInfos =
-          nodeType.outEdges.groupBy(_.viaEdge).map { case (edge, outEdges) =>
-            val viaEdgeAndDirection = edge.className + "Out"
-            val neighborNodeInfos = outEdges.map { case AdjacentNode(_, inNode, cardinality) =>
-              createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
-            }
-            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.OUT), neighborNodeInfos, nextOffsetPos)
-          }
-
-        val neighborInInfos =
-          nodeType.inEdges.groupBy(_.viaEdge).map { case (edge, inEdges) =>
-            val viaEdgeAndDirection = edge.className + "In"
-            val neighborNodeInfos = inEdges.map { case AdjacentNode(_, outNode, cardinality) =>
-              createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
-            }
-            NeighborInfo(neighborAccessorNameForEdge(edge, Direction.IN), neighborNodeInfos, nextOffsetPos)
-          }
-
-        neighborOutInfos ++ neighborInInfos
-      }.toSeq
-
-      val neighborDelegators = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfos, _) =>
+      val neighborDelegators = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfos, _), direction) =>
+        val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
         val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
 
@@ -1067,7 +1077,8 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos.map { case NeighborInfo(accessorNameForEdge, neighborNodeInfo, offsetPos) =>
+      val neighborAccessors = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfo, offsetPos), direction) =>
+        val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
