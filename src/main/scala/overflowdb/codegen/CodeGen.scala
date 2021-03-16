@@ -764,15 +764,14 @@ class CodeGen(schema: Schema) {
       val neighborInfos: Seq[(NeighborInfo, Direction.Value)] =
         neighborOutInfos.map((_, Direction.OUT)) ++ neighborInInfos.map((_, Direction.IN))
 
-      // TODO extract method
-      val outEdgeLayouts = neighborOutInfos.sortBy(_.offsetPosition).map { neighborInfo =>
-        val edgeClass = neighborInfo.edge.className
-        s"edges.$edgeClass.layoutInformation"
-      }.mkString(", ")
-      val inEdgeLayouts = neighborInInfos.sortBy(_.offsetPosition).map { neighborInfo =>
-        val edgeClass = neighborInfo.edge.className
-        s"edges.$edgeClass.layoutInformation"
-      }.mkString(", ")
+
+      def toLayoutInformationEntry(neighborInfos: Seq[NeighborInfo]): String = {
+        neighborInfos.sortBy(_.offsetPosition).map { neighborInfo =>
+          val edgeClass = neighborInfo.edge.className
+          s"edges.$edgeClass.layoutInformation"
+        }.mkString(", ")
+      }
+      val List(outEdgeLayouts, inEdgeLayouts) = List(neighborOutInfos, neighborInInfos).map(toLayoutInformationEntry)
 
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
