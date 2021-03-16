@@ -845,6 +845,19 @@ val modifierTypes = builder.addConstants(category = "ModifierTypes",
   Constant(name = "VIRTUAL", value = "VIRTUAL", valueType = ValueTypes.STRING, comment = "The virtual modifier").protoId(8),
 )
 
+    val controlStructureTypes = builder.addConstants(category = "ControlStructureTypes",
+      Constant(name = "BREAK", value = "BREAK", valueType = ValueTypes.STRING, comment = "Represents a break statement").protoId(1),
+      Constant(name = "CONTINUE", value = "CONTINUE", valueType = ValueTypes.STRING, comment = "Represents a continue statement").protoId(2),
+      Constant(name = "WHILE", value = "WHILE", valueType = ValueTypes.STRING, comment = "Represents a while statement").protoId(3),
+      Constant(name = "DO", value = "DO", valueType = ValueTypes.STRING, comment = "Represents a do statement").protoId(4),
+      Constant(name = "FOR", value = "FOR", valueType = ValueTypes.STRING, comment = "Represents a for statement").protoId(5),
+      Constant(name = "GOTO", value = "GOTO", valueType = ValueTypes.STRING, comment = "Represents a goto statement").protoId(6),
+      Constant(name = "IF", value = "IF", valueType = ValueTypes.STRING, comment = "Represents an if statement").protoId(7),
+      Constant(name = "ELSE", value = "ELSE", valueType = ValueTypes.STRING, comment = "Represents an else statement").protoId(8),
+      Constant(name = "SWITCH", value = "SWITCH", valueType = ValueTypes.STRING, comment = "Represents a switch statement").protoId(9),
+      Constant(name = "TRY", value = "TRY", valueType = ValueTypes.STRING, comment = "Represents a try statement").protoId(10),
+    )
+
   }
 
 }
