@@ -208,7 +208,7 @@ class CodeGen(schema: Schema) {
   }
 
   protected def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
-    "_" + camelCase(edge.className + "_" + direction)
+    "_" + camelCase(edge.name + "_" + direction)
 
   protected def writeNodeFiles(outputDir: File): Seq[File] = {
     val staticHeader =
