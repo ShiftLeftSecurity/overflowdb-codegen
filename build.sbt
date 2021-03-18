@@ -3,7 +3,8 @@ organization := "io.shiftleft"
 
 /* used as sbt plugin, hence we need 2.12.
  * we could cross-compile to 2.13 but there are (minor) issues with how we use the collection api */
-scalaVersion := "2.12.11"
+scalaVersion := "2.12.13"
+crossScalaVersions := Seq("2.12.13", "2.13.5")
 
 enablePlugins(GitVersioning)
 

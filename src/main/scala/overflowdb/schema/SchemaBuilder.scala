@@ -48,11 +48,11 @@ class SchemaBuilder(basePackage: String) {
   def build: Schema =
     new Schema(
       basePackage,
-      nodePropertyKeys,
-      edgePropertyKeys,
-      nodeBaseTypes,
-      nodeTypes,
-      edgeTypes,
+      nodePropertyKeys.toSeq,
+      edgePropertyKeys.toSeq,
+      nodeBaseTypes.toSeq,
+      nodeTypes.toSeq,
+      edgeTypes.toSeq,
       constantsByCategory.toMap
     )
 

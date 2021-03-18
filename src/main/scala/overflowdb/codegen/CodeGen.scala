@@ -96,7 +96,7 @@ class CodeGen(schema: Schema) {
     writeConstantsFile("NodeKeys", schema.nodeProperties.map(toConstantContext))
     writeConstantsFile("EdgeKeys", schema.edgeProperties.map(toConstantContext))
 
-    results
+    results.toSeq
   }
 
   protected def writeEdgeFiles(outputDir: File): Seq[File] = {
@@ -1246,7 +1246,7 @@ class CodeGen(schema: Schema) {
       val srcFile = nodeType.className + ".scala"
       results.append(baseDir.createChild(srcFile).write(src))
     }
-    results
+    results.toSeq
   }
 
   /** generates classes to easily add new nodes to the graph
