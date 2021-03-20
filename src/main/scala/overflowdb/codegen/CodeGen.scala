@@ -218,6 +218,7 @@ class CodeGen(schema: Schema) {
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import overflowdb._
          |import overflowdb.traversal.Traversal
+         |import scala.collection.immutable
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
