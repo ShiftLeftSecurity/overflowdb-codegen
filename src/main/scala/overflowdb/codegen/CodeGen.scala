@@ -921,12 +921,13 @@ class CodeGen(schema: Schema) {
                    |      case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
                    |      case _ => throw new MatchError("unreachable")
                    |    }}.toArray
+                   |
                    |  this._$memberName = if(arr == null) immutable.ArraySeq.empty
                    |    else immutable.ArraySeq.unsafeWrapArray(arr)
                    |}""".stripMargin
             }
           }
-        }.mkString("\n")
+        }.mkString("\n\n")
 
         val registerFullName = if(!properties.map{_.name}.contains("FULL_NAME")) "" else {
           s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
