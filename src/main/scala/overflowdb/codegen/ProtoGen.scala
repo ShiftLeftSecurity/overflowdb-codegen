@@ -18,9 +18,11 @@ class ProtoGen(schema: Schema) {
     val enumsFromConstants: String = schema.constantsByCategory.map { case (categoryName, entries) =>
       val categoryNameSingular = singularize(categoryName)
       val unknownEntry = snakeCase(categoryNameSingular).toUpperCase
+
       s"""enum $categoryName {
          |  UNKNOWN_$unknownEntry = 0;
          |
+         |  ${protoDefs(entries.map(enumEntryMaybe))}
          |}
          |""".stripMargin
     }.mkString("\n")
@@ -38,13 +40,13 @@ class ProtoGen(schema: Schema) {
          |enum NodePropertyName {
          |  UNKNOWN_NODE_PROPERTY = 0;
          |
-         |${toProtoDef(schema.nodeProperties)}
+         |${protoDefs(schema.nodeProperties.map(enumEntryMaybe))}
          |}
          |
          |enum EdgePropertyName {
          |  UNKNOWN_EDGE_PROPERTY = 0;
          |
-         |${toProtoDef(schema.edgeProperties)}
+         |${protoDefs(schema.edgeProperties.map(enumEntryMaybe))}
          |}
          |
          |$enumsFromConstants
@@ -57,18 +59,22 @@ class ProtoGen(schema: Schema) {
     outputFile.toJava
   }
 
-  private def toProtoDef(props: Seq[Property]): String = {
-    props
-      .filter(_.protoId.isDefined)
-      .sortBy(_.protoId.get)
-      .map { prop =>
-        val comment = prop.comment.map(comment => s"// $comment").getOrElse("")
-        s"""  $comment
-           |  ${prop.name} = ${prop.protoId.get}
-           |""".stripMargin
-      }.mkString("\n")
+  private def protoDefs(enumCases: Seq[EnumEntryMaybe]): String = {
+    enumCases.filter(_.protoId.isDefined).sortBy(_.protoId.get).map { enumCase =>
+      val comment = enumCase.comment.map(comment => s"// $comment").getOrElse("")
+      s"""  $comment
+         |  ${enumCase.name} = ${enumCase.protoId.get}
+         |""".stripMargin
+    }.mkString("\n")
   }
 
+  private def enumEntryMaybe(constant: Constant): EnumEntryMaybe =
+    EnumEntryMaybe(constant.protoId, constant.name, constant.comment)
+
+  private def enumEntryMaybe(property: Property): EnumEntryMaybe =
+    EnumEntryMaybe(property.protoId, property.name, property.comment)
+
+  case class EnumEntryMaybe(protoId: Option[Int], name: String, comment: Option[String])
 }
 
 
