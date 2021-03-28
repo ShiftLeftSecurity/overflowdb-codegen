@@ -13,6 +13,17 @@ class ProtoGen(schema: Schema) {
     val protoOpts = schema.protoOptions.getOrElse(
       throw new AssertionError("schema doesn't have any proto options configured"))
 
+    def toProtoDef(props: Seq[Property]): String =
+      props
+        .filter(_.protoId.isDefined)
+        .sortBy(_.protoId.get)
+        .map { prop =>
+        val comment = prop.comment.map(comment => s"// $comment").getOrElse("")
+        s"""  $comment
+           |  ${prop.name} = ${prop.protoId.get}
+           |""".stripMargin
+      }.mkString("\n")
+
     val protoDef =
       s"""syntax = "proto3";
          |
@@ -23,6 +34,15 @@ class ProtoGen(schema: Schema) {
          |option java_outer_classname = "${protoOpts.javaOuterClassname}";
          |option csharp_namespace = "${protoOpts.csharpNamespace}";
          |
+         |enum NodePropertyName {
+         |  UNKNOWN_NODE_PROPERTY = 0;
+         |${toProtoDef(schema.nodeProperties)}
+         |}
+         |
+         |enum EdgePropertyName {
+         |  UNKNOWN_EDGE_PROPERTY = 0;
+         |${toProtoDef(schema.edgeProperties)}
+         |}
          |
          |""".stripMargin
 
