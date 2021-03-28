@@ -7,7 +7,7 @@ import overflowdb.storage.ValueTypes
 
 import scala.collection.mutable
 
-/** Generates a domain model for OverflowDb traversals based on your domain-specific schema. */
+/** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
 class CodeGen(schema: Schema) {
   import Helpers._
   val basePackage = schema.basePackage

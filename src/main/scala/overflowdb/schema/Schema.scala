@@ -14,7 +14,8 @@ class Schema(val basePackage: String,
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
-             val constantsByCategory: Map[String, Seq[Constant]])
+             val constantsByCategory: Map[String, Seq[Constant]],
+             val protoOptions: Option[ProtoOptions])
 
 sealed trait Node {
   def className: String
@@ -212,4 +213,10 @@ object DefaultEdgeTypes {
 }
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)
+
+case class ProtoOptions(pkg: String,
+                        javaOuterClassname: String,
+                        javaPackage: String,
+                        goPackage: String,
+                        csharpNamespace: String)
 

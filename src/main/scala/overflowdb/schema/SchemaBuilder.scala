@@ -16,6 +16,7 @@ class SchemaBuilder(basePackage: String) {
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
+  var protoOptions: Option[ProtoOptions] = None
 
   /** root node trait for all nodes - use if you want to be explicitly unspecific
    * TODO handle differently - it's a cpg-specific special type at the moment, which isn't nice.
@@ -45,6 +46,11 @@ class SchemaBuilder(basePackage: String) {
     constants
   }
 
+  def protoOptions(value: ProtoOptions): SchemaBuilder = {
+    this.protoOptions = Option(value)
+    this
+  }
+
   def build: Schema =
     new Schema(
       basePackage,
@@ -53,7 +59,8 @@ class SchemaBuilder(basePackage: String) {
       nodeBaseTypes.toSeq,
       nodeTypes.toSeq,
       edgeTypes.toSeq,
-      constantsByCategory.toMap
+      constantsByCategory.toMap,
+      protoOptions,
     )
 
   private def addAndReturn[A](buffer: mutable.Buffer[A], a: A): A = {
