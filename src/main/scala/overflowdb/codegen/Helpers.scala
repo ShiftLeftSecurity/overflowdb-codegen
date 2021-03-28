@@ -3,6 +3,8 @@ package overflowdb.codegen
 import overflowdb.schema._
 import overflowdb.storage.ValueTypes
 
+import scala.annotation.tailrec
+
 // TODO drop
 object DefaultNodeTypes {
   /** root type for all nodes */
@@ -56,6 +58,33 @@ object Helpers {
       case Nil          => Nil
     }
     elements.mkString
+  }
+
+  /**
+   * Converts from camelCase to snake_case
+   * e.g.: camelCase => camel_case
+   *
+   * copy pasted from https://gist.github.com/sidharthkuruvila/3154845#gistcomment-2622928
+   */
+  def snakeCase(camelCase: String): String = {
+    @tailrec
+    def go(accDone: List[Char], acc: List[Char]): List[Char] = acc match {
+      case Nil => accDone
+      case a::b::c::tail if a.isUpper && b.isUpper && c.isLower => go(accDone ++ List(a, '_', b, c), tail)
+      case a::b::tail if a.isLower && b.isUpper => go(accDone ++ List(a, '_', b), tail)
+      case a::tail => go(accDone :+ a, tail)
+    }
+    go(Nil, camelCase.toList).mkString.toLowerCase
+  }
+
+  def singularize(str: String): String = {
+    if (str.endsWith("ies")) {
+      // e.g. Strategies -> Strategy
+      s"${str.dropRight(3)}y"
+    } else {
+      // e.g. Types -> Type
+      str.dropRight(1)
+    }
   }
 
   def getHigherType(cardinality: Cardinality): HigherValueType.Value =

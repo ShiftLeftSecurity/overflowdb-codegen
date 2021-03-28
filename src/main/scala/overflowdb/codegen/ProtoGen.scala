@@ -6,6 +6,7 @@ import overflowdb.storage.ValueTypes
 
 /** Generates proto definitions for a given domain-specific schema. */
 class ProtoGen(schema: Schema) {
+  import Helpers._
   val basePackage = schema.basePackage
   val edgesPackage = s"$basePackage.nodes"
 
@@ -13,16 +14,16 @@ class ProtoGen(schema: Schema) {
     val protoOpts = schema.protoOptions.getOrElse(
       throw new AssertionError("schema doesn't have any proto options configured"))
 
-    def toProtoDef(props: Seq[Property]): String =
-      props
-        .filter(_.protoId.isDefined)
-        .sortBy(_.protoId.get)
-        .map { prop =>
-        val comment = prop.comment.map(comment => s"// $comment").getOrElse("")
-        s"""  $comment
-           |  ${prop.name} = ${prop.protoId.get}
-           |""".stripMargin
-      }.mkString("\n")
+    // TODO move outer loop into protoDef string interpolation?
+    val enumsFromConstants: String = schema.constantsByCategory.map { case (categoryName, entries) =>
+      val categoryNameSingular = singularize(categoryName)
+      val unknownEntry = snakeCase(categoryNameSingular).toUpperCase
+      s"""enum $categoryName {
+         |  UNKNOWN_$unknownEntry = 0;
+         |
+         |}
+         |""".stripMargin
+    }.mkString("\n")
 
     val protoDef =
       s"""syntax = "proto3";
@@ -36,13 +37,17 @@ class ProtoGen(schema: Schema) {
          |
          |enum NodePropertyName {
          |  UNKNOWN_NODE_PROPERTY = 0;
+         |
          |${toProtoDef(schema.nodeProperties)}
          |}
          |
          |enum EdgePropertyName {
          |  UNKNOWN_EDGE_PROPERTY = 0;
+         |
          |${toProtoDef(schema.edgeProperties)}
          |}
+         |
+         |$enumsFromConstants
          |
          |""".stripMargin
 
@@ -50,6 +55,18 @@ class ProtoGen(schema: Schema) {
     _outputDir.createDirectories()
     val outputFile = _outputDir.createChild(s"${protoOpts.pkg}.proto").write(protoDef)
     outputFile.toJava
+  }
+
+  private def toProtoDef(props: Seq[Property]): String = {
+    props
+      .filter(_.protoId.isDefined)
+      .sortBy(_.protoId.get)
+      .map { prop =>
+        val comment = prop.comment.map(comment => s"// $comment").getOrElse("")
+        s"""  $comment
+           |  ${prop.name} = ${prop.protoId.get}
+           |""".stripMargin
+      }.mkString("\n")
   }
 
 }
