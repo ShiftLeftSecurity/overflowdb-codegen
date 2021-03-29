@@ -208,7 +208,7 @@ class ProtoGen(schema: Schema) {
          |  }
          |
          |  repeated Entry entries = 1;
-         |
+         |}
          |""".stripMargin
 
     val _outputDir = outputDir.toScala
