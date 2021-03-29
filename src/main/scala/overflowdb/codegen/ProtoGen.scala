@@ -13,13 +13,14 @@ class ProtoGen(schema: Schema) {
     val protoOpts = schema.protoOptions.getOrElse(
       throw new AssertionError("schema doesn't have any proto options configured"))
 
-    // TODO move outer loop into protoDef string interpolation?
     val enumsFromConstants: String = schema.constantsByCategory
       .collect { case (categoryName, entries) if entries.exists(_.protoId.isDefined) =>
         val categoryNameSingular = singularize(categoryName)
+        /* user can provide 'uncommon' enum mappings, if the enum should be called differently than just the category */
+        val protoEnumName = protoOpts.uncommonProtoEnumNameMappings.get(categoryName).getOrElse(categoryName)
         val unknownEntry = snakeCase(categoryNameSingular).toUpperCase
 
-        s"""enum $categoryName {
+        s"""enum $protoEnumName {
            |  UNKNOWN_$unknownEntry = 0;
            |
            |  ${protoDefs(entries.map(enumEntryMaybe))}

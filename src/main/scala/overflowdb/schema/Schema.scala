@@ -218,5 +218,6 @@ case class ProtoOptions(pkg: String,
                         javaOuterClassname: String,
                         javaPackage: String,
                         goPackage: String,
-                        csharpNamespace: String)
+                        csharpNamespace: String,
+                        uncommonProtoEnumNameMappings: Map[String, String] = Map.empty)
 
