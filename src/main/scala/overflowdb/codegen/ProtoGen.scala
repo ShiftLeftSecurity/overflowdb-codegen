@@ -14,17 +14,18 @@ class ProtoGen(schema: Schema) {
       throw new AssertionError("schema doesn't have any proto options configured"))
 
     // TODO move outer loop into protoDef string interpolation?
-    val enumsFromConstants: String = schema.constantsByCategory.map { case (categoryName, entries) =>
-      val categoryNameSingular = singularize(categoryName)
-      val unknownEntry = snakeCase(categoryNameSingular).toUpperCase
+    val enumsFromConstants: String = schema.constantsByCategory
+      .collect { case (categoryName, entries) if entries.exists(_.protoId.isDefined) =>
+        val categoryNameSingular = singularize(categoryName)
+        val unknownEntry = snakeCase(categoryNameSingular).toUpperCase
 
-      s"""enum $categoryName {
-         |  UNKNOWN_$unknownEntry = 0;
-         |
-         |  ${protoDefs(entries.map(enumEntryMaybe))}
-         |}
-         |""".stripMargin
-    }.mkString("\n")
+        s"""enum $categoryName {
+           |  UNKNOWN_$unknownEntry = 0;
+           |
+           |  ${protoDefs(entries.map(enumEntryMaybe))}
+           |}
+           |""".stripMargin
+      }.mkString("\n")
 
     val protoDef =
       s"""syntax = "proto3";
