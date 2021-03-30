@@ -1,16 +1,14 @@
 name := "overflowdb-codegen"
 organization := "io.shiftleft"
 
-/* used as sbt plugin, hence we need 2.12.
- * we could cross-compile to 2.13 but there are (minor) issues with how we use the collection api */
-scalaVersion := "2.12.11"
+scalaVersion := "2.12.13"
+crossScalaVersions := Seq("2.12.13", "2.13.5")
 
 enablePlugins(GitVersioning)
 
 libraryDependencies ++= Seq(
+  "io.shiftleft" % "overflowdb-core" % "1.31",
   "com.github.pathikrit" %% "better-files" % "3.8.0",
-  "com.lihaoyi" %% "ujson" % "0.9.5",
-  "com.typesafe.play" %% "play-json" % "2.8.1",
   "org.scalatest" %% "scalatest" % "3.0.8" % Test
 )
 

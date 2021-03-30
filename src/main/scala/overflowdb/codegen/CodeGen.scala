@@ -1,55 +1,50 @@
 package overflowdb.codegen
 
 import better.files._
-import java.io.{File => JFile}
+import overflowdb.codegen.CodeGen.ConstantContext
+import overflowdb.schema._
+import overflowdb.storage.ValueTypes
 
-object CodeGen extends App {
-  assert(args.size == 2, s"expected two arguments (path to schema json file, basePackage), but got ${args.length}")
-  val schemaFile :: basePackage :: Nil = args.toList
-  val outputDir = new java.io.File("target")
-  new CodeGen(schemaFile, basePackage).run(outputDir)
-}
+import scala.collection.mutable
 
-/** Generates a domain model for OverflowDb traversals based on your domain-specific json schema.
-  *
-  * @param schemaFile: path to the schema (json file)
-  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
-  */
-class CodeGen(schemaFile: String, basePackage: String) {
+/** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
+class CodeGen(schema: Schema) {
   import Helpers._
+  val basePackage = schema.basePackage
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
-  val schema = new Schema(schemaFile)
 
-  def run(outputDir: JFile): List[JFile] =
-    List(
-      writeConstants(outputDir),
-      writeEdgeFiles(outputDir),
-      writeNodeFiles(outputDir),
-      writeNewNodeFiles(outputDir))
+  def run(outputDir: java.io.File): Seq[java.io.File] = {
+    val _outputDir = outputDir.toScala
+    val results = writeConstants(_outputDir) ++ writeEdgeFiles(_outputDir) ++ writeNodeFiles(_outputDir) :+ writeNewNodeFile(_outputDir)
+    println(s"generated ${results.size} files in ${_outputDir}")
+    results.map(_.toJava)
+  }
 
-  def writeConstants(outputDir: JFile): JFile = {
-    val baseDir = File(outputDir.getPath + "/" + basePackage.replaceAll("\\.", "/")).createDirectories
+  protected def writeConstants(outputDir: File): Seq[File] = {
+    val results = mutable.Buffer.empty[File]
+    val baseDir = outputDir / basePackage.replaceAll("\\.", "/")
+    baseDir.createDirectories()
 
-    def writeConstantsFile(className: String, constants: List[Constant])(mkSrc: Constant => String): Unit = {
-      val src = constants.map { constant =>
-        val documentation = constant.comment.filter(_.nonEmpty).map(comment => s"""/** $comment */""").getOrElse("")
+    def writeConstantsFile(className: String, constants: Seq[ConstantContext]): Unit = {
+      val constantsSource = constants.map { constant =>
+        val documentation = constant.documentation.filter(_.nonEmpty).map(comment => s"""/** $comment */""").getOrElse("")
         s""" $documentation
-           | ${mkSrc(constant)}
+           | ${constant.source}
            |""".stripMargin
       }.mkString("\n")
-      val setType = if (src.contains("PropertyKey")) "PropertyKey" else "String"
-      val constantsSetBody = constants.map { constant =>
+      val allConstantsSetType = if (constantsSource.contains("PropertyKey")) "PropertyKey" else "String"
+      val allConstantsBody = constants.map { constant =>
         s"     add(${constant.name});"
       }.mkString("\n").stripSuffix("\n")
-      val constantsSet =
+      val allConstantsSet =
         s"""
-           | public static Set<$setType> ALL = new HashSet<$setType>() {{
-           |$constantsSetBody
+           | public static Set<$allConstantsSetType> ALL = new HashSet<$allConstantsSetType>() {{
+           |$allConstantsBody
            | }};
            |""".stripMargin
-      baseDir.createChild(s"$className.java").write(
-        s"""package io.shiftleft.codepropertygraph.generated;
+      val file = baseDir.createChild(s"$className.java").write(
+        s"""package $basePackage;
            |
            |import overflowdb.*;
            |
@@ -59,69 +54,65 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |public class $className {
            |
-           |$src
-           |$constantsSet
+           |$constantsSource
+           |$allConstantsSet
            |}""".stripMargin
       )
+      results.append(file)
     }
 
-    def writeStringConstants(className: String, constants: List[Constant]): Unit = {
-      writeConstantsFile(className, constants) { constant =>
-        s"""public static final String ${constant.name} = "${constant.value}";"""
-      }
+    writeConstantsFile("NodeKeyNames", schema.nodeProperties.map { property =>
+      ConstantContext(property.name, s"""public static final String ${property.name} = "${property.name}";""", property.comment)
+    })
+    writeConstantsFile("EdgeKeyNames", schema.edgeProperties.map { property =>
+      ConstantContext(property.name, s"""public static final String ${property.name} = "${property.name}";""", property.comment)
+    })
+    writeConstantsFile("NodeTypes", schema.nodeTypes.map { nodeType =>
+      ConstantContext(nodeType.name, s"""public static final String ${nodeType.name} = "${nodeType.name}";""", nodeType.comment)
+    })
+    writeConstantsFile("EdgeTypes", schema.edgeTypes.map { edgeType =>
+      ConstantContext(edgeType.name, s"""public static final String ${edgeType.name} = "${edgeType.name}";""", edgeType.comment)
+    })
+    schema.constantsByCategory.foreach { case (category, constants) =>
+      writeConstantsFile(category, constants.map { constant =>
+        ConstantContext(constant.name, s"""public static final String ${constant.name} = "${constant.value}";""", constant.comment)
+      })
     }
 
-    def writePropertyKeyConstants(className: String, constants: List[Constant]): Unit = {
-      writeConstantsFile(className, constants) { constant =>
-        val valueType = constant.valueType.getOrElse(throw new AssertionError(s"`valueType` must be defined for Key constant - not the case for $constant"))
-        val cardinality = constant.cardinality.getOrElse(throw new AssertionError(s"`cardinality` must be defined for Key constant - not the case for $constant"))
-        val baseType = valueType match {
-          case "string"  => "String"
-          case "int"     => "Integer"
-          case "boolean" => "Boolean"
+    def toConstantContext(property: Property): ConstantContext = {
+      val src = {
+        val valueType = typeFor(property.valueType)
+        val cardinality = property.cardinality
+        val completeType = cardinality match {
+          case Cardinality.One => valueType
+          case Cardinality.ZeroOrOne => valueType
+          case Cardinality.List => s"scala.collection.Seq<$valueType>"
+          case Cardinality.ISeq => s"immutable.IndexedSeq<$valueType>"
         }
-        val completeType = Cardinality.fromName(cardinality) match {
-          case Cardinality.One       => baseType
-          case Cardinality.ZeroOrOne => baseType
-          case Cardinality.List      => s"scala.collection.Seq<$baseType>"
-          case Cardinality.ISeq => s"immutable.IndexedSeq<$baseType>"
-        }
-        s"""public static final PropertyKey<$completeType> ${constant.name} = new PropertyKey<>("${constant.value}");"""
+        s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
       }
+      ConstantContext(property.name, src, property.comment)
     }
+    writeConstantsFile("NodeKeys", schema.nodeProperties.map(toConstantContext))
+    writeConstantsFile("EdgeKeys", schema.edgeProperties.map(toConstantContext))
 
-    writeStringConstants("NodeKeyNames", schema.nodeKeys.map(Constant.fromProperty))
-    writeStringConstants("EdgeKeyNames", schema.edgeKeys.map(Constant.fromProperty))
-    writeStringConstants("NodeTypes", schema.nodeTypes.map(Constant.fromNodeType))
-    writeStringConstants("EdgeTypes", schema.edgeTypes.map(Constant.fromEdgeType))
-
-    List("controlStructureTypes", "dispatchTypes", "frameworks", "languages", "modifierTypes", "evaluationStrategies").foreach { element =>
-      writeStringConstants(element.capitalize, schema.constantsFromElement(element))
-    }
-    List("edgeKeys", "nodeKeys").foreach { element =>
-      writePropertyKeyConstants(s"${element.capitalize}", schema.constantsFromElement(element))
-    }
-    writeStringConstants("Operators", schema.constantsFromElement("operatorNames")(schema.constantReads("operator", "name")))
-
-    outputDir
+    results.toSeq
   }
 
-  def writeEdgeFiles(outputDir: JFile): JFile = {
+  protected def writeEdgeFiles(outputDir: File): Seq[File] = {
     val staticHeader =
       s"""package $edgesPackage
          |
-         |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Set => JSet}
-         |import java.util.{List => JList}
          |import overflowdb._
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
     val packageObject = {
       val factories = {
-        val edgeFactories: List[String] = schema.edgeTypes.map(edgeType => edgeType.className + ".factory")
+        val edgeFactories = schema.edgeTypes.map(edgeType => edgeType.className + ".factory").mkString(", ")
         s"""object Factories {
-           |  lazy val all: List[EdgeFactory[_]] = $edgeFactories
+           |  lazy val all: List[EdgeFactory[_]] = List($edgeFactories)
            |  lazy val allAsJava: java.util.List[EdgeFactory[_]] = all.asJava
            |}
            |""".stripMargin
@@ -133,22 +124,17 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
-    def generateEdgeSource(edgeType: EdgeType, keys: List[Property]) = {
+    def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property]) = {
       val edgeClassName = edgeType.className
 
-      val keyNames = keys.map(p => camelCaseCaps(p.name))
+      val propertyNames = properties.map(_.className)
 
-      val propertyNameDefs = keys.map { p =>
-        s"""val ${camelCaseCaps(p.name)} = "${p.name}" """
+      val propertyNameDefs = properties.map { p =>
+        s"""val ${p.className} = "${p.name}" """
       }.mkString("\n|    ")
 
-      val propertyDefs = keys.map { p =>
-        val baseType = p.valueType match {
-          case "string"  => "String"
-          case "int"     => "Integer"
-          case "boolean" => "Boolean"
-        }
-        propertyKeyDef(p.name, baseType, p.cardinality)
+      val propertyDefs = properties.map { p =>
+        propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
 
       val companionObject =
@@ -157,7 +143,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |  object PropertyNames {
            |    $propertyNameDefs
-           |    val all: Set[String] = Set(${keyNames.mkString(", ")})
+           |    val all: Set[String] = Set(${propertyNames.mkString(", ")})
            |    val allAsJava: JSet[String] = all.asJava
            |  }
            |
@@ -176,12 +162,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}
            |""".stripMargin
 
-      def propertyBasedFieldAccessors(properties: List[Property]): String =
+      def propertyBasedFieldAccessors(properties: Seq[Property]): String =
         properties.map { property =>
           val name = camelCase(property.name)
           val tpe = getCompleteType(property)
 
-          getHigherType(property) match {
+          getHigherType(property.cardinality) match {
             case HigherValueType.None =>
               s"""def $name: $tpe = property("${property.name}").asInstanceOf[$tpe]"""
             case HigherValueType.Option =>
@@ -199,7 +185,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
       val classImpl =
         s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
            |extends Edge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
-           |${propertyBasedFieldAccessors(keys)}
+           |${propertyBasedFieldAccessors(properties)}
            |}
            |""".stripMargin
 
@@ -209,57 +195,52 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |""".stripMargin
     }
 
-    val baseDir = File(outputDir.getPath + "/" + edgesPackage.replaceAll("\\.", "/"))
+    val baseDir = outputDir / edgesPackage.replaceAll("\\.", "/")
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
-    baseDir.createChild("package.scala").write(packageObject)
-    schema.edgeTypes.foreach { edge =>
-      val src = generateEdgeSource(edge, edge.keys.map(schema.edgePropertyByName))
+    val pkgObjFile = baseDir.createChild("package.scala").write(packageObject)
+    val edgeTypeFiles = schema.edgeTypes.map { edge =>
+      val src = generateEdgeSource(edge, edge.properties)
       val srcFile = edge.className + ".scala"
       baseDir.createChild(srcFile).write(src)
     }
-    println(s"generated edge sources in $baseDir (${baseDir.list.size} files)")
-    baseDir.toJava
+    pkgObjFile +: edgeTypeFiles
   }
 
-  def neighborAccessorNameForEdge(edgeTypeName: String, direction: Direction.Value): String =
-    "_" + camelCase(edgeTypeName + "_" + direction)
+  protected def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
+    "_" + camelCase(edge.name + "_" + direction)
 
-  def writeNodeFiles(outputDir: JFile): JFile = {
+  protected def writeNodeFiles(outputDir: File): Seq[File] = {
     val staticHeader =
       s"""package $nodesPackage
          |
-         |import $basePackage.{EdgeKeys, NodeKeys}
          |import $edgesPackage
-         |import java.lang.{Boolean => JBoolean, Long => JLong}
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import overflowdb._
-         |import overflowdb.traversal.filter.P
          |import overflowdb.traversal.Traversal
-         |import scala.jdk.CollectionConverters._
          |import scala.collection.immutable
+         |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
     val rootTypeImpl = {
       val genericNeighborAccessors = for {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
-        accessor = neighborAccessorNameForEdge(edgeType.name, direction)
+        accessor = neighborAccessorNameForEdge(edgeType, direction)
       } yield s"def $accessor: JIterator[StoredNode] = { JCollections.emptyIterator() }"
 
       val keyBasedTraits =
-        schema.nodeKeys.map { property =>
+        schema.nodeProperties.map { property =>
           val camelCaseName = camelCase(property.name)
-          val camelCaseCapitalized = camelCaseName.capitalize
           val tpe = getCompleteType(property)
-          s"trait Has$camelCaseCapitalized { def $camelCaseName: $tpe }"
+          s"trait Has${property.className} { def $camelCaseName: $tpe }"
         }.mkString("\n") + "\n"
 
       val factories = {
-        val nodeFactories: List[String] =
-          schema.nodeTypes.map(nodeType => nodeType.className + ".factory")
+        val nodeFactories =
+          schema.nodeTypes.map(nodeType => nodeType.className + ".factory").mkString(", ")
         s"""object Factories {
-           |  lazy val all: List[NodeFactory[_]] = $nodeFactories
+           |  lazy val all: Seq[NodeFactory[_]] = Seq($nodeFactories)
            |  lazy val allAsJava: java.util.List[NodeFactory[_]] = all.asJava
            |}
            |""".stripMargin
@@ -324,9 +305,9 @@ class CodeGen(schemaFile: String, basePackage: String) {
         schema.nodeTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
 
       val implicitsForNodeBaseTypeTraversals =
-        schema.nodeBaseTraits.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+        schema.nodeBaseTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
 
-      val nonBaseTypes = (schema.nodeTypes.map(_.className).toSet -- schema.nodeBaseTraits.map(_.className).toSet).toList.sorted
+      val nonBaseTypes = (schema.nodeTypes.map(_.className).toSet -- schema.nodeBaseTypes.map(_.className).toSet).toList.sorted
       val implicitsForNewNodeBuilders =
         nonBaseTypes.map(implicitForNewNodeBuilder).mkString("\n")
 
@@ -350,8 +331,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
     def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
-        val baseType = getBaseType(property)
-        val cardinality = Cardinality.fromName(property.cardinality)
+        val baseType = typeFor(property.valueType)
+        val cardinality = property.cardinality
 
         val mapOrFlatMap = cardinality match {
           case Cardinality.One => "map"
@@ -669,12 +650,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
 
         val filterSteps = (cardinality, property.valueType) match {
           case (Cardinality.List | Cardinality.ISeq, _) => ""
-          case (Cardinality.One, "string") => filterStepsForSingleString(property.name)
-          case (Cardinality.ZeroOrOne, "string") => filterStepsForOptionalString(property.name)
-          case (Cardinality.One, "boolean") => filterStepsForSingleBoolean(property.name)
-          case (Cardinality.ZeroOrOne, "boolean") => filterStepsForOptionalBoolean(property.name)
-          case (Cardinality.One, "int") => filterStepsForSingleInt(property.name)
-          case (Cardinality.ZeroOrOne, "int") => filterStepsForOptionalInt(property.name)
+          case (Cardinality.One, ValueTypes.STRING) => filterStepsForSingleString(property.name)
+          case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString(property.name)
+          case (Cardinality.One, ValueTypes.BOOLEAN) => filterStepsForSingleBoolean(property.name)
+          case (Cardinality.ZeroOrOne, ValueTypes.BOOLEAN) => filterStepsForOptionalBoolean(property.name)
+          case (Cardinality.One, ValueTypes.INTEGER) => filterStepsForSingleInt(property.name)
+          case (Cardinality.ZeroOrOne, ValueTypes.INTEGER) => filterStepsForOptionalInt(property.name)
           case (Cardinality.One, _) => filterStepsGenericSingle(property.name)
           case (Cardinality.ZeroOrOne, _) => filterStepsGenericOption(property.name)
           case _ => ""
@@ -698,34 +679,25 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |}""".stripMargin
     }
 
-    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseTrait): String = {
+    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseType): String = {
       val className = nodeBaseTrait.className
-      val properties = nodeBaseTrait.hasKeys.map(schema.nodePropertyByName)
+      val properties = nodeBaseTrait.properties
 
-      val mixins = nodeBaseTrait.hasKeys.map { key =>
-        s"with Has${camelCaseCaps(key)}"
+      val mixins = nodeBaseTrait.properties.map { property =>
+        s"with Has${property.className}"
       }.mkString(" ")
 
-      val mixinTraits = nodeBaseTrait
-        .extendz
-        .getOrElse(Nil)
-        .map { traitName =>
-          s"with ${camelCaseCaps(traitName)}"
-        }.mkString(" ")
+      val mixinTraits = nodeBaseTrait.extendz.map { baseTrait =>
+        s"with ${baseTrait.className}"
+      }.mkString(" ")
 
-      val mixinTraitsForBase = nodeBaseTrait
-        .extendz
-        .getOrElse(List())
-        .map { traitName =>
-          s"with ${camelCaseCaps(traitName)}Base"
-        }.mkString(" ")
+      val mixinTraitsForBase = nodeBaseTrait.extendz.map { baseTrait =>
+        s"with ${baseTrait.className}Base"
+      }.mkString(" ")
 
       s"""package $nodesPackage
          |
-         |import io.shiftleft.codepropertygraph.generated.NodeKeys
-         |import overflowdb.traversal.filter.P
          |import overflowdb.traversal.Traversal
-         |import scala.collection.immutable
          |
          |trait ${className}Base extends CpgNode
          |$mixins
@@ -740,31 +712,67 @@ class CodeGen(schemaFile: String, basePackage: String) {
     }
 
     def generateNodeSource(nodeType: NodeType) = {
-      val properties = nodeType.keys.distinct.map(schema.nodePropertyByName)
+      val properties = nodeType.properties
 
-      val keyNames = nodeType.keys ++ nodeType.containedNodesList.map(_.localName)
-      val propertyNameDefs = keyNames.map { name =>
+      val propertyNames = nodeType.properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
+      val propertyNameDefs = propertyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
 
       val propertyDefs = properties.map { p =>
-        val baseType = p.valueType match {
-          case "string"  => "String"
-          case "int"     => "Integer"
-          case "boolean" => "Boolean"
+        propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
+      }.mkString("\n|    ")
+
+      val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
+        propertyKeyDef(containedNode.localName, containedNode.nodeType.className, containedNode.cardinality)
+      }.mkString("\n|    ")
+
+      val outEdges: Seq[AdjacentNode] = nodeType.outEdges
+      val inEdges: Seq[AdjacentNode] = nodeType.inEdges
+
+      val (neighborOutInfos, neighborInInfos) = {
+        /** the offsetPos determines the index into the adjacent nodes array of a given node type
+         * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
+         * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
+        var _currOffsetPos = -1
+        def nextOffsetPos = { _currOffsetPos += 1; _currOffsetPos }
+
+        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
+          val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
+          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), neighborClassName, cardinality)
         }
-        propertyKeyDef(p.name, baseType, p.cardinality)
-      }.mkString("\n|    ")
 
-      val propertyDefsForContainedNodes = nodeType.containedNodesList.map { containedNode =>
-        propertyKeyDef(containedNode.localName, containedNode.nodeTypeClassName, containedNode.cardinality)
-      }.mkString("\n|    ")
+        val neighborOutInfos =
+          nodeType.outEdges.groupBy(_.viaEdge).map { case (edge, outEdges) =>
+            val viaEdgeAndDirection = edge.className + "Out"
+            val neighborNodeInfos = outEdges.map { case AdjacentNode(_, inNode, cardinality) =>
+              createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
+            }
+            NeighborInfo(edge, neighborNodeInfos, nextOffsetPos)
+          }.toSeq
 
-      val outEdgeNames: Seq[String] = nodeType.outEdges.map(_.edgeName)
-      val inEdgeNames:  Seq[String] = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Seq.empty).map(_.edgeName)
+        val neighborInInfos =
+          nodeType.inEdges.groupBy(_.viaEdge).map { case (edge, inEdges) =>
+            val viaEdgeAndDirection = edge.className + "In"
+            val neighborNodeInfos = inEdges.map { case AdjacentNode(_, outNode, cardinality) =>
+              createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
+            }
+            NeighborInfo(edge, neighborNodeInfos, nextOffsetPos)
+          }.toSeq
 
-      val outEdgeLayouts = outEdgeNames.map(edge => s"edges.${camelCaseCaps(edge)}.layoutInformation").mkString(", ")
-      val inEdgeLayouts = inEdgeNames.map(edge => s"edges.${camelCaseCaps(edge)}.layoutInformation").mkString(", ")
+        (neighborOutInfos, neighborInInfos)
+      }
+      val neighborInfos: Seq[(NeighborInfo, Direction.Value)] =
+        neighborOutInfos.map((_, Direction.OUT)) ++ neighborInInfos.map((_, Direction.IN))
+
+
+      def toLayoutInformationEntry(neighborInfos: Seq[NeighborInfo]): String = {
+        neighborInfos.sortBy(_.offsetPosition).map { neighborInfo =>
+          val edgeClass = neighborInfo.edge.className
+          s"edges.$edgeClass.layoutInformation"
+        }.mkString(", ")
+      }
+      val List(outEdgeLayouts, inEdgeLayouts) = List(neighborOutInfos, neighborInInfos).map(toLayoutInformationEntry)
 
       val className = nodeType.className
       val classNameDb = nodeType.classNameDb
@@ -777,7 +785,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |  object PropertyNames {
            |    $propertyNameDefs
-           |    val all: Set[String] = Set(${keyNames.map(camelCaseCaps).mkString(", ")})
+           |    val all: Set[String] = Set(${propertyNames.map(camelCaseCaps).mkString(", ")})
            |    val allAsJava: JSet[String] = all.asJava
            |  }
            |
@@ -794,8 +802,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |
            |
            |  object Edges {
-           |    val In: Array[String] = Array(${quoted(inEdgeNames).mkString(",")})
-           |    val Out: Array[String] = Array(${quoted(outEdgeNames).mkString(",")})
+           |    val Out: Array[String] = Array(${quoted(neighborOutInfos.map(_.edge.name).sorted).mkString(",")})
+           |    val In: Array[String] = Array(${quoted(neighborInInfos.map(_.edge.name).sorted).mkString(",")})
            |  }
            |
            |  val factory = new NodeFactory[$classNameDb] {
@@ -810,28 +818,26 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |""".stripMargin
 
       val mixinTraits: String =
-        nodeType.is
-          .getOrElse(List())
+        nodeType.extendz
           .map { traitName =>
-            s"with ${camelCaseCaps(traitName)}"
+            s"with ${traitName.className}"
           }
           .mkString(" ")
 
       val mixinTraitsForBase: String =
-        nodeType.is
-          .getOrElse(List())
+        nodeType.extendz
           .map { traitName =>
-            s"with ${camelCaseCaps(traitName)}Base"
+            s"with ${traitName.className}Base"
           }
           .mkString(" ")
 
-      val propertyBasedTraits = properties.map(key => s"with Has${camelCaseCaps(key.name)}").mkString(" ")
+      val propertyBasedTraits = properties.map(p => s"with Has${p.className}").mkString(" ")
 
       val valueMapImpl = {
         val putKeysImpl = properties
           .map { key: Property =>
             val memberName = camelCase(key.name)
-            Cardinality.fromName(key.cardinality) match {
+            key.cardinality match {
               case Cardinality.One =>
                 s"""if ($memberName != null) { properties.put("${key.name}", $memberName) }"""
               case Cardinality.ZeroOrOne =>
@@ -842,9 +848,9 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
           .mkString("\n")
         val putRefsImpl = {
-          nodeType.containedNodesList.map { cnt =>
+          nodeType.containedNodes.map { cnt =>
             val memberName = cnt.localName
-            Cardinality.fromName(cnt.cardinality) match {
+            cnt.cardinality match {
               case Cardinality.One =>
                 s"""   if (this._$memberName != null) { properties.put("${memberName}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
@@ -867,7 +873,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
         val initKeysImpl = properties
           .map { key: Property =>
             val memberName = camelCase(key.name)
-            Cardinality.fromName(key.cardinality) match {
+            key.cardinality match {
               case Cardinality.One =>
                 s"""   this._$memberName = other.$memberName""".stripMargin
               case Cardinality.ZeroOrOne =>
@@ -880,11 +886,11 @@ class CodeGen(schemaFile: String, basePackage: String) {
           .mkString("\n")
 
         val initRefsImpl = {
-          nodeType.containedNodesList.map { containedNode =>
+          nodeType.containedNodes.map { containedNode =>
             val memberName = containedNode.localName
-            val containedNodeType = containedNode.nodeTypeClassName
+            val containedNodeType = containedNode.nodeType.className
 
-            Cardinality.fromName(containedNode.cardinality) match {
+            containedNode.cardinality match {
               case Cardinality.One =>
                 s"""  this._$memberName = other.$memberName match {
                    |    case null => null
@@ -915,12 +921,13 @@ class CodeGen(schemaFile: String, basePackage: String) {
                    |      case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
                    |      case _ => throw new MatchError("unreachable")
                    |    }}.toArray
+                   |
                    |  this._$memberName = if(arr == null) immutable.ArraySeq.empty
                    |    else immutable.ArraySeq.unsafeWrapArray(arr)
                    |}""".stripMargin
             }
           }
-        }.mkString("\n")
+        }.mkString("\n\n")
 
         val registerFullName = if(!properties.map{_.name}.contains("FULL_NAME")) "" else {
           s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
@@ -936,11 +943,10 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }
 
       val containedNodesAsMembers =
-        nodeType.containedNodesList
+        nodeType.containedNodes
           .map { containedNode =>
-            val containedNodeType = containedNode.nodeTypeClassName
-            val cardinality = Cardinality.fromName(containedNode.cardinality)
-            cardinality match {
+            val containedNodeType = containedNode.nodeType.className
+            containedNode.cardinality match {
               case Cardinality.One =>
                 s"""
                    |private var _${containedNode.localName}: $containedNodeType = null
@@ -953,8 +959,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
                    |""".stripMargin
               case Cardinality.List =>
                 s"""
-                   |private var _${containedNode.localName}: List[$containedNodeType] = Nil
-                   |def ${containedNode.localName}: List[$containedNodeType] = this._${containedNode.localName}
+                   |private var _${containedNode.localName}: Seq[$containedNodeType] = Seq.empty
+                   |def ${containedNode.localName}: Seq[$containedNodeType] = this._${containedNode.localName}
                    |""".stripMargin
               case Cardinality.ISeq =>
                 s"""
@@ -965,7 +971,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           }
           .mkString("\n")
 
-      val productElements: List[ProductElement] = {
+      val productElements: Seq[ProductElement] = {
         var currIndex = -1
         def nextIdx = { currIndex += 1; currIndex }
         val forId = ProductElement("id", "id", nextIdx)
@@ -973,7 +979,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           val name = camelCase(key.name)
           ProductElement(name, name, nextIdx)
         }
-        val forContainedNodes = nodeType.containedNodesList.map { containedNode =>
+        val forContainedNodes = nodeType.containedNodes.map { containedNode =>
           ProductElement(
             containedNode.localName,
             containedNode.localName,
@@ -992,20 +998,20 @@ class CodeGen(schemaFile: String, basePackage: String) {
           s"case $index => $accessorSrc"
         }.mkString("\n")
 
-      val abstractContainedNodeAccessors = nodeType.containedNodesList.map { containedNode =>
+      val abstractContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         s"""def ${containedNode.localName}: ${getCompleteType(containedNode)}"""
       }.mkString("\n")
 
-      val delegatingContainedNodeAccessors = nodeType.containedNodesList.map { containedNode =>
-        Cardinality.fromName(containedNode.cardinality) match {
+      val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
+        containedNode.cardinality match {
           case Cardinality.One =>
-            s"""  def ${containedNode.localName}: ${containedNode.nodeTypeClassName} = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
           case Cardinality.ZeroOrOne =>
-            s"""  def ${containedNode.localName}: Option[${containedNode.nodeTypeClassName}] = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: Option[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.List =>
-            s"""  def ${containedNode.localName}: List[${containedNode.nodeTypeClassName}] = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: Seq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.ISeq =>
-            s"""  def ${containedNode.localName}: immutable.IndexedSeq[${containedNode.nodeTypeClassName}] = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
         }
       }.mkString("\n")
 
@@ -1017,61 +1023,13 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |}
            |""".stripMargin
 
-      val neighborInfos: List[NeighborInfo] = {
-        /** the offsetPos determines the index into the adjacent nodes array of a given node type
-         * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
-         * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
-        var offsetPos = -1
-        def nextOffsetPos = { offsetPos += 1; offsetPos }
-
-        val inEdges = schema.nodeToInEdgeContexts.getOrElse(nodeType.name, Nil)
-
-        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
-          val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
-          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), neighborClassName, cardinality)
-        }
-
-        val neighborOutInfos =
-          nodeType.outEdges.map { case OutEdgeEntry(edgeName, inNodes) =>
-            val viaEdgeAndDirection = camelCase(edgeName) + "Out"
-            val neighborNodeInfos = inNodes.map { inNode =>
-              val nodeName = inNode.name
-              val cardinality = inNode.cardinality match {
-                case Some(c) if c.endsWith(":1") => Cardinality.One
-                case Some(c) if c.endsWith(":0-1") => Cardinality.ZeroOrOne
-                case _ => Cardinality.List
-              }
-              createNeighborNodeInfo(nodeName, camelCaseCaps(nodeName), viaEdgeAndDirection, cardinality)
-            }.toSet
-            NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.OUT), neighborNodeInfos, nextOffsetPos)
-          }
-
-        val neighborInInfos =
-          inEdges.map { case InEdgeContext(edgeName, neighborNodes) =>
-            val viaEdgeAndDirection = camelCase(edgeName) + "In"
-            val neighborNodeInfos = neighborNodes.map { neighborNode =>
-              val neighborNodeClassName = schema.nodeTypeByName(neighborNode.name).className
-              // note: cardinalities are defined on the 'other' side, i.e. on `outEdges.inEdges.cardinality`
-              // therefor, here we're interested in the left side of the `:`
-              val cardinality = neighborNode.cardinality match {
-                case Some(c) if c.startsWith("1:") => Cardinality.One
-                case Some(c) if c.startsWith("0-1:") => Cardinality.ZeroOrOne
-                case _ => Cardinality.List
-              }
-              createNeighborNodeInfo(neighborNode.name, neighborNodeClassName, viaEdgeAndDirection, cardinality)
-            }
-            NeighborInfo(neighborAccessorNameForEdge(edgeName, Direction.IN), neighborNodeInfos, nextOffsetPos)
-          }
-
-        neighborOutInfos ++ neighborInInfos
-      }
-
-      val neighborDelegators = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, _) =>
+      val neighborDelegators = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfos, _), direction) =>
+        val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
         val genericEdgeBasedDelegators =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
 
-        val specificNodeBasedDelegators = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
-          case NeighborNodeInfo(accessorNameForNode, className, cardinality)  =>
+        val specificNodeBasedDelegators = neighborNodeInfos.map {
+          case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             val returnType = cardinality match {
               case Cardinality.List => s"Iterator[$className]"
               case Cardinality.ZeroOrOne => s"Option[$className]"
@@ -1079,8 +1037,9 @@ class CodeGen(schemaFile: String, basePackage: String) {
               case Cardinality.ISeq => ???
             }
             s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
-          }
-        specificNodeBasedDelegators + genericEdgeBasedDelegators
+        }.mkString("\n")
+        s"""$specificNodeBasedDelegators
+           |$genericEdgeBasedDelegators""".stripMargin
       }.mkString("\n")
 
       val nodeRefImpl = {
@@ -1119,11 +1078,12 @@ class CodeGen(schemaFile: String, basePackage: String) {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos.flatMap { case NeighborInfo(accessorNameForEdge, nodeInfos, offsetPos) =>
+      val neighborAccessors = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfo, offsetPos), direction) =>
+        val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
         val genericEdgeBasedAccessor =
           s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
 
-        val specificNodeBasedAccessors = nodeInfos.filter(_.className != DefaultNodeTypes.NodeClassname).map {
+        val specificNodeBasedAccessors = neighborNodeInfo.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             cardinality match {
               case Cardinality.List =>
@@ -1134,13 +1094,14 @@ class CodeGen(schemaFile: String, basePackage: String) {
                 s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next()"
               case Cardinality.ISeq => ???
             }
-        }
-        specificNodeBasedAccessors + genericEdgeBasedAccessor
+        }.mkString("\n")
+        s"""$specificNodeBasedAccessors
+           |$genericEdgeBasedAccessor""".stripMargin
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
-        def caseEntry(name: String, accessorName: String, cardinality: String, baseType: String) = {
-          val setter = Cardinality.fromName(cardinality) match {
+        def caseEntry(name: String, accessorName: String, cardinality: Cardinality, baseType: String) = {
+          val setter = cardinality match {
             case Cardinality.One =>
               s"value.asInstanceOf[$baseType]"
             case Cardinality.ZeroOrOne =>
@@ -1167,10 +1128,10 @@ class CodeGen(schemaFile: String, basePackage: String) {
           s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = properties.map(key => caseEntry(key.name, camelCase(key.name), key.cardinality, getBaseType(key.valueType))).mkString("\n")
+        val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, typeFor(p.valueType))).mkString("\n")
 
-        val forContaintedNodes = nodeType.containedNodesList.map(containedNode =>
-          caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeTypeClassName)
+        val forContaintedNodes = nodeType.containedNodes.map(containedNode =>
+          caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeType.className)
         ).mkString("\n")
 
         s"""  override protected def updateSpecificProperty(key:String, value: Object): Unit = {
@@ -1183,8 +1144,8 @@ class CodeGen(schemaFile: String, basePackage: String) {
       }
 
       val propertyImpl: String = {
-        def caseEntry(name: String, accessorName: String, cardinality: String) = {
-          Cardinality.fromName(cardinality) match {
+        def caseEntry(name: String, accessorName: String, cardinality: Cardinality) = {
+          cardinality match {
             case Cardinality.One | Cardinality.List =>
               s"""|      case "$name" => this._$accessorName"""
             case Cardinality.ZeroOrOne =>
@@ -1199,7 +1160,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
           caseEntry(key.name, camelCase(key.name), key.cardinality)
         ).mkString("\n")
 
-        val forContainedKeys = nodeType.containedNodesList.map(containedNode =>
+        val forContainedKeys = nodeType.containedNodes.map(containedNode =>
           caseEntry(containedNode.localName ,containedNode.localName, containedNode.cardinality)
         ).mkString("\n")
 
@@ -1270,36 +1231,32 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |package object nodes extends NodeTraversalImplicits
          |""".stripMargin
 
-    val baseDir = File(outputDir.getPath + "/" + nodesPackage.replaceAll("\\.", "/"))
+    val results = mutable.Buffer.empty[File]
+    val baseDir = outputDir / nodesPackage.replaceAll("\\.", "/")
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
-    baseDir.createChild("package.scala").write(packageObject)
-    baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits)
-    baseDir.createChild("RootTypes.scala").write(rootTypeImpl)
-    schema.nodeBaseTraits.foreach { nodeBaseTrait =>
+    results.append(baseDir.createChild("package.scala").write(packageObject))
+    results.append(baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits))
+    results.append(baseDir.createChild("RootTypes.scala").write(rootTypeImpl))
+    schema.nodeBaseTypes.foreach { nodeBaseTrait =>
       val src = generateNodeBaseTypeSource(nodeBaseTrait)
       val srcFile = nodeBaseTrait.className + ".scala"
-      baseDir.createChild(srcFile).write(src)
+      results.append(baseDir.createChild(srcFile).write(src))
     }
     schema.nodeTypes.foreach { nodeType =>
       val src = generateNodeSource(nodeType)
       val srcFile = nodeType.className + ".scala"
-      baseDir.createChild(srcFile).write(src)
+      results.append(baseDir.createChild(srcFile).write(src))
     }
-    println(s"generated node sources in $baseDir (${baseDir.list.size} files)")
-    baseDir.toJava
+    results.toSeq
   }
 
   /** generates classes to easily add new nodes to the graph
     * this ability could have been added to the existing nodes, but it turned out as a different specialisation,
     * since e.g. `id` is not set before adding it to the graph */
-  def writeNewNodeFiles(outputDir: JFile): JFile = {
+  protected def writeNewNodeFile(outputDir: File): File = {
     val staticHeader =
       s"""package $nodesPackage
-         |
-         |import java.lang.{Boolean => JBoolean, Long => JLong}
-         |import java.util.{Map => JMap, Set => JSet}
-         |import scala.collection.immutable
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
          |trait NewNode extends CpgNode {
@@ -1313,46 +1270,46 @@ class CodeGen(schemaFile: String, basePackage: String) {
          |}
          |""".stripMargin
 
-    def generateNewNodeSource(nodeType: NodeType, keys: List[Property]) = {
-      var fieldDescriptions = List[(String, String, Option[String])]() // fieldName, type, default
+    def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
+      val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, Option[String])] // fieldName, type, default
       for (key <- keys) {
         val optionalDefault =
-          if (getHigherType(key) == HigherValueType.Option) Some("None")
-          else if (key.valueType == "int") Some("-1")
-          else if (getHigherType(key) == HigherValueType.None && key.valueType == "string")
+          if (getHigherType(key.cardinality) == HigherValueType.Option) Some("None")
+          else if (key.valueType == ValueTypes.INTEGER) Some("-1")
+          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.STRING)
             Some("\"\"")
-          else if (getHigherType(key) == HigherValueType.None && key.valueType == "boolean")
+          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.BOOLEAN)
             Some("false")
-          else if (getHigherType(key) == HigherValueType.List) Some("List()")
-          else if (getHigherType(key) == HigherValueType.None) Some("null")
+          else if (getHigherType(key.cardinality) == HigherValueType.List)
+            Some("List()")
+          else if (getHigherType(key.cardinality) == HigherValueType.None)
+            Some("null")
           else None
         val typ = getCompleteType(key)
-        fieldDescriptions = (camelCase(key.name), typ, optionalDefault) :: fieldDescriptions
+        fieldDescriptions += ((camelCase(key.name), typ, optionalDefault))
       }
-      for (containedNode <- nodeType.containedNodesList) {
-        val optionalDefault =
-          Cardinality.fromName(containedNode.cardinality) match {
-            case Cardinality.List      => Some("List()")
-            case Cardinality.ZeroOrOne => Some("None")
-            case Cardinality.ISeq => Some("IndexedSeq.empty")
-            case Cardinality.One => Some("null")
-            case _                     => None
-          }
+      for (containedNode <- nodeType.containedNodes) {
+        val optionalDefault = containedNode.cardinality match {
+          case Cardinality.List      => Some("List()")
+          case Cardinality.ZeroOrOne => Some("None")
+          case Cardinality.ISeq      => Some("IndexedSeq.empty")
+          case Cardinality.One       => Some("null")
+          case _                     => None
+        }
         val typ = getCompleteType(containedNode)
-        fieldDescriptions = (containedNode.localName, typ, optionalDefault) :: fieldDescriptions
+        fieldDescriptions += ((containedNode.localName, typ, optionalDefault))
       }
-      fieldDescriptions = fieldDescriptions.reverse
-      val defaultsVal = fieldDescriptions
+      val defaultsVal = fieldDescriptions.reverse
         .map {case (name, typ, Some(default)) => s"var $name: $typ = $default"
               case (name, typ, None)          => s"var $name: $typ"}
         .mkString(", ")
 
-      val defaultsNoVal = fieldDescriptions
+      val defaultsNoVal = fieldDescriptions.reverse
         .map {case (name, typ, Some(default)) => s"$name: $typ = $default"
               case (name, typ, None)          => s"$name: $typ"}
         .mkString(", ")
 
-      val paramId = fieldDescriptions
+      val paramId = fieldDescriptions.reverse
         .map {case (name, _, _) => s"$name = $name"}
         .mkString(", ")
 
@@ -1360,7 +1317,7 @@ class CodeGen(schemaFile: String, basePackage: String) {
         val putKeysImpl = keys
           .map { key: Property =>
             val memberName = camelCase(key.name)
-            Cardinality.fromName(key.cardinality) match {
+            key.cardinality match {
               case Cardinality.One =>
                 s"""  if ($memberName != null) { res += "${key.name}" -> $memberName }"""
               case Cardinality.ZeroOrOne =>
@@ -1370,9 +1327,9 @@ class CodeGen(schemaFile: String, basePackage: String) {
             }
           }
           .mkString("\n")
-      val putRefsImpl = nodeType.containedNodesList.map { key =>
+      val putRefsImpl = nodeType.containedNodes.map { key =>
           val memberName = key.localName
-          Cardinality.fromName(key.cardinality) match {
+          key.cardinality match {
             case Cardinality.One =>
               s"""  if ($memberName != null) { res += "$memberName" -> $memberName }"""
             case Cardinality.ZeroOrOne =>
@@ -1440,20 +1397,18 @@ class CodeGen(schemaFile: String, basePackage: String) {
     }
 
 
-    val outfile = File(outputDir.getPath + "/" + nodesPackage.replaceAll("\\.", "/") + "/NewNodes.scala")
+    val outfile = outputDir / nodesPackage.replaceAll("\\.", "/") / "NewNodes.scala"
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.keys.map(schema.nodePropertyByName))
+      generateNewNodeSource(nodeType, nodeType.properties)
     }.mkString("\n")
     outfile.write(s"""$staticHeader
                      |$src
                      |""".stripMargin)
-    println(s"generated NewNode sources in $outfile")
-    outfile.toJava
   }
+}
 
-  /* surrounds input with `"` */
-  def quoted(strings: Iterable[String]): Iterable[String] =
-    strings.map(string => s""""$string"""")
+object CodeGen {
+  case class ConstantContext(name: String, source: String, documentation: Option[String])
 }

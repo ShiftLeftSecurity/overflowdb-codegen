@@ -1,8 +1,49 @@
 package overflowdb.codegen
 
+import overflowdb.schema._
+import overflowdb.storage.ValueTypes
+
+import scala.annotation.tailrec
+
+// TODO drop
+object DefaultNodeTypes {
+  /** root type for all nodes */
+  val Node = "CPG_NODE"
+  val NodeClassname = "CpgNode"
+}
+
+// TODO drop
+object DefaultEdgeTypes {
+  val ContainsNode = "CONTAINS_NODE"
+}
+
 object Helpers {
 
-  def isNodeBaseTrait(baseTraits: List[NodeBaseTrait], nodeName: String): Boolean =
+  /* surrounds input with `"` */
+  def quoted(strings: Iterable[String]): Iterable[String] =
+    strings.map(string => s""""$string"""")
+
+  def stringToOption(s: String): Option[String] = s.trim match {
+    case "" => None
+    case nonEmptyString => Some(nonEmptyString)
+  }
+
+  def typeFor(valueType: ValueTypes): String = valueType match {
+    case ValueTypes.BOOLEAN => "java.lang.Boolean"
+    case ValueTypes.STRING => "String"
+    case ValueTypes.BYTE => "java.lang.Byte"
+    case ValueTypes.SHORT => "java.lang.Short"
+    case ValueTypes.INTEGER => "java.lang.Integer"
+    case ValueTypes.LONG => "java.lang.Long"
+    case ValueTypes.FLOAT => "java.lang.Float"
+    case ValueTypes.DOUBLE => "java.lang.Double"
+    case ValueTypes.LIST => "java.lang.List[_]"
+    case ValueTypes.NODE_REF => "overflowdb.NodeRef[_]"
+    case ValueTypes.UNKNOWN => "java.lang.Object"
+    case ValueTypes.CHARACTER => "java.lang.Character"
+  }
+
+  def isNodeBaseTrait(baseTraits: List[NodeBaseType], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.Node || baseTraits.map(_.name).contains(nodeName)
 
   def camelCaseCaps(snakeCase: String): String = camelCase(snakeCase).capitalize
@@ -19,71 +60,88 @@ object Helpers {
     elements.mkString
   }
 
-  def getHigherType(property: Property): HigherValueType.Value =
-    Cardinality.fromName(property.cardinality) match {
+  /**
+   * Converts from camelCase to snake_case
+   * e.g.: camelCase => camel_case
+   *
+   * copy pasted from https://gist.github.com/sidharthkuruvila/3154845#gistcomment-2622928
+   */
+  def snakeCase(camelCase: String): String = {
+    @tailrec
+    def go(accDone: List[Char], acc: List[Char]): List[Char] = acc match {
+      case Nil => accDone
+      case a::b::c::tail if a.isUpper && b.isUpper && c.isLower => go(accDone ++ List(a, '_', b, c), tail)
+      case a::b::tail if a.isLower && b.isUpper => go(accDone ++ List(a, '_', b), tail)
+      case a::tail => go(accDone :+ a, tail)
+    }
+    go(Nil, camelCase.toList).mkString.toLowerCase
+  }
+
+  def singularize(str: String): String = {
+    if (str.endsWith("ies")) {
+      // e.g. Strategies -> Strategy
+      s"${str.dropRight(3)}y"
+    } else {
+      // e.g. Types -> Type
+      str.dropRight(1)
+    }
+  }
+
+  def getHigherType(cardinality: Cardinality): HigherValueType.Value =
+    cardinality match {
       case Cardinality.One       => HigherValueType.None
       case Cardinality.ZeroOrOne => HigherValueType.Option
       case Cardinality.List      => HigherValueType.List
       case  Cardinality.ISeq => ???
     }
 
-  def getBaseType(schemaType: String): String = {
-    schemaType match {
-      case "string"  => "String"
-      case "int"     => "Integer"
-      case "boolean" => "JBoolean"
-      case _         => "Nothing"
+  def getCompleteType(property: Property): String = {
+    val valueType = typeFor(property.valueType)
+    getHigherType(property.cardinality) match {
+      case HigherValueType.None   => valueType
+      case HigherValueType.Option => s"Option[$valueType]"
+      case HigherValueType.List   => s"List[$valueType]"
     }
   }
 
-  def getBaseType(property: Property): String =
-    getBaseType(property.valueType)
-
-  def getCompleteType(property: Property): String =
-    getHigherType(property) match {
-      case HigherValueType.None   => getBaseType(property)
-      case HigherValueType.Option => s"Option[${getBaseType(property)}]"
-      case HigherValueType.List   => s"List[${getBaseType(property)}]"
-    }
-
   def getCompleteType(containedNode: ContainedNode): String = {
-    val tpe = if (containedNode.nodeType != DefaultNodeTypes.Node) {
-      containedNode.nodeTypeClassName + "Base"
+    val tpe = if (containedNode.nodeType.className != DefaultNodeTypes.NodeClassname) {
+      containedNode.nodeType.className + "Base"
     } else {
-      containedNode.nodeTypeClassName
+      containedNode.nodeType.className
     }
 
-    Cardinality.fromName(containedNode.cardinality) match {
+    containedNode.cardinality match {
       case Cardinality.ZeroOrOne => s"Option[$tpe]"
       case Cardinality.One       => tpe
-      case Cardinality.List      => s"List[$tpe]"
+      case Cardinality.List      => s"Seq[$tpe]"
       case Cardinality.ISeq => s"IndexedSeq[$tpe]"
     }
   }
 
-  def propertyBasedFields(properties: List[Property]): String =
+  def propertyBasedFields(properties: Seq[Property]): String =
     properties.map { property =>
       val name = camelCase(property.name)
       val tpe = getCompleteType(property)
-      val unsetValue = propertyUnsetValue(property)
+      val unsetValue = propertyUnsetValue(property.cardinality)
 
       s"""private var _$name: $tpe = $unsetValue
          |def $name: $tpe = _$name""".stripMargin
     }.mkString("\n\n")
 
-  def propertyUnsetValue(property: Property): String =
-    getHigherType(property) match {
+  def propertyUnsetValue(cardinality: Cardinality): String =
+    getHigherType(cardinality) match {
       case HigherValueType.None => "null"
       case HigherValueType.Option => "None"
       case HigherValueType.List => "Nil"
     }
 
-  def propertyKeyDef(name: String, baseType: String, cardinality: String) = {
-    val completeType = Cardinality.fromName(cardinality) match {
+  def propertyKeyDef(name: String, baseType: String, cardinality: Cardinality) = {
+    val completeType = cardinality match {
       case Cardinality.One       => baseType
       case Cardinality.ZeroOrOne => baseType
       case Cardinality.List      => s"Seq[$baseType]"
-      case Cardinality.ISeq=> s"IndexedSeq[${baseType}]"
+      case Cardinality.ISeq=> s"IndexedSeq[$baseType]"
     }
     s"""val ${camelCaseCaps(name)} = new PropertyKey[$completeType]("$name") """
   }
