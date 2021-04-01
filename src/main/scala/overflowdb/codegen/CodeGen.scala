@@ -719,6 +719,13 @@ class CodeGen(schema: Schema) {
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
 
+      if (nodeType.className == "Ioflow") {
+        println("xxxxx1")
+        println(propertyNames)
+        println("xxxxx2")
+        println(propertyNames)
+      }
+
       val propertyDefs = properties.map { p =>
         propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
@@ -764,7 +771,6 @@ class CodeGen(schema: Schema) {
       }
       val neighborInfos: Seq[(NeighborInfo, Direction.Value)] =
         neighborOutInfos.map((_, Direction.OUT)) ++ neighborInInfos.map((_, Direction.IN))
-
 
       def toLayoutInformationEntry(neighborInfos: Seq[NeighborInfo]): String = {
         neighborInfos.sortBy(_.offsetPosition).map { neighborInfo =>
