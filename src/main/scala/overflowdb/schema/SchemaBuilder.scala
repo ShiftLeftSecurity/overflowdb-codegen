@@ -55,11 +55,11 @@ class SchemaBuilder(basePackage: String) {
   def build: Schema =
     new Schema(
       basePackage,
-      nodePropertyKeys.sortBy(_.name).toSeq,
-      edgePropertyKeys.sortBy(_.name).toSeq,
-      nodeBaseTypes.sortBy(_.name).toSeq,
-      nodeTypes.sortBy(_.name).toSeq,
-      edgeTypes.sortBy(_.name).toSeq,
+      nodePropertyKeys.sortBy(_.name.toLowerCase).toSeq,
+      edgePropertyKeys.sortBy(_.name.toLowerCase).toSeq,
+      nodeBaseTypes.sortBy(_.name.toLowerCase).toSeq,
+      nodeTypes.sortBy(_.name.toLowerCase).toSeq,
+      edgeTypes.sortBy(_.name.toLowerCase).toSeq,
       constantsByCategory.toMap,
       protoOptions,
     )
