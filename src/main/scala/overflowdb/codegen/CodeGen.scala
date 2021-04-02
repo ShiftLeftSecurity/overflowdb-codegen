@@ -722,13 +722,6 @@ class CodeGen(schema: Schema) {
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
 
-      if (nodeType.className == "Ioflow") {
-        println("xxxxx1")
-        println(propertyNames)
-        println("xxxxx2")
-        println(propertyNames)
-      }
-
       val propertyDefs = properties.map { p =>
         propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
