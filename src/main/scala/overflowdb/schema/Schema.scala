@@ -40,7 +40,7 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
   }
 
   def properties: Seq[Property] =
-    (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name)
+    (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
 
   def extendz: Seq[NodeBaseType] =
     _extendz.toSeq
@@ -52,7 +52,7 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
     _inEdges.toSeq
 
   def containedNodes: Seq[ContainedNode] =
-    _containedNodes.toSeq
+    _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
 
   def addProperties(additional: Property*): NodeType = {
     additional.foreach(_properties.add)

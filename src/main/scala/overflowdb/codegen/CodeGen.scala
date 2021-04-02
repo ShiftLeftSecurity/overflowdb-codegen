@@ -714,10 +714,7 @@ class CodeGen(schema: Schema) {
     def generateNodeSource(nodeType: NodeType) = {
       val properties = nodeType.properties
 
-      val propertyNames = {
-        val all = nodeType.properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
-        all.sortBy(_.toLowerCase)
-      }
+      val propertyNames = nodeType.properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
       val propertyNameDefs = propertyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
@@ -729,9 +726,6 @@ class CodeGen(schema: Schema) {
       val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
         propertyKeyDef(containedNode.localName, containedNode.nodeType.className, containedNode.cardinality)
       }.mkString("\n|    ")
-
-      val outEdges: Seq[AdjacentNode] = nodeType.outEdges
-      val inEdges: Seq[AdjacentNode] = nodeType.inEdges
 
       val (neighborOutInfos, neighborInInfos) = {
         /** the offsetPos determines the index into the adjacent nodes array of a given node type
