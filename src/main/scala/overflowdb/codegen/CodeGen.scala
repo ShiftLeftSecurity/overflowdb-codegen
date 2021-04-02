@@ -727,9 +727,6 @@ class CodeGen(schema: Schema) {
         propertyKeyDef(containedNode.localName, containedNode.nodeType.className, containedNode.cardinality)
       }.mkString("\n|    ")
 
-      val outEdges: Seq[AdjacentNode] = nodeType.outEdges
-      val inEdges: Seq[AdjacentNode] = nodeType.inEdges
-
       val (neighborOutInfos, neighborInInfos) = {
         /** the offsetPos determines the index into the adjacent nodes array of a given node type
          * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
@@ -764,7 +761,6 @@ class CodeGen(schema: Schema) {
       }
       val neighborInfos: Seq[(NeighborInfo, Direction.Value)] =
         neighborOutInfos.map((_, Direction.OUT)) ++ neighborInInfos.map((_, Direction.IN))
-
 
       def toLayoutInformationEntry(neighborInfos: Seq[NeighborInfo]): String = {
         neighborInfos.sortBy(_.offsetPosition).map { neighborInfo =>
