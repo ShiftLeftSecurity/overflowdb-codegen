@@ -2,7 +2,6 @@ package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
 import overflowdb.storage.ValueTypes
-
 import scala.collection.mutable
 
 /**
@@ -113,7 +112,17 @@ class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   lazy val className = camelCaseCaps(name)
 
-  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
+  def properties: Seq[Property] = {
+    /* only to provide feedback for potential schema optimisation: no need to redefine properties if they are already
+     * defined in one of the parents */
+    for {
+      property <- _properties
+      baseType <- _extendz
+      if baseType.properties.contains(property)
+    } println(s"info for schema optimization: $baseType already defines $property - no need to do that again in $this")
+
+    (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
+  }
 
   def extendz: Seq[NodeBaseType] =
     _extendz.toSeq
@@ -188,6 +197,8 @@ class Property(val name: String,
     _protoId = Some(id)
     this
   }
+
+  override def toString = s"Property($name)"
 }
 
 class Constant(val name: String,
