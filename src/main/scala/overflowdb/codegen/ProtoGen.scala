@@ -219,7 +219,7 @@ class ProtoGen(schema: Schema) {
 
   private def protoDefs(enumCases: Seq[EnumEntryMaybe]): String = {
     enumCases.filter(_.protoId.isDefined).sortBy(_.protoId.get).map { enumCase =>
-      val comment = enumCase.comment.map(comment => s"// $comment").getOrElse("")
+      val comment = enumCase.comment.map(comment => s"/* $comment */").getOrElse("")
       s"""  $comment
          |  ${enumCase.name} = ${enumCase.protoId.get};
          |""".stripMargin
