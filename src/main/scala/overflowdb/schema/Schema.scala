@@ -45,7 +45,7 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
       property <- _properties
       baseType <- _extendz
       if baseType.properties.contains(property)
-    } println(s"info for schema optimization: $baseType already defines $property - no need to do that again in $this")
+    } println(s"[info]: $this wouldn't need to have $property added explicitly - $baseType already brings it in")
 
     (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
   }
@@ -119,9 +119,9 @@ class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
       property <- _properties
       baseType <- _extendz
       if baseType.properties.contains(property)
-    } println(s"info for schema optimization: $baseType already defines $property - no need to do that again in $this")
+    } println(s"[info]: $this wouldn't need to have $property added explicitly - $baseType already brings it in")
 
-    (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
+  (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
   }
 
   def extendz: Seq[NodeBaseType] =
