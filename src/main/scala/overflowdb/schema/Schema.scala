@@ -16,25 +16,21 @@ class Schema(val basePackage: String,
              val constantsByCategory: Map[String, Seq[Constant]],
              val protoOptions: Option[ProtoOptions])
 
-sealed trait Node {
-  def className: String
-}
+abstract class AbstractNodeType(val name: String, val comment: Option[String]) {
+  lazy val className = camelCaseCaps(name)
 
-class NodeType(val name: String, val comment: Option[String]) extends Node {
-  protected var _protoId: Option[Int] = None
-  protected val _properties: mutable.Set[Property] = mutable.Set.empty
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
-  protected val _containedNodes: mutable.Set[ContainedNode] = mutable.Set.empty
+  protected val _properties: mutable.Set[Property] = mutable.Set.empty
 
-  lazy val className = camelCaseCaps(name)
-  lazy val classNameDb = s"${className}Db"
+  def addProperty(additional: Property): this.type = {
+    _properties.add(additional)
+    this
+  }
 
-  def protoId: Option[Int] = _protoId
-
-  def protoId(id: Int): NodeType = {
-    _protoId = Some(id)
+  def addProperties(additional: Property*): this.type = {
+    additional.foreach(addProperty)
     this
   }
 
@@ -50,102 +46,71 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
     (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
   }
 
-  def extendz: Seq[NodeBaseType] =
-    _extendz.toSeq
-
-  def outEdges: Seq[AdjacentNode] =
-    _outEdges.toSeq
-
-  def inEdges: Seq[AdjacentNode] =
-    _inEdges.toSeq
-
-  def containedNodes: Seq[ContainedNode] =
-    _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
-
-  def addProperty(additional: Property): NodeType = {
-    _properties.add(additional)
-    this
-  }
-
-  def addProperties(additional: Property*): NodeType = {
-    additional.foreach(addProperty)
-    this
-  }
-
-  def addContainedNode(node: Node, localName: String, cardinality: Cardinality): NodeType = {
-    _containedNodes.add(ContainedNode(node, localName, cardinality))
-    this
-  }
-
-  def extendz(additional: NodeBaseType*): NodeType = {
+  def extendz(additional: NodeBaseType*): this.type = {
     additional.foreach(_extendz.add)
     this
   }
+
+  def extendz: Seq[NodeBaseType] =
+    _extendz.toSeq
 
   /**
    * note: allowing to define one outEdge for ONE inNode only - if you are looking for Union Types, please use NodeBaseTypes
    */
   def addOutEdge(edge: EdgeType,
-                 inNode: NodeType,
+                 inNode: AbstractNodeType,
                  cardinalityOut: Cardinality = Cardinality.List,
-                 cardinalityIn: Cardinality = Cardinality.List): NodeType = {
+                 cardinalityIn: Cardinality = Cardinality.List): this.type = {
     _outEdges.add(AdjacentNode(edge, inNode, cardinalityOut))
     inNode._inEdges.add(AdjacentNode(edge, this, cardinalityIn))
     this
   }
 
   def addInEdge(edge: EdgeType,
-                outNode: NodeType,
+                outNode: AbstractNodeType,
                 cardinalityIn: Cardinality = Cardinality.List,
-                cardinalityOut: Cardinality = Cardinality.List): NodeType = {
+                cardinalityOut: Cardinality = Cardinality.List): this.type = {
     _inEdges.add(AdjacentNode(edge, outNode, cardinalityIn))
     outNode._outEdges.add(AdjacentNode(edge, this, cardinalityOut))
     this
   }
 
-  override def toString = s"NodeType($name)"
+  def outEdges: Seq[AdjacentNode] =
+    (_outEdges ++ _extendz.flatMap(_.outEdges)).toSeq
+
+  def inEdges: Seq[AdjacentNode] =
+    (_inEdges ++ _extendz.flatMap(_.inEdges)).toSeq
+
+  override def toString = s"$getClass($name)"
 }
 
-// TODO deduplicate with NodeType - maybe just add a flag `isAbstract` and allow general inheritance?
-class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
-  protected val _properties: mutable.Set[Property] = mutable.Set.empty
-  protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
-  lazy val className = camelCaseCaps(name)
+class NodeType(name: String, comment: Option[String]) extends AbstractNodeType(name, comment) {
+  protected var _protoId: Option[Int] = None
+  protected val _containedNodes: mutable.Set[ContainedNode] = mutable.Set.empty
 
-  def properties: Seq[Property] = {
-    /* only to provide feedback for potential schema optimisation: no need to redefine properties if they are already
-     * defined in one of the parents */
-    for {
-      property <- _properties
-      baseType <- _extendz
-      if baseType.properties.contains(property)
-    } println(s"[info]: $this wouldn't need to have $property added explicitly - $baseType already brings it in")
+  lazy val classNameDb = s"${className}Db"
 
-  (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
-  }
+  def protoId: Option[Int] = _protoId
 
-  def extendz: Seq[NodeBaseType] =
-    _extendz.toSeq
-
-  def extendz(additional: NodeBaseType*): NodeBaseType = {
-    additional.foreach(_extendz.add)
+  def protoId(id: Int): NodeType = {
+    _protoId = Some(id)
     this
   }
 
-  def addProperties(additional: Property*): NodeBaseType = {
-    additional.foreach(_properties.add)
+  def containedNodes: Seq[ContainedNode] =
+    _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
+
+  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Cardinality): NodeType = {
+    _containedNodes.add(ContainedNode(node, localName, cardinality))
     this
   }
-
-  // TODO add ability for outEdge/inEdge etc.
-
-  override def toString = s"NodeBaseType($name)"
 }
 
+class NodeBaseType(name: String, comment: Option[String]) extends AbstractNodeType(name, comment)
 
-case class AdjacentNode(viaEdge: EdgeType, neighbor: NodeType, cardinality: Cardinality)
+case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: Cardinality)
 
-case class ContainedNode(nodeType: Node, localName: String, cardinality: Cardinality)
+case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Cardinality)
 
 sealed abstract class Cardinality(val name: String)
 object Cardinality {
