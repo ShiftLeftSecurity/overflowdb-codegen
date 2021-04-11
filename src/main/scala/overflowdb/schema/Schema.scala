@@ -16,11 +16,12 @@ class Schema(val basePackage: String,
              val constantsByCategory: Map[String, Seq[Constant]],
              val protoOptions: Option[ProtoOptions])
 
-sealed trait Node {
+sealed trait AbstractNodeType {
+  def name: String
   def className: String
 }
 
-class NodeType(val name: String, val comment: Option[String]) extends Node {
+class NodeType(val name: String, val comment: Option[String]) extends AbstractNodeType {
   protected var _protoId: Option[Int] = None
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
@@ -72,7 +73,7 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
     this
   }
 
-  def addContainedNode(node: Node, localName: String, cardinality: Cardinality): NodeType = {
+  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Cardinality): NodeType = {
     _containedNodes.add(ContainedNode(node, localName, cardinality))
     this
   }
@@ -86,7 +87,7 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
    * note: allowing to define one outEdge for ONE inNode only - if you are looking for Union Types, please use NodeBaseTypes
    */
   def addOutEdge(edge: EdgeType,
-                 inNode: NodeType,
+                 inNode: AbstractNodeType,
                  cardinalityOut: Cardinality = Cardinality.List,
                  cardinalityIn: Cardinality = Cardinality.List): NodeType = {
     _outEdges.add(AdjacentNode(edge, inNode, cardinalityOut))
@@ -95,7 +96,7 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
   }
 
   def addInEdge(edge: EdgeType,
-                outNode: NodeType,
+                outNode: AbstractNodeType,
                 cardinalityIn: Cardinality = Cardinality.List,
                 cardinalityOut: Cardinality = Cardinality.List): NodeType = {
     _inEdges.add(AdjacentNode(edge, outNode, cardinalityIn))
@@ -107,7 +108,7 @@ class NodeType(val name: String, val comment: Option[String]) extends Node {
 }
 
 // TODO deduplicate with NodeType - maybe just add a flag `isAbstract` and allow general inheritance?
-class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
+class NodeBaseType(val name: String, val comment: Option[String]) extends AbstractNodeType {
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   lazy val className = camelCaseCaps(name)
@@ -143,9 +144,9 @@ class NodeBaseType(val name: String, val comment: Option[String]) extends Node {
 }
 
 
-case class AdjacentNode(viaEdge: EdgeType, neighbor: NodeType, cardinality: Cardinality)
+case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: Cardinality)
 
-case class ContainedNode(nodeType: Node, localName: String, cardinality: Cardinality)
+case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Cardinality)
 
 sealed abstract class Cardinality(val name: String)
 object Cardinality {
