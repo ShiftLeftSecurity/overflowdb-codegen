@@ -9,9 +9,9 @@ import overflowdb.storage.ValueTypes
 object TestSchema1 extends App {
   val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
 
-  // node properties
+  // properties
   val name = builder
-    .addNodeProperty(
+    .addProperty(
       name = "NAME",
       valueType = ValueTypes.STRING,
       cardinality = Cardinality.One,
@@ -20,7 +20,7 @@ object TestSchema1 extends App {
     .protoId(5)
 
   val order = builder
-    .addNodeProperty(
+    .addProperty(
       name = "ORDER",
       valueType = ValueTypes.INTEGER,
       cardinality = Cardinality.One,
@@ -30,7 +30,7 @@ object TestSchema1 extends App {
     .protoId(4)
 
   val hash = builder
-    .addNodeProperty(
+    .addProperty(
       name = "HASH",
       valueType = ValueTypes.STRING,
       cardinality = Cardinality.ZeroOrOne,
@@ -39,7 +39,7 @@ object TestSchema1 extends App {
     .protoId(120)
 
   val inheritsFromTypeFullName = builder
-    .addNodeProperty(
+    .addProperty(
       name = "INHERITS_FROM_TYPE_FULL_NAME",
       valueType = ValueTypes.STRING,
       cardinality = Cardinality.List,
@@ -48,9 +48,8 @@ object TestSchema1 extends App {
     )
     .protoId(53)
 
-  // edge properties
   val alias = builder
-    .addEdgeProperty(
+    .addProperty(
       name = "ALIAS",
       valueType = ValueTypes.BOOLEAN,
       cardinality = Cardinality.One,
@@ -59,7 +58,7 @@ object TestSchema1 extends App {
     .protoId(1)
 
   val localName = builder
-    .addEdgeProperty(
+    .addProperty(
       name = "LOCAL_NAME",
       valueType = ValueTypes.STRING,
       cardinality = Cardinality.ZeroOrOne,
@@ -68,7 +67,7 @@ object TestSchema1 extends App {
     .protoId(6)
 
   val edgekey1Lst = builder
-    .addEdgeProperty(
+    .addProperty(
       name = "EDGEKEY_1_LST",
       valueType = ValueTypes.INTEGER,
       cardinality = Cardinality.List,

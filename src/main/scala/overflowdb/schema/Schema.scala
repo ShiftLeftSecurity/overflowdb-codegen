@@ -8,13 +8,25 @@ import scala.collection.mutable
 * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
 class Schema(val basePackage: String,
-             val nodeProperties: Seq[Property],
-             val edgeProperties: Seq[Property],
+             val properties: Seq[Property],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
              val constantsByCategory: Map[String, Seq[Constant]],
-             val protoOptions: Option[ProtoOptions])
+             val protoOptions: Option[ProtoOptions]) {
+
+  /** properties that are used in node types */
+  def nodeProperties: Seq[Property] =
+    properties.filter(property =>
+      (nodeTypes ++ nodeBaseTypes).exists(_.properties.contains(property))
+    )
+
+  /** properties that are used in edge types */
+  def edgeProperties: Seq[Property] =
+    properties.filter(property =>
+      edgeTypes.exists(_.properties.contains(property))
+    )
+}
 
 abstract class AbstractNodeType(val name: String, val comment: Option[String]) extends HasClassName {
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
