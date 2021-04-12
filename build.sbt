@@ -9,7 +9,7 @@ enablePlugins(GitVersioning)
 libraryDependencies ++= Seq(
   "io.shiftleft" % "overflowdb-core" % "1.31",
   "com.github.pathikrit" %% "better-files" % "3.8.0",
-  "org.scalatest" %% "scalatest" % "3.0.8" % Test
+  "org.scalatest" %% "scalatest" % "3.2.7" % Test,
 )
 
 resolvers ++= Seq(
