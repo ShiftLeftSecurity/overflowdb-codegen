@@ -16,9 +16,7 @@ class Schema(val basePackage: String,
              val constantsByCategory: Map[String, Seq[Constant]],
              val protoOptions: Option[ProtoOptions])
 
-abstract class AbstractNodeType(val name: String, val comment: Option[String]) {
-  lazy val className = camelCaseCaps(name)
-
+abstract class AbstractNodeType(val name: String, val comment: Option[String]) extends HasClassName {
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
@@ -80,8 +78,6 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String]) {
 
   def inEdges: Seq[AdjacentNode] =
     (_inEdges ++ _extendz.flatMap(_.inEdges)).toSeq
-
-  override def toString = s"${getClass.getSimpleName}($name)"
 }
 
 class NodeType(name: String, comment: Option[String]) extends AbstractNodeType(name, comment) with HasOptionalProtoId  {
@@ -96,9 +92,13 @@ class NodeType(name: String, comment: Option[String]) extends AbstractNodeType(n
     _containedNodes.add(ContainedNode(node, localName, cardinality))
     this
   }
+
+  override def toString = s"NodeType($name)"
 }
 
-class NodeBaseType(name: String, comment: Option[String]) extends AbstractNodeType(name, comment)
+class NodeBaseType(name: String, comment: Option[String]) extends AbstractNodeType(name, comment) {
+  override def toString = s"NodeBaseType($name)"
+}
 
 case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: Cardinality)
 
@@ -117,9 +117,8 @@ object Cardinality {
       .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq`, but was $name"))
 }
 
-class EdgeType(val name: String, val comment: Option[String]) extends HasOptionalProtoId {
+class EdgeType(val name: String, val comment: Option[String]) extends HasClassName with HasOptionalProtoId {
   protected val _properties: mutable.Set[Property] = mutable.Set.empty
-  lazy val className = camelCaseCaps(name)
 
   def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
 
@@ -134,9 +133,7 @@ class EdgeType(val name: String, val comment: Option[String]) extends HasOptiona
 class Property(val name: String,
                val comment: Option[String],
                val valueType: ValueTypes,
-               val cardinality: Cardinality) extends HasOptionalProtoId {
-  lazy val className = camelCaseCaps(name)
-
+               val cardinality: Cardinality) extends HasClassName with HasOptionalProtoId {
   override def toString = s"Property($name)"
 }
 
@@ -144,7 +141,7 @@ class Constant(val name: String,
                val value: String,
                val valueType: ValueTypes,
                val comment: Option[String]) extends HasOptionalProtoId {
-  override def toString = s"${getClass.getSimpleName}($name)"
+  override def toString = s"Constant($name)"
 }
 
 object Constant {
@@ -178,6 +175,11 @@ case class ProtoOptions(pkg: String,
                         goPackage: String,
                         csharpNamespace: String,
                         uncommonProtoEnumNameMappings: Map[String, String] = Map.empty)
+
+trait HasClassName {
+  def name: String
+  lazy val className = camelCaseCaps(name)
+}
 
 trait HasOptionalProtoId {
   protected var _protoId: Option[Int] = None
