@@ -5,13 +5,8 @@ import overflowdb.storage.ValueTypes
 
 import scala.collection.mutable
 
-/**
-  *  TODO future refactorings:
-  *  + move lazy val to Helpers, don't import Helpers here
-  */
 class SchemaBuilder(basePackage: String) {
-  val nodePropertyKeys = mutable.ListBuffer.empty[Property]
-  val edgePropertyKeys = mutable.ListBuffer.empty[Property]
+  val propertyKeys = mutable.ListBuffer.empty[Property]
   val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseType]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
@@ -25,11 +20,8 @@ class SchemaBuilder(basePackage: String) {
   lazy val anyNode: NodeBaseType =
     new NodeBaseType("CPG_NODE", Some("generic node base trait - use if you want to be explicitly unspecific"))
 
-  def addNodeProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(nodePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
-
-  def addEdgeProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(edgePropertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
+  def addProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
+    addAndReturn(propertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
 
   def addNodeBaseType(name: String, comment: String = ""): NodeBaseType =
     addAndReturn(nodeBaseTypes, new NodeBaseType(name, stringToOption(comment)))
@@ -55,8 +47,7 @@ class SchemaBuilder(basePackage: String) {
     verifyProtoIdsUnique
     new Schema(
       basePackage,
-      nodePropertyKeys.sortBy(_.name.toLowerCase).toSeq,
-      edgePropertyKeys.sortBy(_.name.toLowerCase).toSeq,
+      propertyKeys.sortBy(_.name.toLowerCase).toSeq,
       nodeBaseTypes.sortBy(_.name.toLowerCase).toSeq,
       nodeTypes.sortBy(_.name.toLowerCase).toSeq,
       edgeTypes.sortBy(_.name.toLowerCase).toSeq,
@@ -68,7 +59,7 @@ class SchemaBuilder(basePackage: String) {
   /** proto ids must be unique (if used) */
   def verifyProtoIdsUnique: Unit = {
     val elementsWithProtoId: Seq[HasOptionalProtoId] =
-      (nodePropertyKeys ++ edgePropertyKeys ++ nodeTypes ++ edgeTypes ++ constantsByCategory.values.flatten)
+      (propertyKeys ++ nodeTypes ++ edgeTypes ++ constantsByCategory.values.flatten)
         .toSeq
         .filter(_.protoId.isDefined)
 

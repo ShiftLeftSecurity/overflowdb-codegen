@@ -16,9 +16,9 @@ object TestSchema2 extends App {
 object Base {
   def apply(builder: SchemaBuilder) = new Schema(builder)
   class Schema(builder: SchemaBuilder) {
-    // node properties
+
     val name = builder
-      .addNodeProperty(
+      .addProperty(
         name = "NAME",
         valueType = ValueTypes.STRING,
         cardinality = Cardinality.One,
@@ -27,7 +27,7 @@ object Base {
       .protoId(5)
 
     val order = builder
-      .addNodeProperty(
+      .addProperty(
         name = "ORDER",
         valueType = ValueTypes.INTEGER,
         cardinality = Cardinality.One,
@@ -36,9 +36,8 @@ object Base {
       )
       .protoId(4)
 
-    // edge properties
     val localName = builder
-      .addEdgeProperty(
+      .addProperty(
         name = "LOCAL_NAME",
         valueType = ValueTypes.STRING,
         cardinality = Cardinality.ZeroOrOne,

@@ -8,31 +8,32 @@ import scala.collection.mutable
 * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
 class Schema(val basePackage: String,
-             val nodeProperties: Seq[Property],
-             val edgeProperties: Seq[Property],
+             val properties: Seq[Property],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
              val constantsByCategory: Map[String, Seq[Constant]],
-             val protoOptions: Option[ProtoOptions])
+             val protoOptions: Option[ProtoOptions]) {
 
-abstract class AbstractNodeType(val name: String, val comment: Option[String]) extends HasClassName {
+  /** properties that are used in node types */
+  def nodeProperties: Seq[Property] =
+    properties.filter(property =>
+      (nodeTypes ++ nodeBaseTypes).exists(_.properties.contains(property))
+    )
+
+  /** properties that are used in edge types */
+  def edgeProperties: Seq[Property] =
+    properties.filter(property =>
+      edgeTypes.exists(_.properties.contains(property))
+    )
+}
+
+abstract class AbstractNodeType(val name: String, val comment: Option[String]) extends HasClassName with HasProperties {
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
-  protected val _properties: mutable.Set[Property] = mutable.Set.empty
 
-  def addProperty(additional: Property): this.type = {
-    _properties.add(additional)
-    this
-  }
-
-  def addProperties(additional: Property*): this.type = {
-    additional.foreach(addProperty)
-    this
-  }
-
-  def properties: Seq[Property] = {
+  override def properties: Seq[Property] = {
     /* only to provide feedback for potential schema optimisation: no need to redefine properties if they are already
      * defined in one of the parents */
     for {
@@ -117,16 +118,7 @@ object Cardinality {
       .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq`, but was $name"))
 }
 
-class EdgeType(val name: String, val comment: Option[String]) extends HasClassName with HasOptionalProtoId {
-  protected val _properties: mutable.Set[Property] = mutable.Set.empty
-
-  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
-
-  def addProperties(additional: Property*): EdgeType = {
-    additional.foreach(_properties.add)
-    this
-  }
-
+class EdgeType(val name: String, val comment: Option[String]) extends HasClassName with HasProperties with HasOptionalProtoId {
   override def toString = s"EdgeType($name)"
 }
 
@@ -179,6 +171,22 @@ case class ProtoOptions(pkg: String,
 trait HasClassName {
   def name: String
   lazy val className = camelCaseCaps(name)
+}
+
+trait HasProperties {
+  protected val _properties: mutable.Set[Property] = mutable.Set.empty
+
+  def addProperty(additional: Property): this.type = {
+    _properties.add(additional)
+    this
+  }
+
+  def addProperties(additional: Property*): this.type = {
+    additional.foreach(addProperty)
+    this
+  }
+
+  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
 }
 
 trait HasOptionalProtoId {

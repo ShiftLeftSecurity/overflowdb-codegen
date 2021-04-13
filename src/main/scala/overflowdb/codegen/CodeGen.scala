@@ -61,10 +61,7 @@ class CodeGen(schema: Schema) {
       results.append(file)
     }
 
-    writeConstantsFile("NodeKeyNames", schema.nodeProperties.map { property =>
-      ConstantContext(property.name, s"""public static final String ${property.name} = "${property.name}";""", property.comment)
-    })
-    writeConstantsFile("EdgeKeyNames", schema.edgeProperties.map { property =>
+    writeConstantsFile("PropertyNames", schema.properties.map { property =>
       ConstantContext(property.name, s"""public static final String ${property.name} = "${property.name}";""", property.comment)
     })
     writeConstantsFile("NodeTypes", schema.nodeTypes.map { nodeType =>
@@ -79,7 +76,7 @@ class CodeGen(schema: Schema) {
       })
     }
 
-    def toConstantContext(property: Property): ConstantContext = {
+    writeConstantsFile("Properties", schema.properties.map { property =>
       val src = {
         val valueType = typeFor(property.valueType)
         val cardinality = property.cardinality
@@ -92,9 +89,7 @@ class CodeGen(schema: Schema) {
         s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
       }
       ConstantContext(property.name, src, property.comment)
-    }
-    writeConstantsFile("NodeKeys", schema.nodeProperties.map(toConstantContext))
-    writeConstantsFile("EdgeKeys", schema.edgeProperties.map(toConstantContext))
+    })
 
     results.toSeq
   }
