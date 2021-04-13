@@ -65,7 +65,7 @@ class SchemaBuilder(basePackage: String) {
         throw new AssertionError(
           s"proto ids must be unique across all schema elements, however we found " +
             s"the following duplicates:\n" +
-            duplicates.view.mapValues(_.mkString(", ")).mkString("\n")
+            duplicates.map { case (protoId , elements) => s"$protoId -> ${elements.mkString(",")}"}.mkString
         )
       }
     }
