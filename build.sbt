@@ -12,9 +12,7 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.7" % Test,
 )
 
-resolvers ++= Seq(
-  Resolver.mavenLocal,
-  Resolver.bintrayRepo("shiftleft", "maven"))
+resolvers += Resolver.mavenLocal
 
 Compile/scalacOptions ++= Seq(
   "-Xfatal-warnings",
