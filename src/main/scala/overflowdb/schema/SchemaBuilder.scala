@@ -58,20 +58,20 @@ class SchemaBuilder(basePackage: String) {
 
   /** proto ids must be unique (if used) */
   def verifyProtoIdsUnique: Unit = {
-    val elementsWithProtoId: Seq[HasOptionalProtoId] =
-      (propertyKeys ++ nodeTypes ++ edgeTypes ++ constantsByCategory.values.flatten)
-        .toSeq
-        .filter(_.protoId.isDefined)
-
-    val duplicates = elementsWithProtoId.groupBy(_.protoId.get).filter(_._2.size > 1)
-    if (duplicates.nonEmpty) {
-      throw new AssertionError(
-        s"proto ids must be unique across all schema elements, however we found " +
-          s"the following duplicates: protoId -> Seq[SchemaElement]: \n" +
-          duplicates.mkString("\n")
-      )
+    def ensureNoDuplicateProtoIds(elements: Seq[HasOptionalProtoId]): Unit = {
+      val elementsWithProtoId = elements.filter(_.protoId.isDefined)
+      val duplicates = elementsWithProtoId.groupBy(_.protoId.get).filter(_._2.size > 1)
+      if (duplicates.nonEmpty) {
+        throw new AssertionError(
+          s"proto ids must be unique across all schema elements, however we found " +
+            s"the following duplicates: protoId -> Seq[SchemaElement]: \n" +
+            duplicates.mkString("\n")
+        )
+      }
     }
 
+    val schemaElementCategories = Seq(propertyKeys, nodeTypes, edgeTypes) ++ constantsByCategory.values
+    schemaElementCategories.map(_.toSeq).foreach(ensureNoDuplicateProtoIds)
   }
 
   private def addAndReturn[A](buffer: mutable.Buffer[A], a: A): A = {

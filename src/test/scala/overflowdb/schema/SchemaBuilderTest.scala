@@ -5,17 +5,17 @@ import overflowdb.storage.ValueTypes
 
 class SchemaBuilderTest extends AnyWordSpec {
 
-  "proto ids must be unique" in {
+  "proto ids must be unique within one category" in {
     val schemaModifications: Seq[(String, SchemaBuilder => Any)] = Seq(
       ("property", _.addProperty(name = "prop", valueType = ValueTypes.STRING, cardinality = Cardinality.One).protoId(10)),
       ("node", _.addNodeType("testNode").protoId(10)),
       ("edge", _.addEdgeType("testEdge").protoId(10)),
-      ("category", _.addConstants("category1", Constant("constant1", "value1", ValueTypes.STRING).protoId(10))),
-      ("category", _.addConstants("category2", Constant("constant2", "value2", ValueTypes.STRING).protoId(10))),
+      ("category1", _.addConstants("category1", Constant("constant1", "value1", ValueTypes.STRING).protoId(10))),
+      ("category2", _.addConstants("category2", Constant("constant2", "value2", ValueTypes.STRING).protoId(10))),
     )
 
-    /** combining any two of these schema modifications should lead to an AssertionError during `schemaBuilder.build`,
-     * since all of these use the same protoId */
+
+    /* all combinations of any two schema modifications */
     for {
       (case1, modification1) <- schemaModifications
       (case2, modification2) <- schemaModifications
@@ -23,8 +23,16 @@ class SchemaBuilderTest extends AnyWordSpec {
       val builder = new SchemaBuilder("test")
       modification1(builder)
       modification2(builder)
-      withClue(s"combining $case1 and $case2:") {
-        assertThrows[AssertionError](builder.build)
+
+      if (case1 == case2) {
+        /** when using the same protoId within the same category should lead to an AssertionError
+         * during `schemaBuilder.build`, since all of these use the same protoId */
+        withClue(s"adding two $case1 schema elements with identical protoId:") {
+          assertThrows[AssertionError](builder.build)
+        }
+      } else {
+        /** using the same protoId in different categories is fine */
+        builder.build
       }
     }
   }
