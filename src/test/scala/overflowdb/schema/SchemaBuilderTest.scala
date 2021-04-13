@@ -7,11 +7,18 @@ class SchemaBuilderTest extends AnyWordSpec {
 
   "proto ids must be unique within one category" in {
     val schemaModifications: Seq[(String, SchemaBuilder => Any)] = Seq(
-      ("property", _.addProperty(name = "prop", valueType = ValueTypes.STRING, cardinality = Cardinality.One).protoId(10)),
       ("node", _.addNodeType("testNode").protoId(10)),
       ("edge", _.addEdgeType("testEdge").protoId(10)),
       ("category1", _.addConstants("category1", Constant("constant1", "value1", ValueTypes.STRING).protoId(10))),
       ("category2", _.addConstants("category2", Constant("constant2", "value2", ValueTypes.STRING).protoId(10))),
+      ("node property", { schemaBuilder =>
+        val property = schemaBuilder.addProperty(name = "prop", valueType = ValueTypes.STRING, cardinality = Cardinality.One).protoId(10)
+        schemaBuilder.addNodeType("testNode").addProperty(property)
+      }),
+      ("edge property", { schemaBuilder =>
+        val property = schemaBuilder.addProperty(name = "prop", valueType = ValueTypes.STRING, cardinality = Cardinality.One).protoId(10)
+        schemaBuilder.addEdgeType("testEdge").addProperty(property)
+      }),
     )
 
 
