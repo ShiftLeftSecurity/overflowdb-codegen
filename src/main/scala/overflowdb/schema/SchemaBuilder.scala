@@ -64,8 +64,8 @@ class SchemaBuilder(basePackage: String) {
       if (duplicates.nonEmpty) {
         throw new AssertionError(
           s"proto ids must be unique across all schema elements, however we found " +
-            s"the following duplicates: protoId -> Seq[SchemaElement]: \n" +
-            duplicates.mkString("\n")
+            s"the following duplicates:\n" +
+            duplicates.view.mapValues(_.mkString(", ")).mkString("\n")
         )
       }
     }
