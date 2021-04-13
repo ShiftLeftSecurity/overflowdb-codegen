@@ -59,21 +59,25 @@ class SchemaBuilder(basePackage: String) {
 
   /** proto ids must be unique (if used) */
   def verifyProtoIdsUnique(schema: Schema): Unit = {
-    def ensureNoDuplicateProtoIds(elements: Seq[HasOptionalProtoId]): Unit = {
+    def ensureNoDuplicateProtoIds(categoryName: String, elements: Iterable[HasOptionalProtoId]): Unit = {
       val elementsWithProtoId = elements.filter(_.protoId.isDefined)
       val duplicates = elementsWithProtoId.groupBy(_.protoId.get).filter(_._2.size > 1)
       if (duplicates.nonEmpty) {
         throw new AssertionError(
-          s"proto ids must be unique across all schema elements, however we found " +
-            s"the following duplicates:\n" +
+          s"proto ids must be unique across all schema elements, however we found the following " +
+            s"duplicates in $categoryName:\n" +
             duplicates.map { case (protoId , elements) => s"$protoId -> ${elements.mkString(",")}"}.mkString
         )
       }
     }
 
-    val schemaElementCategories =
-      Seq(schema.nodeProperties, schema.edgeProperties, schema.nodeTypes, schema.edgeTypes) ++ schema.constantsByCategory.values
-    schemaElementCategories.map(_.toSeq).foreach(ensureNoDuplicateProtoIds)
+    ensureNoDuplicateProtoIds("node properties", schema.nodeProperties)
+    ensureNoDuplicateProtoIds("edge properties", schema.edgeProperties)
+    ensureNoDuplicateProtoIds("node types", schema.nodeTypes)
+    ensureNoDuplicateProtoIds("edge types", schema.edgeTypes)
+    schema.constantsByCategory.foreach { case (categoryName, constants) =>
+      ensureNoDuplicateProtoIds(s"constants $categoryName", constants)
+    }
   }
 
   private def addAndReturn[A](buffer: mutable.Buffer[A], a: A): A = {
