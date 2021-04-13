@@ -6,7 +6,7 @@ import overflowdb.storage.ValueTypes
 import scala.collection.mutable
 
 class SchemaBuilder(basePackage: String) {
-  val propertyKeys = mutable.ListBuffer.empty[Property]
+  val properties = mutable.ListBuffer.empty[Property]
   val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseType]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
@@ -21,7 +21,7 @@ class SchemaBuilder(basePackage: String) {
     new NodeBaseType("CPG_NODE", Some("generic node base trait - use if you want to be explicitly unspecific"))
 
   def addProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(propertyKeys, new Property(name, stringToOption(comment), valueType, cardinality))
+    addAndReturn(properties, new Property(name, stringToOption(comment), valueType, cardinality))
 
   def addNodeBaseType(name: String, comment: String = ""): NodeBaseType =
     addAndReturn(nodeBaseTypes, new NodeBaseType(name, stringToOption(comment)))
@@ -44,20 +44,21 @@ class SchemaBuilder(basePackage: String) {
   }
 
   def build: Schema = {
-    verifyProtoIdsUnique
-    new Schema(
+    val schema = new Schema(
       basePackage,
-      propertyKeys.sortBy(_.name.toLowerCase).toSeq,
+      properties.sortBy(_.name.toLowerCase).toSeq,
       nodeBaseTypes.sortBy(_.name.toLowerCase).toSeq,
       nodeTypes.sortBy(_.name.toLowerCase).toSeq,
       edgeTypes.sortBy(_.name.toLowerCase).toSeq,
       constantsByCategory.toMap,
       protoOptions,
     )
+    verifyProtoIdsUnique(schema)
+    schema
   }
 
   /** proto ids must be unique (if used) */
-  def verifyProtoIdsUnique: Unit = {
+  def verifyProtoIdsUnique(schema: Schema): Unit = {
     def ensureNoDuplicateProtoIds(elements: Seq[HasOptionalProtoId]): Unit = {
       val elementsWithProtoId = elements.filter(_.protoId.isDefined)
       val duplicates = elementsWithProtoId.groupBy(_.protoId.get).filter(_._2.size > 1)
@@ -70,7 +71,8 @@ class SchemaBuilder(basePackage: String) {
       }
     }
 
-    val schemaElementCategories = Seq(propertyKeys, nodeTypes, edgeTypes) ++ constantsByCategory.values
+    val schemaElementCategories =
+      Seq(schema.nodeProperties, schema.edgeProperties, schema.nodeTypes, schema.edgeTypes) ++ schema.constantsByCategory.values
     schemaElementCategories.map(_.toSeq).foreach(ensureNoDuplicateProtoIds)
   }
 
