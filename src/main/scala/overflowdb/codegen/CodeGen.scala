@@ -205,14 +205,6 @@ class CodeGen(schema: Schema) {
     "_" + camelCase(edge.name + "_" + direction)
 
   protected def writeNodeFiles(outputDir: File): Seq[File] = {
-    val staticHeader =
-      s"""package $nodesPackage
-         |
-         |import overflowdb._
-         |import overflowdb.traversal.Traversal
-         |import scala.jdk.CollectionConverters._
-         |""".stripMargin
-
     val rootTypeImpl = {
       val genericNeighborAccessors = for {
         direction <- Direction.all
@@ -237,7 +229,11 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
       val reChars = "[](){}*+&|?.,\\\\$"
-      s"""$staticHeader
+      s"""package $nodesPackage
+         |
+         |import overflowdb._
+         |import scala.jdk.CollectionConverters._
+         |
          |$propertyErrorRegisterImpl
          |
          |object Misc {
@@ -279,6 +275,14 @@ class CodeGen(schema: Schema) {
          |  $factories
          |""".stripMargin
     }
+
+    val staticHeader =
+      s"""package $nodesPackage
+         |
+         |import overflowdb._
+         |import overflowdb.traversal.Traversal
+         |import scala.jdk.CollectionConverters._
+         |""".stripMargin
 
     lazy val nodeTraversalImplicits = {
       def implicitForNodeType(name: String) = {
