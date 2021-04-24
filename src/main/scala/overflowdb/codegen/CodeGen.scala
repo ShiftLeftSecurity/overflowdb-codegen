@@ -98,7 +98,6 @@ class CodeGen(schema: Schema) {
     val staticHeader =
       s"""package $edgesPackage
          |
-         |import java.util.{Set => JSet}
          |import overflowdb._
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
@@ -139,7 +138,7 @@ class CodeGen(schema: Schema) {
            |  object PropertyNames {
            |    $propertyNameDefs
            |    val all: Set[String] = Set(${propertyNames.mkString(", ")})
-           |    val allAsJava: JSet[String] = all.asJava
+           |    val allAsJava: java.util.Set[String] = all.asJava
            |  }
            |
            |  object Properties {
@@ -209,7 +208,6 @@ class CodeGen(schema: Schema) {
     val staticHeader =
       s"""package $nodesPackage
          |
-         |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import overflowdb._
          |import overflowdb.traversal.Traversal
          |import scala.collection.immutable
@@ -221,7 +219,7 @@ class CodeGen(schema: Schema) {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType, direction)
-      } yield s"def $accessor: JIterator[StoredNode] = { JCollections.emptyIterator() }"
+      } yield s"def $accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
 
       val keyBasedTraits =
         schema.nodeProperties.map { property =>
@@ -273,7 +271,7 @@ class CodeGen(schema: Schema) {
          |  def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = ???
          |
          |  /* all properties */
-         |  def valueMap: JMap[String, AnyRef]
+         |  def valueMap: java.util.Map[String, AnyRef]
          |
          |  ${genericNeighborAccessors.mkString("\n")}
          |}
@@ -776,7 +774,7 @@ class CodeGen(schema: Schema) {
            |  object PropertyNames {
            |    $propertyNameDefs
            |    val all: Set[String] = Set(${propertyNames.map(camelCaseCaps).mkString(", ")})
-           |    val allAsJava: JSet[String] = all.asJava
+           |    val allAsJava: java.util.Set[String] = all.asJava
            |  }
            |
            |  object Properties {
@@ -852,7 +850,7 @@ class CodeGen(schema: Schema) {
         }.mkString("\n")
 
         s""" {
-        |  val properties = new JHashMap[String, AnyRef]
+        |  val properties = new java.util.HashMap[String, AnyRef]
         |$putKeysImpl
         |$putRefsImpl
         |  properties
@@ -1016,7 +1014,7 @@ class CodeGen(schema: Schema) {
       val neighborDelegators = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfos, _), direction) =>
         val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
         val genericEdgeBasedDelegators =
-          s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
+          s"override def $accessorNameForEdge: java.util.Iterator[StoredNode] = get().$accessorNameForEdge"
 
         val specificNodeBasedDelegators = neighborNodeInfos.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
@@ -1046,7 +1044,7 @@ class CodeGen(schema: Schema) {
            |  $delegatingContainedNodeAccessors
            |  $neighborDelegators
            |  override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode): Unit = get().fromNewNode(newNode, mapping)
-           |  override def valueMap: JMap[String, AnyRef] = get.valueMap
+           |  override def valueMap: java.util.Map[String, AnyRef] = get.valueMap
            |  override def canEqual(that: Any): Boolean = get.canEqual(that)
            |  override def label: String = {
            |    $className.Label
@@ -1071,7 +1069,7 @@ class CodeGen(schema: Schema) {
       val neighborAccessors = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfo, offsetPos), direction) =>
         val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
         val genericEdgeBasedAccessor =
-          s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
+          s"override def $accessorNameForEdge: java.util.Iterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[java.util.Iterator[StoredNode]]"
 
         val specificNodeBasedAccessors = neighborNodeInfo.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
@@ -1173,7 +1171,7 @@ class CodeGen(schema: Schema) {
            |$containedNodesAsMembers
            |
            |  /* all properties */
-           |  override def valueMap: JMap[String, AnyRef] = $valueMapImpl
+           |  override def valueMap: java.util.Map[String, AnyRef] = $valueMapImpl
            |
            |  $neighborAccessors
            |
