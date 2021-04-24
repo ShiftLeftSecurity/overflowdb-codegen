@@ -209,7 +209,6 @@ class CodeGen(schema: Schema) {
     val staticHeader =
       s"""package $nodesPackage
          |
-         |import $edgesPackage
          |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
          |import overflowdb._
          |import overflowdb.traversal.Traversal
@@ -760,8 +759,8 @@ class CodeGen(schema: Schema) {
       def toLayoutInformationEntry(neighborInfos: Seq[NeighborInfo]): String = {
         neighborInfos.sortBy(_.offsetPosition).map { neighborInfo =>
           val edgeClass = neighborInfo.edge.className
-          s"edges.$edgeClass.layoutInformation"
-        }.mkString(", ")
+          s"$edgesPackage.$edgeClass.layoutInformation"
+        }.mkString(",\n")
       }
       val List(outEdgeLayouts, inEdgeLayouts) = List(neighborOutInfos, neighborInInfos).map(toLayoutInformationEntry)
 
