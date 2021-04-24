@@ -1376,7 +1376,6 @@ class CodeGen(schema: Schema) {
          |
          |object New${nodeType.className}{
          |  def apply() : New${nodeType.className}Builder = New${nodeType.className}Builder()
-         |  private def apply(${defaultsNoVal}): New${nodeType.className} = new New${nodeType.className}($paramId)
          |}
          |
          |case class New${nodeType.className} private[nodes] ($defaultsVal) extends NewNode with ${nodeType.className}Base {
