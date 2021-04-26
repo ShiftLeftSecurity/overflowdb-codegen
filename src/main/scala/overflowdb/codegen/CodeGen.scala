@@ -84,7 +84,7 @@ class CodeGen(schema: Schema) {
           case Cardinality.One => valueType
           case Cardinality.ZeroOrOne => valueType
           case Cardinality.List => s"scala.collection.Seq<$valueType>"
-          case Cardinality.ISeq => s"immutable.IndexedSeq<$valueType>"
+          case Cardinality.ISeq => s"collection.immutable.IndexedSeq<$valueType>"
         }
         s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
       }
@@ -98,7 +98,6 @@ class CodeGen(schema: Schema) {
     val staticHeader =
       s"""package $edgesPackage
          |
-         |import java.util.{Set => JSet}
          |import overflowdb._
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
@@ -139,7 +138,7 @@ class CodeGen(schema: Schema) {
            |  object PropertyNames {
            |    $propertyNameDefs
            |    val all: Set[String] = Set(${propertyNames.mkString(", ")})
-           |    val allAsJava: JSet[String] = all.asJava
+           |    val allAsJava: java.util.Set[String] = all.asJava
            |  }
            |
            |  object Properties {
@@ -206,23 +205,12 @@ class CodeGen(schema: Schema) {
     "_" + camelCase(edge.name + "_" + direction)
 
   protected def writeNodeFiles(outputDir: File): Seq[File] = {
-    val staticHeader =
-      s"""package $nodesPackage
-         |
-         |import $edgesPackage
-         |import java.util.{Collections => JCollections, HashMap => JHashMap, Iterator => JIterator, Map => JMap, Set => JSet}
-         |import overflowdb._
-         |import overflowdb.traversal.Traversal
-         |import scala.collection.immutable
-         |import scala.jdk.CollectionConverters._
-         |""".stripMargin
-
     val rootTypeImpl = {
       val genericNeighborAccessors = for {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType, direction)
-      } yield s"def $accessor: JIterator[StoredNode] = { JCollections.emptyIterator() }"
+      } yield s"def $accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
 
       val keyBasedTraits =
         schema.nodeProperties.map { property =>
@@ -241,7 +229,11 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
       val reChars = "[](){}*+&|?.,\\\\$"
-      s"""$staticHeader
+      s"""package $nodesPackage
+         |
+         |import overflowdb._
+         |import scala.jdk.CollectionConverters._
+         |
          |$propertyErrorRegisterImpl
          |
          |object Misc {
@@ -274,7 +266,7 @@ class CodeGen(schema: Schema) {
          |  def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = ???
          |
          |  /* all properties */
-         |  def valueMap: JMap[String, AnyRef]
+         |  def valueMap: java.util.Map[String, AnyRef]
          |
          |  ${genericNeighborAccessors.mkString("\n")}
          |}
@@ -283,6 +275,14 @@ class CodeGen(schema: Schema) {
          |  $factories
          |""".stripMargin
     }
+
+    val staticHeader =
+      s"""package $nodesPackage
+         |
+         |import overflowdb._
+         |import overflowdb.traversal.Traversal
+         |import scala.jdk.CollectionConverters._
+         |""".stripMargin
 
     lazy val nodeTraversalImplicits = {
       def implicitForNodeType(name: String) = {
@@ -760,8 +760,8 @@ class CodeGen(schema: Schema) {
       def toLayoutInformationEntry(neighborInfos: Seq[NeighborInfo]): String = {
         neighborInfos.sortBy(_.offsetPosition).map { neighborInfo =>
           val edgeClass = neighborInfo.edge.className
-          s"edges.$edgeClass.layoutInformation"
-        }.mkString(", ")
+          s"$edgesPackage.$edgeClass.layoutInformation"
+        }.mkString(",\n")
       }
       val List(outEdgeLayouts, inEdgeLayouts) = List(neighborOutInfos, neighborInInfos).map(toLayoutInformationEntry)
 
@@ -777,7 +777,7 @@ class CodeGen(schema: Schema) {
            |  object PropertyNames {
            |    $propertyNameDefs
            |    val all: Set[String] = Set(${propertyNames.map(camelCaseCaps).mkString(", ")})
-           |    val allAsJava: JSet[String] = all.asJava
+           |    val allAsJava: java.util.Set[String] = all.asJava
            |  }
            |
            |  object Properties {
@@ -853,7 +853,7 @@ class CodeGen(schema: Schema) {
         }.mkString("\n")
 
         s""" {
-        |  val properties = new JHashMap[String, AnyRef]
+        |  val properties = new java.util.HashMap[String, AnyRef]
         |$putKeysImpl
         |$putRefsImpl
         |  properties
@@ -913,8 +913,8 @@ class CodeGen(schema: Schema) {
                    |      case _ => throw new MatchError("unreachable")
                    |    }}.toArray
                    |
-                   |  this._$memberName = if(arr == null) immutable.ArraySeq.empty
-                   |    else immutable.ArraySeq.unsafeWrapArray(arr)
+                   |  this._$memberName = if(arr == null) collection.immutable.ArraySeq.empty
+                   |    else collection.immutable.ArraySeq.unsafeWrapArray(arr)
                    |}""".stripMargin
             }
           }
@@ -955,8 +955,8 @@ class CodeGen(schema: Schema) {
                    |""".stripMargin
               case Cardinality.ISeq =>
                 s"""
-                   |private var _${containedNode.localName}: immutable.ArraySeq[$containedNodeType] = immutable.ArraySeq.empty
-                   |def ${containedNode.localName}: immutable.IndexedSeq[$containedNodeType] = this._${containedNode.localName}
+                   |private var _${containedNode.localName}: collection.immutable.ArraySeq[$containedNodeType] = collection.immutable.ArraySeq.empty
+                   |def ${containedNode.localName}: collection.immutable.IndexedSeq[$containedNodeType] = this._${containedNode.localName}
                    |""".stripMargin
             }
           }
@@ -1002,7 +1002,7 @@ class CodeGen(schema: Schema) {
           case Cardinality.List =>
             s"""  def ${containedNode.localName}: Seq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.ISeq =>
-            s"""  def ${containedNode.localName}: immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
+            s"""  def ${containedNode.localName}: collection.immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
         }
       }.mkString("\n")
 
@@ -1017,7 +1017,7 @@ class CodeGen(schema: Schema) {
       val neighborDelegators = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfos, _), direction) =>
         val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
         val genericEdgeBasedDelegators =
-          s"override def $accessorNameForEdge: JIterator[StoredNode] = get().$accessorNameForEdge"
+          s"override def $accessorNameForEdge: java.util.Iterator[StoredNode] = get().$accessorNameForEdge"
 
         val specificNodeBasedDelegators = neighborNodeInfos.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
@@ -1047,7 +1047,7 @@ class CodeGen(schema: Schema) {
            |  $delegatingContainedNodeAccessors
            |  $neighborDelegators
            |  override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode): Unit = get().fromNewNode(newNode, mapping)
-           |  override def valueMap: JMap[String, AnyRef] = get.valueMap
+           |  override def valueMap: java.util.Map[String, AnyRef] = get.valueMap
            |  override def canEqual(that: Any): Boolean = get.canEqual(that)
            |  override def label: String = {
            |    $className.Label
@@ -1072,7 +1072,7 @@ class CodeGen(schema: Schema) {
       val neighborAccessors = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfo, offsetPos), direction) =>
         val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
         val genericEdgeBasedAccessor =
-          s"override def $accessorNameForEdge: JIterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[JIterator[StoredNode]]"
+          s"override def $accessorNameForEdge: java.util.Iterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[java.util.Iterator[StoredNode]]"
 
         val specificNodeBasedAccessors = neighborNodeInfo.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
@@ -1105,15 +1105,15 @@ class CodeGen(schema: Schema) {
                  |        case singleValue: $baseType => List(singleValue)
                  |        case null | None | Nil => Nil
                  |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
-                 |        case lst: List[_] => value.asInstanceOf[List[$baseType]]
+                 |        case _: List[_] => value.asInstanceOf[List[$baseType]]
                  |      }""".stripMargin
             case Cardinality.ISeq =>
               s"""value match {
-                 |        case null  => immutable.ArraySeq.empty
-                 |        case singleValue: $baseType => immutable.ArraySeq(singleValue)
-                 |        case arr: Array[$baseType] => if(arr.nonEmpty)  immutable.ArraySeq.unsafeWrapArray(arr) else immutable.ArraySeq.empty
-                 |        case jCollection: java.lang.Iterable[_] => if(jCollection.iterator.hasNext()) immutable.ArraySeq.unsafeWrapArray(jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toArray) else immutable.ArraySeq.empty
-                 |        case iter: Iterable[_] => if(iter.nonEmpty) immutable.ArraySeq.unsafeWrapArray(iter.asInstanceOf[Iterable[$baseType]].toArray) else immutable.ArraySeq.empty
+                 |        case null  => collection.immutable.ArraySeq.empty
+                 |        case singleValue: $baseType => collection.immutable.ArraySeq(singleValue)
+                 |        case arr: Array[$baseType] => if(arr.nonEmpty)  collection.immutable.ArraySeq.unsafeWrapArray(arr) else collection.immutable.ArraySeq.empty
+                 |        case jCollection: java.lang.Iterable[_] => if(jCollection.iterator.hasNext()) collection.immutable.ArraySeq.unsafeWrapArray(jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toArray) else collection.immutable.ArraySeq.empty
+                 |        case iter: Iterable[_] => if(iter.nonEmpty) collection.immutable.ArraySeq.unsafeWrapArray(iter.asInstanceOf[Iterable[$baseType]].toArray) else collection.immutable.ArraySeq.empty
                  |      }""".stripMargin
           }
           s"""|      case "$name" => this._$accessorName = $setter"""
@@ -1174,7 +1174,7 @@ class CodeGen(schema: Schema) {
            |$containedNodesAsMembers
            |
            |  /* all properties */
-           |  override def valueMap: JMap[String, AnyRef] = $valueMapImpl
+           |  override def valueMap: java.util.Map[String, AnyRef] = $valueMapImpl
            |
            |  $neighborAccessors
            |
@@ -1376,7 +1376,6 @@ class CodeGen(schema: Schema) {
          |
          |object New${nodeType.className}{
          |  def apply() : New${nodeType.className}Builder = New${nodeType.className}Builder()
-         |  private def apply(${defaultsNoVal}): New${nodeType.className} = new New${nodeType.className}($paramId)
          |}
          |
          |case class New${nodeType.className} private[nodes] ($defaultsVal) extends NewNode with ${nodeType.className}Base {
