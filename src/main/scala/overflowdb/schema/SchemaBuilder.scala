@@ -1,5 +1,6 @@
 package overflowdb.schema
 
+import overflowdb.codegen.DefaultNodeTypes
 import overflowdb.codegen.Helpers._
 import overflowdb.storage.ValueTypes
 
