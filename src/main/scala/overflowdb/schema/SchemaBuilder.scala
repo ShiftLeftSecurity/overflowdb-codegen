@@ -18,7 +18,7 @@ class SchemaBuilder(basePackage: String) {
    * it's not even part of the regular base types, but instead defined in the RootTypes.scala
    * */
   lazy val anyNode: NodeBaseType =
-    new NodeBaseType("CPG_NODE", Some("generic node base trait - use if you want to be explicitly unspecific"))
+    new NodeBaseType(DefaultNodeTypes.AbstractNodeName, Some("generic node base trait - use if you want to be explicitly unspecific"))
 
   def addProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
     addAndReturn(properties, new Property(name, stringToOption(comment), valueType, cardinality))

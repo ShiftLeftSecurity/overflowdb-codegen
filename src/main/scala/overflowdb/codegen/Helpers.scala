@@ -8,8 +8,8 @@ import scala.annotation.tailrec
 // TODO drop
 object DefaultNodeTypes {
   /** root type for all nodes */
-  val Node = "CPG_NODE"
-  val NodeClassname = "CpgNode"
+  val AbstractNodeName = "ABSTRACT_NODE"
+  val AbstractNodeClassname = "AbstractNode"
 }
 
 // TODO drop
@@ -44,7 +44,7 @@ object Helpers {
   }
 
   def isNodeBaseTrait(baseTraits: List[NodeBaseType], nodeName: String): Boolean =
-    nodeName == DefaultNodeTypes.Node || baseTraits.map(_.name).contains(nodeName)
+    nodeName == DefaultNodeTypes.AbstractNodeName || baseTraits.map(_.name).contains(nodeName)
 
   def camelCaseCaps(snakeCase: String): String = camelCase(snakeCase).capitalize
 
@@ -105,7 +105,7 @@ object Helpers {
   }
 
   def getCompleteType(containedNode: ContainedNode): String = {
-    val tpe = if (containedNode.nodeType.className != DefaultNodeTypes.NodeClassname) {
+    val tpe = if (containedNode.nodeType.className != DefaultNodeTypes.AbstractNodeClassname) {
       containedNode.nodeType.className + "Base"
     } else {
       containedNode.nodeType.className
