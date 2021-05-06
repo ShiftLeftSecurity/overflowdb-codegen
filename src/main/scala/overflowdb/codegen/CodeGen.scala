@@ -241,12 +241,13 @@ class CodeGen(schema: Schema) {
          |  def isRegex(pattern: String): Boolean = pattern.exists(reChars.contains(_))
          |}
          |
-         |trait CpgNode {
+         |/** Abstract supertype for overflowdb.Node and NewNode */
+         |trait AbstractNode {
          |  def label: String
          |}
          |
          |/* A node that is stored inside an Graph (rather than e.g. DiffGraph) */
-         |trait StoredNode extends Node with CpgNode with Product {
+         |trait StoredNode extends Node with AbstractNode with Product {
          |  /* underlying Node in the graph.
          |   * since this is a StoredNode, this is always set */
          |  def underlying: Node = this
@@ -694,7 +695,7 @@ class CodeGen(schema: Schema) {
          |
          |import overflowdb.traversal.Traversal
          |
-         |trait ${className}Base extends CpgNode
+         |trait ${className}Base extends AbstractNode
          |$mixins
          |$mixinTraitsForBase
          |
@@ -1007,7 +1008,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
 
       val nodeBaseImpl =
-        s"""trait ${className}Base extends CpgNode $mixinTraitsForBase $propertyBasedTraits {
+        s"""trait ${className}Base extends AbstractNode $mixinTraitsForBase $propertyBasedTraits {
            |  def asStored : StoredNode = this.asInstanceOf[StoredNode]
            |
            |  $abstractContainedNodeAccessors
@@ -1250,7 +1251,7 @@ class CodeGen(schema: Schema) {
       s"""package $nodesPackage
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
-         |trait NewNode extends CpgNode {
+         |trait NewNode extends AbstractNode {
          |  def properties: Map[String, Any]
          |}
          |
