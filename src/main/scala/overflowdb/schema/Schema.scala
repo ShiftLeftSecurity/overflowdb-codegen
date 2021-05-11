@@ -28,7 +28,8 @@ class Schema(val basePackage: String,
     )
 }
 
-abstract class AbstractNodeType(val name: String, val comment: Option[String]) extends HasClassName with HasProperties {
+abstract class AbstractNodeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
+  extends HasClassName with HasProperties with HasSchemaInfo {
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
@@ -81,7 +82,8 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String]) e
     (_inEdges ++ _extendz.flatMap(_.inEdges)).toSeq
 }
 
-class NodeType(name: String, comment: Option[String]) extends AbstractNodeType(name, comment) with HasOptionalProtoId  {
+class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
+  extends AbstractNodeType(name, comment, schemaInfo) with HasOptionalProtoId  {
   protected val _containedNodes: mutable.Set[ContainedNode] = mutable.Set.empty
 
   lazy val classNameDb = s"${className}Db"
@@ -97,7 +99,8 @@ class NodeType(name: String, comment: Option[String]) extends AbstractNodeType(n
   override def toString = s"NodeType($name)"
 }
 
-class NodeBaseType(name: String, comment: Option[String]) extends AbstractNodeType(name, comment) {
+class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
+  extends AbstractNodeType(name, comment, schemaInfo) {
   override def toString = s"NodeBaseType($name)"
 }
 
@@ -118,27 +121,31 @@ object Cardinality {
       .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq`, but was $name"))
 }
 
-class EdgeType(val name: String, val comment: Option[String]) extends HasClassName with HasProperties with HasOptionalProtoId {
+class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
+  extends HasClassName with HasProperties with HasOptionalProtoId with HasSchemaInfo {
   override def toString = s"EdgeType($name)"
 }
 
 class Property(val name: String,
                val comment: Option[String],
                val valueType: ValueTypes,
-               val cardinality: Cardinality) extends HasClassName with HasOptionalProtoId {
+               val cardinality: Cardinality,
+               val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
   override def toString = s"Property($name)"
 }
 
 class Constant(val name: String,
                val value: String,
                val valueType: ValueTypes,
-               val comment: Option[String]) extends HasOptionalProtoId {
+               val comment: Option[String],
+               val schemaInfo: SchemaInfo) extends HasOptionalProtoId with HasSchemaInfo {
   override def toString = s"Constant($name)"
 }
 
 object Constant {
-  def apply(name: String, value: String, valueType: ValueTypes, comment: String = ""): Constant =
-    new Constant(name, value, valueType, stringToOption(comment))
+  def apply(name: String, value: String, valueType: ValueTypes, comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Constant =
+    new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
 }
 
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
@@ -156,7 +163,7 @@ object Direction extends Enumeration {
 
 object DefaultEdgeTypes {
   // TODO define this in actual schema, not here
-  val ContainsNode = new EdgeType("CONTAINS_NODE", None).protoId(9)
+  val ContainsNode = new EdgeType("CONTAINS_NODE", None, SchemaInfo.forClass(getClass)).protoId(9)
 }
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)
@@ -198,4 +205,18 @@ trait HasOptionalProtoId {
   }
 
   def protoId: Option[Int] = _protoId
+}
+
+trait HasSchemaInfo {
+  def schemaInfo: SchemaInfo
+}
+
+/** carry extra information on where a schema element is being defined, e.g. when we want to be able to
+ * refer back that `node XYZ` was defined in `BaseSchema`, e.g. for documentation */
+case class SchemaInfo(definedIn: Option[Class[_]])
+object SchemaInfo {
+  val Unknown = SchemaInfo(None)
+
+  def forClass(schemaClass: Class[_]): SchemaInfo =
+    SchemaInfo(Option(schemaClass))
 }

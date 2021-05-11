@@ -19,19 +19,27 @@ class SchemaBuilder(basePackage: String) {
    * it's not even part of the regular base types, but instead defined in the RootTypes.scala
    * */
   lazy val anyNode: NodeBaseType =
-    new NodeBaseType(DefaultNodeTypes.AbstractNodeName, Some("generic node base trait - use if you want to be explicitly unspecific"))
+    new NodeBaseType(
+      DefaultNodeTypes.AbstractNodeName,
+      Some("generic node base trait - use if you want to be explicitly unspecific"),
+      SchemaInfo.forClass(getClass)
+    )
 
-  def addProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = ""): Property =
-    addAndReturn(properties, new Property(name, stringToOption(comment), valueType, cardinality))
+  def addProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property =
+    addAndReturn(properties, new Property(name, stringToOption(comment), valueType, cardinality, schemaInfo))
 
-  def addNodeBaseType(name: String, comment: String = ""): NodeBaseType =
-    addAndReturn(nodeBaseTypes, new NodeBaseType(name, stringToOption(comment)))
+  def addNodeBaseType(name: String, comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): NodeBaseType =
+    addAndReturn(nodeBaseTypes, new NodeBaseType(name, stringToOption(comment), schemaInfo))
 
-  def addEdgeType(name: String, comment: String = ""): EdgeType =
-    addAndReturn(edgeTypes, new EdgeType(name, stringToOption(comment)))
+  def addEdgeType(name: String, comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): EdgeType =
+    addAndReturn(edgeTypes, new EdgeType(name, stringToOption(comment), schemaInfo))
 
-  def addNodeType(name: String, comment: String = ""): NodeType =
-    addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment)))
+  def addNodeType(name: String, comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): NodeType =
+    addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), schemaInfo))
 
   def addConstants(category: String, constants: Constant*): Seq[Constant] = {
     val previousEntries = constantsByCategory.getOrElse(category, Seq.empty)
