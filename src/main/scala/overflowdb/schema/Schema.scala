@@ -149,7 +149,12 @@ object Constant {
 }
 
 case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
-case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int)
+case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int) {
+  lazy val deriveNeighborNodeType: String = nodeInfos match {
+    case Seq(singleEntry) => singleEntry.className
+    case _ => "StoredNode"
+  }
+}
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value

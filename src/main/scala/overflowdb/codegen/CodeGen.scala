@@ -1070,12 +1070,13 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfo, offsetPos), direction) =>
-        val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
+      val neighborAccessors = neighborInfos.map { case (neighborInfo, direction) =>
+        val accessorNameForEdge = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+        val accessorReturnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
         val genericEdgeBasedAccessor =
-          s"override def $accessorNameForEdge: java.util.Iterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[java.util.Iterator[StoredNode]]"
+          s"override def $accessorNameForEdge: $accessorReturnType = createAdjacentNodeIteratorByOffSet(${neighborInfo.offsetPosition}).asInstanceOf[$accessorReturnType]"
 
-        val specificNodeBasedAccessors = neighborNodeInfo.map {
+        val specificNodeBasedAccessors = neighborInfo.nodeInfos.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             cardinality match {
               case Cardinality.List =>
