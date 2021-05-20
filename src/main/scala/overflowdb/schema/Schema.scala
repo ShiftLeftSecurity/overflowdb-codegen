@@ -2,6 +2,7 @@ package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
 import overflowdb.storage.ValueTypes
+
 import scala.collection.mutable
 
 /**
@@ -149,11 +150,24 @@ object Constant {
 }
 
 case class NeighborNodeInfo(accessorName: String, node: AbstractNodeType, cardinality: Cardinality)
+
 case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int) {
   lazy val deriveNeighborNodeType: String = {
     val nodeInfosSet = nodeInfos.map(_.node).toSet
-    if (nodeInfosSet.size == 1) nodeInfosSet.head.className
-    else "StoredNode"
+    val defaultNodeType = "StoredNode"
+
+    if (nodeInfosSet.size == 1) {
+      nodeInfosSet.head.className
+    } else if (nodeInfosSet.size > 1) {
+      /** try to find common supertype. this is nontrivial and we're probably missing a few cases.
+       * trying to at least keep it deterministic... */
+//      def deriveCommonSuperType(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] =
+//      Helpers.deriveCommonSuperType(nodeInfosSet).map(_.className).getOrElse(defaultNodeType)
+      "TODO"
+
+    } else {
+      defaultNodeType
+    }
   }
 }
 
