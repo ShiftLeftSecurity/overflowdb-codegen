@@ -176,4 +176,22 @@ object Helpers {
     if (scalaReservedKeywords.contains(value)) s"`$value`"
     else value
 
+  /** try to find common supertype. this is nontrivial and we're probably missing a few cases.
+   * trying to at least keep it deterministic...
+   */
+  def deriveCommonSuperType(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] = {
+    if (nodeTypes.size == 1) {
+      Some(nodeTypes.head)
+    } else if (nodeTypes.size > 1) {
+      /** try to find common supertype. this is nontrivial and we're probably missing a few cases.
+       * trying to at least keep it deterministic... */
+      //      def deriveCommonSuperType(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] =
+      //      Helpers.deriveCommonSuperType(nodeInfosSet).map(_.className).getOrElse(defaultNodeType)
+      // "TODO"
+      ???
+    } else {
+      None
+    }
+  }
+
 }
