@@ -5,15 +5,19 @@ import org.scalatest.wordspec.AnyWordSpec
 
 class SchemaTest extends AnyWordSpec with Matchers {
 
-  "NeighborInfo.deriveNeighborNodeType" should {
+  "NeighborInfo.deriveNeighborNodeType" when {
     val defaultNeighborNodeType = "StoredNode"
 
-    "for no (known) neighbor" in {
+    "having no (known) neighbor" in {
       neighborInfoWith(Seq.empty).deriveNeighborNodeType shouldBe defaultNeighborNodeType
     }
 
-    "for one neighbor" in {
+    "having one neighbor" in {
       neighborInfoWith(Seq("Foo")).deriveNeighborNodeType shouldBe "Foo"
+    }
+
+    "having multiple neighbors with same type" in {
+      neighborInfoWith(Seq("Foo", "Foo")).deriveNeighborNodeType shouldBe "Foo"
     }
 
     def neighborInfoWith(nodeClassnames: Seq[String]): NeighborInfo =
