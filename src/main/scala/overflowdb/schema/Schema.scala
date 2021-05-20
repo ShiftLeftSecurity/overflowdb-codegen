@@ -148,11 +148,11 @@ object Constant {
     new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
 }
 
-case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
+case class NeighborNodeInfo(accessorName: String, node: AbstractNodeType, cardinality: Cardinality)
 case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int) {
   lazy val deriveNeighborNodeType: String = {
-    val nodeInfosSet = nodeInfos.map(_.className).toSet
-    if (nodeInfosSet.size == 1) nodeInfosSet.head
+    val nodeInfosSet = nodeInfos.map(_.node).toSet
+    if (nodeInfosSet.size == 1) nodeInfosSet.head.className
     else "StoredNode"
   }
 }

@@ -730,16 +730,16 @@ class CodeGen(schema: Schema) {
         var _currOffsetPos = -1
         def nextOffsetPos = { _currOffsetPos += 1; _currOffsetPos }
 
-        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
-          val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
-          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), neighborClassName, cardinality)
+        def createNeighborNodeInfo(node: AbstractNodeType, edgeAndDirection: String, cardinality: Cardinality) = {
+          val accessorName = s"_${camelCase(node.name)}Via${edgeAndDirection.capitalize}"
+          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), node, cardinality)
         }
 
         val neighborOutInfos =
           nodeType.outEdges.groupBy(_.viaEdge).map { case (edge, outEdges) =>
             val viaEdgeAndDirection = edge.className + "Out"
             val neighborNodeInfos = outEdges.map { case AdjacentNode(_, inNode, cardinality) =>
-              createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
+              createNeighborNodeInfo(inNode, viaEdgeAndDirection, cardinality)
             }
             NeighborInfo(edge, neighborNodeInfos, nextOffsetPos)
           }.toSeq
@@ -748,7 +748,7 @@ class CodeGen(schema: Schema) {
           nodeType.inEdges.groupBy(_.viaEdge).map { case (edge, inEdges) =>
             val viaEdgeAndDirection = edge.className + "In"
             val neighborNodeInfos = inEdges.map { case AdjacentNode(_, outNode, cardinality) =>
-              createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
+              createNeighborNodeInfo(outNode, viaEdgeAndDirection, cardinality)
             }
             NeighborInfo(edge, neighborNodeInfos, nextOffsetPos)
           }.toSeq
