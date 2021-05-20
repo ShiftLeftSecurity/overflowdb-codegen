@@ -8,20 +8,19 @@ class SchemaTest extends AnyWordSpec with Matchers {
   "NeighborInfo.deriveNeighborNodeType" should {
     val defaultNeighborNodeType = "StoredNode"
 
-    def neighborInfoWith(nodeInfos: Seq[NeighborNodeInfo]): NeighborInfo =
-       NeighborInfo(edge = null, nodeInfos, offsetPosition = 0)
-
-
     "for no (known) neighbor" in {
-      neighborInfoWith(nodeInfos = Seq.empty).deriveNeighborNodeType shouldBe defaultNeighborNodeType
+      neighborInfoWith(Seq.empty).deriveNeighborNodeType shouldBe defaultNeighborNodeType
     }
 
     "for one neighbor" in {
-      val nodeInfos = Seq(
-        NeighborNodeInfo(accessorName = null, className = "Foo", cardinality = null)
-      )
-      neighborInfoWith(nodeInfos).deriveNeighborNodeType shouldBe "Foo"
+      neighborInfoWith(Seq("Foo")).deriveNeighborNodeType shouldBe "Foo"
     }
+
+    def neighborInfoWith(nodeClassnames: Seq[String]): NeighborInfo =
+      NeighborInfo(
+        edge = null,
+        nodeClassnames.map(c => NeighborNodeInfo(accessorName = null, className = c, cardinality = null)),
+        offsetPosition = 0)
   }
 
 }
