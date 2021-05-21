@@ -199,6 +199,6 @@ object Helpers {
   }
 
   def allTypes(node: AbstractNodeType): Seq[AbstractNodeType] =
-    node +: node.extendz.flatMap(allTypes)
+    node +: node.extendzRecursively
 
 }

@@ -55,6 +55,11 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   def extendz: Seq[NodeBaseType] =
     _extendz.toSeq
 
+  def extendzRecursively: Seq[NodeBaseType] = {
+    val extendsLevel1 = extendz
+    extendsLevel1 ++ extendsLevel1.flatMap(_.extendzRecursively)
+  }
+
   /**
    * note: allowing to define one outEdge for ONE inNode only - if you are looking for Union Types, please use NodeBaseTypes
    */
