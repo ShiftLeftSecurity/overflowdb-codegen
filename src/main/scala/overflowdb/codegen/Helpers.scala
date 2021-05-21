@@ -183,8 +183,18 @@ object Helpers {
     if (nodeTypes.size == 1) {
       Some(nodeTypes.head)
     } else if (nodeTypes.size > 1) {
-      /** try to find common supertype. this is nontrivial and we're probably missing a few cases.
-       * trying to at least keep it deterministic... */
+      /** Trying to find common supertype. This is nontrivial and we're probably missing a few cases.
+       * Trying to at least keep it deterministic...
+       * Idea: take one nodeType and check if it's type or any of it's supertypes are declared in *all* other nodeTypes
+       * */
+      val sorted = nodeTypes.toSeq.sortBy(_.className)
+      val (first, other) = (sorted.head, sorted.tail)
+      val candidates: Seq[AbstractNodeType] = first +: first.extendz
+      candidates.find { candidate =>
+        false
+      }
+
+
       //      def deriveCommonSuperType(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] =
       //      Helpers.deriveCommonSuperType(nodeInfosSet).map(_.className).getOrElse(defaultNodeType)
       // "TODO"
