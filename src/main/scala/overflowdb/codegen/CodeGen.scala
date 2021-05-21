@@ -691,16 +691,12 @@ class CodeGen(schema: Schema) {
         s"with ${baseTrait.className}Base"
       }.mkString(" ")
 
-      def generateEdgeAccessors(neighbors: Seq[AdjacentNode], direction: Direction.Value) =
+      def abstractEdgeAccessors(neighbors: Seq[AdjacentNode], direction: Direction.Value) =
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = camelCase(edge.className) + camelCaseCaps(direction.toString)
           val neighborNodesType = deriveCommonSuperType(neighbors.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
           s"def _$edgeAccessorName: java.util.Iterator[$neighborNodesType]"
-        }
-
-      val abstractEdgeAccessors =
-        (generateEdgeAccessors(nodeBaseType.outEdges, Direction.OUT) ++
-          generateEdgeAccessors(nodeBaseType.inEdges, Direction.IN)).mkString("\n")
+        }.mkString("\n")
 
       s"""package $nodesPackage
          |
@@ -712,7 +708,8 @@ class CodeGen(schema: Schema) {
          |
          |trait $className extends StoredNode with ${className}Base
          |$mixinTraits {
-         |$abstractEdgeAccessors
+         |${abstractEdgeAccessors(nodeBaseType.outEdges, Direction.OUT)}
+         |${abstractEdgeAccessors(nodeBaseType.inEdges, Direction.IN)}
          |}
          |
          |${generatePropertyTraversals(className, properties)}
