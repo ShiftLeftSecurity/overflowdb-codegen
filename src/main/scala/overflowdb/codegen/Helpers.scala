@@ -176,9 +176,6 @@ object Helpers {
     if (scalaReservedKeywords.contains(value)) s"`$value`"
     else value
 
-  /** try to find common supertype. this is nontrivial and we're probably missing a few cases.
-   * trying to at least keep it deterministic...
-   */
   def deriveCommonSuperType(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] = {
     if (nodeTypes.size == 1) {
       Some(nodeTypes.head)
@@ -187,8 +184,6 @@ object Helpers {
        * Trying to at least keep it deterministic...
        * Idea: take one nodeType and check if it's type or any of it's supertypes are declared in *all* other nodeTypes
        * */
-      def allTypes(node: AbstractNodeType): Seq[AbstractNodeType] =
-        node +: node.extendz
 
       val sorted = nodeTypes.toSeq.sortBy(_.className)
 
@@ -202,5 +197,8 @@ object Helpers {
       None
     }
   }
+
+  def allTypes(node: AbstractNodeType): Seq[AbstractNodeType] =
+    node +: node.extendz.flatMap(allTypes)
 
 }
