@@ -187,18 +187,17 @@ object Helpers {
        * Trying to at least keep it deterministic...
        * Idea: take one nodeType and check if it's type or any of it's supertypes are declared in *all* other nodeTypes
        * */
+      def allTypes(node: AbstractNodeType): Seq[AbstractNodeType] =
+        node +: node.extendz
+
       val sorted = nodeTypes.toSeq.sortBy(_.className)
-      val (first, other) = (sorted.head, sorted.tail)
-      val candidates: Seq[AbstractNodeType] = first +: first.extendz
-      candidates.find { candidate =>
-        false
+
+      val (first, otherNodes) = (sorted.head, sorted.tail)
+      allTypes(first).find { candidate =>
+        otherNodes.forall { otherNode =>
+          allTypes(otherNode).contains(candidate)
+        }
       }
-
-
-      //      def deriveCommonSuperType(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] =
-      //      Helpers.deriveCommonSuperType(nodeInfosSet).map(_.className).getOrElse(defaultNodeType)
-      // "TODO"
-      ???
     } else {
       None
     }
