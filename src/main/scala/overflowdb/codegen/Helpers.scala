@@ -201,4 +201,12 @@ object Helpers {
   def allTypes(node: AbstractNodeType): Seq[AbstractNodeType] =
     node +: node.extendzRecursively
 
+  def fullScalaType(neighborNodeClass: String, cardinality: Cardinality): String =
+    cardinality match {
+      case Cardinality.List => s"Iterator[$neighborNodeClass]"
+      case Cardinality.ZeroOrOne => s"Option[$neighborNodeClass]"
+      case Cardinality.One => s"$neighborNodeClass"
+      case Cardinality.ISeq => ???
+    }
+
 }

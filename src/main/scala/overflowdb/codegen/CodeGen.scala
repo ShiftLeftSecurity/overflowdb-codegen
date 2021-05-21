@@ -691,11 +691,20 @@ class CodeGen(schema: Schema) {
         s"with ${baseTrait.className}Base"
       }.mkString(" ")
 
+      // TODO refactor: extract common parts with NodeRefImpl, e.g. for the return types and supertypes
       def abstractEdgeAccessors(neighbors: Seq[AdjacentNode], direction: Direction.Value) =
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
-          val edgeAccessorName = camelCase(edge.className) + camelCaseCaps(direction.toString)
+          val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
           val neighborNodesType = deriveCommonSuperType(neighbors.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
-          s"def _$edgeAccessorName: java.util.Iterator[$neighborNodesType]"
+          val genericEdgeAccessor = s"def $edgeAccessorName: java.util.Iterator[$neighborNodesType]"
+
+          val specificNodeAccessors = neighbors.map { adjacentNode =>
+            // TODO do this for all supertypes of adjacentNode.neighbor
+            val accessorName = s"_${camelCase(adjacentNode.neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+            s"def $accessorName: ${fullScalaType(className, adjacentNode.cardinality)} = ???"
+          }.mkString("\n")
+          s"""$genericEdgeAccessor
+             |$specificNodeAccessors""".stripMargin
         }.mkString("\n")
 
       s"""package $nodesPackage
@@ -1032,14 +1041,8 @@ class CodeGen(schema: Schema) {
           s"override def $accessorNameForEdge: $accessorReturnType = get().$accessorNameForEdge"
 
         val specificNodeBasedDelegators = neighborInfo.nodeInfos.map {
-          case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
-            val returnType = cardinality match {
-              case Cardinality.List => s"Iterator[$className]"
-              case Cardinality.ZeroOrOne => s"Option[$className]"
-              case Cardinality.One => s"$className"
-              case Cardinality.ISeq => ???
-            }
-            s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
+          case NeighborNodeInfo(accessorNameForNode, nodeType, cardinality) =>
+            s"def $accessorNameForNode: ${fullScalaType(nodeType.className, cardinality)} = get().$accessorNameForNode"
         }.mkString("\n")
         s"""$specificNodeBasedDelegators
            |$genericEdgeBasedDelegators""".stripMargin
