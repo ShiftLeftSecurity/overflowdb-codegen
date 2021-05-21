@@ -675,21 +675,28 @@ class CodeGen(schema: Schema) {
          |}""".stripMargin
     }
 
-    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseType): String = {
-      val className = nodeBaseTrait.className
-      val properties = nodeBaseTrait.properties
+    def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
+      val className = nodeBaseType.className
+      val properties = nodeBaseType.properties
 
-      val mixins = nodeBaseTrait.properties.map { property =>
+      val mixins = nodeBaseType.properties.map { property =>
         s"with Has${property.className}"
       }.mkString(" ")
 
-      val mixinTraits = nodeBaseTrait.extendz.map { baseTrait =>
+      val mixinTraits = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}"
       }.mkString(" ")
 
-      val mixinTraitsForBase = nodeBaseTrait.extendz.map { baseTrait =>
+      val mixinTraitsForBase = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}Base"
       }.mkString(" ")
+
+      val abstractEdgeAccessors =
+        nodeBaseType.outEdges.groupBy(_.viaEdge).map { case (edge, outEdges) =>
+          val inNodesType = deriveCommonSuperType(outEdges.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
+          s"def _${camelCase(edge.className)}Out: java.util.Iterator[$inNodesType]"
+        }.mkString("\n")
+      // TODO same for IN edges
 
       s"""package $nodesPackage
          |
@@ -700,7 +707,9 @@ class CodeGen(schema: Schema) {
          |$mixinTraitsForBase
          |
          |trait $className extends StoredNode with ${className}Base
-         |$mixinTraits
+         |$mixinTraits {
+         |$abstractEdgeAccessors
+         |}
          |
          |${generatePropertyTraversals(className, properties)}
          |
