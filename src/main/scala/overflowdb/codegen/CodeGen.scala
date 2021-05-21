@@ -701,7 +701,7 @@ class CodeGen(schema: Schema) {
           val specificNodeAccessors = neighbors.map { adjacentNode =>
             // TODO do this for all supertypes of adjacentNode.neighbor
             val accessorName = s"_${camelCase(adjacentNode.neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
-            s"def $accessorName: ${fullScalaType(className, adjacentNode.cardinality)} = ???"
+            s"def $accessorName: ${fullScalaType(adjacentNode.neighbor, adjacentNode.cardinality)} = ???"
           }.mkString("\n")
           s"""$genericEdgeAccessor
              |$specificNodeAccessors""".stripMargin
@@ -1042,8 +1042,9 @@ class CodeGen(schema: Schema) {
 
         val specificNodeBasedDelegators = neighborInfo.nodeInfos.map {
           case NeighborNodeInfo(accessorNameForNode, nodeType, cardinality) =>
-            s"def $accessorNameForNode: ${fullScalaType(nodeType.className, cardinality)} = get().$accessorNameForNode"
+            s"def $accessorNameForNode: ${fullScalaType(nodeType, cardinality)} = get().$accessorNameForNode"
         }.mkString("\n")
+        
         s"""$specificNodeBasedDelegators
            |$genericEdgeBasedDelegators""".stripMargin
       }.mkString("\n")
