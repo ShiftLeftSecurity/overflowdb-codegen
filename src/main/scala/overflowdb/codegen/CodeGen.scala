@@ -1015,12 +1015,13 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      val neighborDelegators = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfos, _), direction) =>
-        val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
+      val neighborDelegators = neighborInfos.map { case (neighborInfo, direction) =>
+        val accessorNameForEdge = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+        val accessorReturnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
         val genericEdgeBasedDelegators =
-          s"override def $accessorNameForEdge: java.util.Iterator[StoredNode] = get().$accessorNameForEdge"
+          s"override def $accessorNameForEdge: $accessorReturnType = get().$accessorNameForEdge"
 
-        val specificNodeBasedDelegators = neighborNodeInfos.map {
+        val specificNodeBasedDelegators = neighborInfo.nodeInfos.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             val returnType = cardinality match {
               case Cardinality.List => s"Iterator[$className]"
