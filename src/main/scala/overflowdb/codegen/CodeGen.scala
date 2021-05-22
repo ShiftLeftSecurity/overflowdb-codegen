@@ -1047,19 +1047,10 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      val neighborDelegators = neighborInfos.map { case (neighborInfo, direction) =>
-        val accessorNameForEdge = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val accessorReturnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
-        val genericEdgeBasedDelegators =
-          s"override def $accessorNameForEdge: $accessorReturnType = get().$accessorNameForEdge"
-
-        val specificNodeBasedDelegators = neighborInfo.nodeInfos.map {
-          case NeighborNodeInfo(accessorNameForNode, nodeType, cardinality) =>
-            s"def $accessorNameForNode: ${fullScalaType(nodeType, cardinality)} = get().$accessorNameForNode"
-        }.mkString("\n")
-
-        s"""$specificNodeBasedDelegators
-           |$genericEdgeBasedDelegators""".stripMargin
+      val edgeDelegators = neighborInfos.map { case (neighborInfo, direction) =>
+        val accessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+        val returnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
+        s"override def $accessorName: $returnType = get().$accessorName"
       }.mkString("\n")
 
       val nodeRefImpl = {
@@ -1074,7 +1065,7 @@ class CodeGen(schema: Schema) {
            |  $mixinTraits {
            |  $propertyDelegators
            |  $delegatingContainedNodeAccessors
-           |  $neighborDelegators
+           |  $edgeDelegators
            |  override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode): Unit = get().fromNewNode(newNode, mapping)
            |  override def valueMap: java.util.Map[String, AnyRef] = get.valueMap
            |  override def canEqual(that: Any): Boolean = get.canEqual(that)
@@ -1098,26 +1089,10 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos.map { case (neighborInfo, direction) =>
-        val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val edgeAccessorType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
-        val genericEdgeAccessor =
-          s"override def $edgeAccessorName: $edgeAccessorType = createAdjacentNodeIteratorByOffSet(${neighborInfo.offsetPosition}).asInstanceOf[$edgeAccessorType]"
-
-        val specificNodeAccessors = neighborInfo.nodeInfos.map {
-          case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
-            cardinality match {
-              case Cardinality.List =>
-                s"def $accessorNameForNode: Iterator[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }"
-              case Cardinality.ZeroOrOne =>
-                s"def $accessorNameForNode: Option[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }.nextOption()"
-              case Cardinality.One =>
-                s"def $accessorNameForNode: $className = $edgeAccessorName.asScala.collect { case node: $className => node }.next()"
-              case Cardinality.ISeq => ???
-            }
-        }.mkString("\n")
-        s"""$specificNodeAccessors
-           |$genericEdgeAccessor""".stripMargin
+      val edgeAccessors = neighborInfos.map { case (neighborInfo, direction) =>
+        val accessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+        val returnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
+        s"override def $accessorName: $returnType = createAdjacentNodeIteratorByOffSet(${neighborInfo.offsetPosition}).asInstanceOf[$returnType]"
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
@@ -1206,7 +1181,7 @@ class CodeGen(schema: Schema) {
            |  /* all properties */
            |  override def valueMap: java.util.Map[String, AnyRef] = $valueMapImpl
            |
-           |  $neighborAccessors
+           |  $edgeAccessors
            |
            |  override def label: String = {
            |    $className.Label
