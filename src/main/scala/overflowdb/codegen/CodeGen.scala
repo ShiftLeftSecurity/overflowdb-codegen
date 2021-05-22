@@ -697,19 +697,21 @@ class CodeGen(schema: Schema) {
           val neighborNodesType = deriveCommonSuperType(neighbors.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
           val genericEdgeAccessor = s"def $edgeAccessorName: java.util.Iterator[$neighborNodesType]"
 
-          // TODO do this for all supertypes of adjacentNode.neighbor
-          val specificNodeAccessors = neighbors.map { adjacentNode =>
+          val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
-            val accessorName = s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
-            val className = neighbor.className
-            adjacentNode.cardinality match {
-              case Cardinality.List =>
-                s"def $accessorName: Iterator[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }"
-              case Cardinality.ZeroOrOne =>
-                s"def $accessorName: Option[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }.nextOption()"
-              case Cardinality.One =>
-                s"def $accessorName: $className = $edgeAccessorName.asScala.collect { case node: $className => node }.next()"
-              case Cardinality.ISeq => ???
+            val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
+            entireNodeHierarchy.map { neighbor =>
+              val accessorName = s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+              val className = neighbor.className
+              adjacentNode.cardinality match {
+                case Cardinality.List =>
+                  s"def $accessorName: Iterator[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }"
+                case Cardinality.ZeroOrOne =>
+                  s"def $accessorName: Option[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }.nextOption()"
+                case Cardinality.One =>
+                  s"def $accessorName: $className = $edgeAccessorName.asScala.collect { case node: $className => node }.next()"
+                case Cardinality.ISeq => ???
+              }
             }
           }.mkString("\n\n")
 

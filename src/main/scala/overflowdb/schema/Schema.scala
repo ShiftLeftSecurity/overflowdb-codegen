@@ -16,6 +16,10 @@ class Schema(val basePackage: String,
              val constantsByCategory: Map[String, Seq[Constant]],
              val protoOptions: Option[ProtoOptions]) {
 
+  /** nodeTypes and nodeBaseTypes combined */
+  lazy val allNodeTypes: Seq[AbstractNodeType] =
+    nodeTypes ++ nodeBaseTypes
+
   /** properties that are used in node types */
   def nodeProperties: Seq[Property] =
     properties.filter(property =>
