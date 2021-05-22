@@ -691,7 +691,7 @@ class CodeGen(schema: Schema) {
         s"with ${baseTrait.className}Base"
       }.mkString(" ")
 
-      // TODO refactor: extract common parts with NodeRefImpl, e.g. for the return types and supertypes
+      // TODO refactor: extract common parts with NodeRefImpl et al
       def abstractEdgeAccessors(neighbors: Seq[AdjacentNode], direction: Direction.Value) =
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
@@ -699,9 +699,23 @@ class CodeGen(schema: Schema) {
           val genericEdgeAccessor = s"def $edgeAccessorName: java.util.Iterator[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.map { adjacentNode =>
+            val neighbor = adjacentNode.neighbor
             // TODO do this for all supertypes of adjacentNode.neighbor
-            val accessorName = s"_${camelCase(adjacentNode.neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
-            s"def $accessorName: ${fullScalaType(adjacentNode.neighbor, adjacentNode.cardinality)} = ???"
+            val accessorName = s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+            /*
+              def _node2ViaEdge1Out: Iterator[Node2] =
+                  _edge1Out.asScala.collect { case node: RootNode2 => node }
+
+            def fullScalaType(neighborNode: AbstractNodeType, cardinality: Cardinality): String = {
+              val neighborNodeClass = neighborNode.className
+            }
+             */
+            val implementation = adjacentNode.cardinality match {
+              case Cardinality.One => s"$edgeAccessorName.asScala.next"
+              case Cardinality.ZeroOrOne => s"$edgeAccessorName.asScala.nextOption"
+              case _ => s"$edgeAccessorName.asScala.collect { case node: ${neighbor.className} => node }"
+            }
+            s"def $accessorName: ${fullScalaType(neighbor, adjacentNode.cardinality)} = ???"
           }.mkString("\n")
           s"""$genericEdgeAccessor
              |$specificNodeAccessors""".stripMargin
@@ -1044,7 +1058,7 @@ class CodeGen(schema: Schema) {
           case NeighborNodeInfo(accessorNameForNode, nodeType, cardinality) =>
             s"def $accessorNameForNode: ${fullScalaType(nodeType, cardinality)} = get().$accessorNameForNode"
         }.mkString("\n")
-        
+
         s"""$specificNodeBasedDelegators
            |$genericEdgeBasedDelegators""".stripMargin
       }.mkString("\n")
@@ -1086,25 +1100,25 @@ class CodeGen(schema: Schema) {
       }
 
       val neighborAccessors = neighborInfos.map { case (neighborInfo, direction) =>
-        val accessorNameForEdge = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val accessorReturnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
-        val genericEdgeBasedAccessor =
-          s"override def $accessorNameForEdge: $accessorReturnType = createAdjacentNodeIteratorByOffSet(${neighborInfo.offsetPosition}).asInstanceOf[$accessorReturnType]"
+        val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+        val edgeAccessorType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
+        val genericEdgeAccessor =
+          s"override def $edgeAccessorName: $edgeAccessorType = createAdjacentNodeIteratorByOffSet(${neighborInfo.offsetPosition}).asInstanceOf[$edgeAccessorType]"
 
-        val specificNodeBasedAccessors = neighborInfo.nodeInfos.map {
+        val specificNodeAccessors = neighborInfo.nodeInfos.map {
           case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
             cardinality match {
               case Cardinality.List =>
-                s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
+                s"def $accessorNameForNode: Iterator[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }"
               case Cardinality.ZeroOrOne =>
-                s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption()"
+                s"def $accessorNameForNode: Option[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }.nextOption()"
               case Cardinality.One =>
-                s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next()"
+                s"def $accessorNameForNode: $className = $edgeAccessorName.asScala.collect { case node: $className => node }.next()"
               case Cardinality.ISeq => ???
             }
         }.mkString("\n")
-        s"""$specificNodeBasedAccessors
-           |$genericEdgeBasedAccessor""".stripMargin
+        s"""$specificNodeAccessors
+           |$genericEdgeAccessor""".stripMargin
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
