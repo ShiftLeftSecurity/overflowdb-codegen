@@ -35,6 +35,9 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
 
+  /** all node types that extend this node */
+  def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType]
+
   override def properties: Seq[Property] = {
     /* only to provide feedback for potential schema optimisation: no need to redefine properties if they are already
      * defined in one of the parents */
@@ -94,6 +97,9 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
 
   lazy val classNameDb = s"${className}Db"
 
+  /** all node types that extend this node */
+  override def subtypes(allNodes: Set[AbstractNodeType]) = Set.empty
+
   def containedNodes: Seq[ContainedNode] =
     _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
 
@@ -107,6 +113,13 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
 
 class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   extends AbstractNodeType(name, comment, schemaInfo) {
+
+  /** all node types that extend this node */
+  override def subtypes(allNodes: Set[AbstractNodeType]) =
+    allNodes.filter { candidate =>
+      candidate.extendzRecursively.contains(this)
+    }
+
   override def toString = s"NodeBaseType($name)"
 }
 

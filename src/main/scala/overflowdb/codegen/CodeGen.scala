@@ -697,9 +697,9 @@ class CodeGen(schema: Schema) {
           val neighborNodesType = deriveCommonSuperType(neighbors.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
           val genericEdgeAccessor = s"def $edgeAccessorName: java.util.Iterator[$neighborNodesType]"
 
+          // TODO do this for all supertypes of adjacentNode.neighbor
           val specificNodeAccessors = neighbors.map { adjacentNode =>
             val neighbor = adjacentNode.neighbor
-            // TODO do this for all supertypes of adjacentNode.neighbor
             val accessorName = s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
             val className = neighbor.className
             adjacentNode.cardinality match {
@@ -712,7 +712,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.ISeq => ???
             }
           }.mkString("\n\n")
-          
+
           s"""$genericEdgeAccessor
              |
              |$specificNodeAccessors""".stripMargin
