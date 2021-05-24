@@ -695,7 +695,7 @@ class CodeGen(schema: Schema) {
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
           val neighborNodesType = deriveCommonSuperType(neighbors.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
-          val genericEdgeAccessor = s"def _$edgeAccessorName: java.util.Iterator[$neighborNodesType]"
+          val genericEdgeAccessor = s"def $edgeAccessorName: Traversal[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
@@ -1049,8 +1049,9 @@ class CodeGen(schema: Schema) {
 
       val edgeDelegators = neighborInfos.map { case (neighborInfo, direction) =>
         val accessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val returnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
-        s"override def _$accessorName: $returnType = get().$accessorName"
+        s"""def $accessorName = get().$accessorName
+           |override def _$accessorName = get()._$accessorName
+           |""".stripMargin
       }.mkString("\n")
 
       val nodeRefImpl = {
@@ -1091,8 +1092,11 @@ class CodeGen(schema: Schema) {
 
       val edgeAccessors = neighborInfos.map { case (neighborInfo, direction) =>
         val accessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val returnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
-        s"override def _$accessorName: $returnType = createAdjacentNodeIteratorByOffSet(${neighborInfo.offsetPosition}).asInstanceOf[$returnType]"
+        val neighborType = neighborInfo.deriveNeighborNodeType
+        val offsetPosition = neighborInfo.offsetPosition
+        s"""def $accessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
+           |override def _$accessorName = createAdjacentNodeIteratorByOffSet[StoredNode]($offsetPosition)
+           |""".stripMargin
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
