@@ -202,7 +202,7 @@ class CodeGen(schema: Schema) {
   }
 
   protected def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
-    "_" + camelCase(edge.name + "_" + direction)
+    camelCase(edge.name + "_" + direction)
 
   protected def writeNodeFiles(outputDir: File): Seq[File] = {
     val rootTypeImpl = {
@@ -210,7 +210,7 @@ class CodeGen(schema: Schema) {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType, direction)
-      } yield s"def $accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
+      } yield s"def _$accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
 
       val keyBasedTraits =
         schema.nodeProperties.map { property =>
@@ -695,7 +695,7 @@ class CodeGen(schema: Schema) {
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
           val neighborNodesType = deriveCommonSuperType(neighbors.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
-          val genericEdgeAccessor = s"def $edgeAccessorName: java.util.Iterator[$neighborNodesType]"
+          val genericEdgeAccessor = s"def _$edgeAccessorName: java.util.Iterator[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
@@ -1050,7 +1050,7 @@ class CodeGen(schema: Schema) {
       val edgeDelegators = neighborInfos.map { case (neighborInfo, direction) =>
         val accessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
         val returnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
-        s"override def $accessorName: $returnType = get().$accessorName"
+        s"override def _$accessorName: $returnType = get().$accessorName"
       }.mkString("\n")
 
       val nodeRefImpl = {
@@ -1092,7 +1092,7 @@ class CodeGen(schema: Schema) {
       val edgeAccessors = neighborInfos.map { case (neighborInfo, direction) =>
         val accessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
         val returnType = s"java.util.Iterator[${neighborInfo.deriveNeighborNodeType}]"
-        s"override def $accessorName: $returnType = createAdjacentNodeIteratorByOffSet(${neighborInfo.offsetPosition}).asInstanceOf[$returnType]"
+        s"override def _$accessorName: $returnType = createAdjacentNodeIteratorByOffSet(${neighborInfo.offsetPosition}).asInstanceOf[$returnType]"
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
