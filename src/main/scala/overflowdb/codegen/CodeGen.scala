@@ -1047,10 +1047,17 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      val edgeDelegators = neighborInfos.map { case (neighborInfo, direction) =>
-        val accessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        s"""def $accessorName = get().$accessorName
-           |override def _$accessorName = get()._$accessorName
+      val neighborAccessorDelegators = neighborInfos.map { case (neighborInfo, direction) =>
+        val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+        val nodeDelegators = neighborInfo.nodeInfos.map {
+          case NeighborNodeInfo(accessorNameForNode, neighborNode, cardinality) =>
+            val returnType = fullScalaType(neighborNode, cardinality)
+            s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
+        }.mkString("\n")
+
+        s"""def $edgeAccessorName = get().$edgeAccessorName
+           |override def _$edgeAccessorName = get()._$edgeAccessorName
+           |$nodeDelegators
            |""".stripMargin
       }.mkString("\n")
 
@@ -1066,7 +1073,8 @@ class CodeGen(schema: Schema) {
            |  $mixinTraits {
            |  $propertyDelegators
            |  $delegatingContainedNodeAccessors
-           |  $edgeDelegators
+           |  $neighborAccessorDelegators
+           |
            |  override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode): Unit = get().fromNewNode(newNode, mapping)
            |  override def valueMap: java.util.Map[String, AnyRef] = get.valueMap
            |  override def canEqual(that: Any): Boolean = get.canEqual(that)
@@ -1090,12 +1098,25 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
 
-      val edgeAccessors = neighborInfos.map { case (neighborInfo, direction) =>
-        val accessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+      val neighborAccessors = neighborInfos.map { case (neighborInfo, direction) =>
+        val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
         val neighborType = neighborInfo.deriveNeighborNodeType
         val offsetPosition = neighborInfo.offsetPosition
-        s"""def $accessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
-           |override def _$accessorName = createAdjacentNodeIteratorByOffSet[StoredNode]($offsetPosition)
+
+        val nodeAccessors = neighborInfo.nodeInfos.map {
+          case NeighborNodeInfo(accessorNameForNode, neighborNode, cardinality) =>
+            val returnType = fullScalaType(neighborNode, cardinality)
+            val appendix = cardinality match {
+              case Cardinality.One => ".next()"
+              case Cardinality.ZeroOrOne => s".nextOption()"
+              case _ => ""
+            }
+            s"def $accessorNameForNode: $returnType = $edgeAccessorName.collectAll[${neighborNode.className}]$appendix"
+        }.mkString("\n")
+
+        s"""def $edgeAccessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
+           |override def _$edgeAccessorName = createAdjacentNodeIteratorByOffSet[StoredNode]($offsetPosition)
+           |$nodeAccessors
            |""".stripMargin
       }.mkString("\n")
 
@@ -1185,7 +1206,7 @@ class CodeGen(schema: Schema) {
            |  /* all properties */
            |  override def valueMap: java.util.Map[String, AnyRef] = $valueMapImpl
            |
-           |  $edgeAccessors
+           |  $neighborAccessors
            |
            |  override def label: String = {
            |    $className.Label
