@@ -176,4 +176,39 @@ object Helpers {
     if (scalaReservedKeywords.contains(value)) s"`$value`"
     else value
 
+  def deriveCommonSuperType(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] = {
+    if (nodeTypes.size == 1) {
+      Some(nodeTypes.head)
+    } else if (nodeTypes.size > 1) {
+      /** Trying to find common supertype. This is nontrivial and we're probably missing a few cases.
+       * Trying to at least keep it deterministic...
+       * Idea: take one nodeType and check if it's type or any of it's supertypes are declared in *all* other nodeTypes
+       * */
+
+      val sorted = nodeTypes.toSeq.sortBy(_.className)
+
+      val (first, otherNodes) = (sorted.head, sorted.tail)
+      allTypes(first).find { candidate =>
+        otherNodes.forall { otherNode =>
+          allTypes(otherNode).contains(candidate)
+        }
+      }
+    } else {
+      None
+    }
+  }
+
+  def allTypes(node: AbstractNodeType): Seq[AbstractNodeType] =
+    node +: node.extendzRecursively
+
+  def fullScalaType(neighborNode: AbstractNodeType, cardinality: Cardinality): String = {
+    val neighborNodeClass = neighborNode.className
+    cardinality match {
+      case Cardinality.List => s"Traversal[$neighborNodeClass]"
+      case Cardinality.ZeroOrOne => s"Option[$neighborNodeClass]"
+      case Cardinality.One => s"$neighborNodeClass"
+      case Cardinality.ISeq => ???
+    }
+  }
+
 }

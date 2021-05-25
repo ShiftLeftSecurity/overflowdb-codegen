@@ -1,13 +1,13 @@
 name := "overflowdb-codegen"
 organization := "io.shiftleft"
 
-scalaVersion := "2.13.5"
-crossScalaVersions := Seq("2.12.13", "2.13.5")
+scalaVersion := "2.13.6"
+crossScalaVersions := Seq("2.12.13", "2.13.6")
 
 enablePlugins(GitVersioning)
 
 libraryDependencies ++= Seq(
-  "io.shiftleft" % "overflowdb-core" % "1.31",
+  "io.shiftleft" % "overflowdb-core" % "1.38",
   "com.github.pathikrit" %% "better-files" % "3.8.0",
   "org.scalatest" %% "scalatest" % "3.2.7" % Test,
 )

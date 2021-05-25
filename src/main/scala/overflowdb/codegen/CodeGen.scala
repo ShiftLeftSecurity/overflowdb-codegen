@@ -202,7 +202,7 @@ class CodeGen(schema: Schema) {
   }
 
   protected def neighborAccessorNameForEdge(edge: EdgeType, direction: Direction.Value): String =
-    "_" + camelCase(edge.name + "_" + direction)
+    camelCase(edge.name + "_" + direction)
 
   protected def writeNodeFiles(outputDir: File): Seq[File] = {
     val rootTypeImpl = {
@@ -210,7 +210,7 @@ class CodeGen(schema: Schema) {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType, direction)
-      } yield s"def $accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
+      } yield s"def _$accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
 
       val keyBasedTraits =
         schema.nodeProperties.map { property =>
@@ -675,21 +675,47 @@ class CodeGen(schema: Schema) {
          |}""".stripMargin
     }
 
-    def generateNodeBaseTypeSource(nodeBaseTrait: NodeBaseType): String = {
-      val className = nodeBaseTrait.className
-      val properties = nodeBaseTrait.properties
+    def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
+      val className = nodeBaseType.className
+      val properties = nodeBaseType.properties
 
-      val mixins = nodeBaseTrait.properties.map { property =>
+      val mixins = nodeBaseType.properties.map { property =>
         s"with Has${property.className}"
       }.mkString(" ")
 
-      val mixinTraits = nodeBaseTrait.extendz.map { baseTrait =>
+      val mixinTraits = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}"
       }.mkString(" ")
 
-      val mixinTraitsForBase = nodeBaseTrait.extendz.map { baseTrait =>
+      val mixinTraitsForBase = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}Base"
       }.mkString(" ")
+
+      def abstractEdgeAccessors(neighbors: Seq[AdjacentNode], direction: Direction.Value) =
+        neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
+          val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
+          val neighborNodesType = deriveCommonSuperType(neighbors.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
+          val genericEdgeAccessor = s"def $edgeAccessorName: Traversal[$neighborNodesType]"
+
+          val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
+            val neighbor = adjacentNode.neighbor
+            val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
+            entireNodeHierarchy.map { neighbor =>
+              val accessorName = s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+              val cardinality = adjacentNode.cardinality
+              val appendix = cardinality match {
+                case Cardinality.One => ".next()"
+                case Cardinality.ZeroOrOne => s".nextOption()"
+                case _ => ""
+              }
+              s"def $accessorName: ${fullScalaType(neighbor, cardinality)} = $edgeAccessorName.collectAll[${neighbor.className}]$appendix"
+            }
+          }.mkString("\n\n")
+
+          s"""$genericEdgeAccessor
+             |
+             |$specificNodeAccessors""".stripMargin
+        }.mkString("\n")
 
       s"""package $nodesPackage
          |
@@ -700,7 +726,10 @@ class CodeGen(schema: Schema) {
          |$mixinTraitsForBase
          |
          |trait $className extends StoredNode with ${className}Base
-         |$mixinTraits
+         |$mixinTraits {
+         |${abstractEdgeAccessors(nodeBaseType.outEdges, Direction.OUT)}
+         |${abstractEdgeAccessors(nodeBaseType.inEdges, Direction.IN)}
+         |}
          |
          |${generatePropertyTraversals(className, properties)}
          |
@@ -730,31 +759,31 @@ class CodeGen(schema: Schema) {
         var _currOffsetPos = -1
         def nextOffsetPos = { _currOffsetPos += 1; _currOffsetPos }
 
-        def createNeighborNodeInfo(nodeName: String, neighborClassName: String, edgeAndDirection: String, cardinality: Cardinality) = {
-          val accessorName = s"_${camelCase(nodeName)}Via${edgeAndDirection.capitalize}"
-          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), neighborClassName, cardinality)
+        def createNeighborNodeInfo(node: AbstractNodeType, edgeAndDirection: String, cardinality: Cardinality, isInherited: Boolean) = {
+          val accessorName = s"_${camelCase(node.name)}Via${edgeAndDirection.capitalize}"
+          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), node, cardinality, isInherited)
         }
 
-        val neighborOutInfos =
-          nodeType.outEdges.groupBy(_.viaEdge).map { case (edge, outEdges) =>
-            val viaEdgeAndDirection = edge.className + "Out"
-            val neighborNodeInfos = outEdges.map { case AdjacentNode(_, inNode, cardinality) =>
-              createNeighborNodeInfo(inNode.name, inNode.className, viaEdgeAndDirection, cardinality)
-            }
-            NeighborInfo(edge, neighborNodeInfos, nextOffsetPos)
-          }.toSeq
+        def neighborContexts(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[NeighborContext] = {
+          adjacentNodes(nodeType).map(NeighborContext(_, false)) ++
+            nodeType.extendzRecursively.flatMap(adjacentNodes).map(NeighborContext(_, true))
+        }
 
-        val neighborInInfos =
-          nodeType.inEdges.groupBy(_.viaEdge).map { case (edge, inEdges) =>
-            val viaEdgeAndDirection = edge.className + "In"
-            val neighborNodeInfos = inEdges.map { case AdjacentNode(_, outNode, cardinality) =>
-              createNeighborNodeInfo(outNode.name, outNode.className, viaEdgeAndDirection, cardinality)
+        def createNeighborInfos(neighborContexts: Seq[NeighborContext], direction: Direction.Value): Seq[NeighborInfo] = {
+          neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edgeType, neighborContexts) =>
+            val viaEdgeAndDirection = edgeType.className + camelCaseCaps(direction.toString)
+            val neighborNodeInfos = neighborContexts.map { case NeighborContext(adjacentNode, isInherited) =>
+              createNeighborNodeInfo(adjacentNode.neighbor, viaEdgeAndDirection, adjacentNode.cardinality, isInherited)
             }
-            NeighborInfo(edge, neighborNodeInfos, nextOffsetPos)
+            NeighborInfo(edgeType, neighborNodeInfos, nextOffsetPos)
           }.toSeq
+        }
 
+        val neighborOutInfos = createNeighborInfos(neighborContexts(_.outEdges), Direction.OUT)
+        val neighborInInfos = createNeighborInfos(neighborContexts(_.inEdges), Direction.IN)
         (neighborOutInfos, neighborInInfos)
       }
+
       val neighborInfos: Seq[(NeighborInfo, Direction.Value)] =
         neighborOutInfos.map((_, Direction.OUT)) ++ neighborInInfos.map((_, Direction.IN))
 
@@ -1015,23 +1044,18 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      val neighborDelegators = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfos, _), direction) =>
-        val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
-        val genericEdgeBasedDelegators =
-          s"override def $accessorNameForEdge: java.util.Iterator[StoredNode] = get().$accessorNameForEdge"
-
-        val specificNodeBasedDelegators = neighborNodeInfos.map {
-          case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
-            val returnType = cardinality match {
-              case Cardinality.List => s"Iterator[$className]"
-              case Cardinality.ZeroOrOne => s"Option[$className]"
-              case Cardinality.One => s"$className"
-              case Cardinality.ISeq => ???
-            }
+      val neighborAccessorDelegators = neighborInfos.map { case (neighborInfo, direction) =>
+        val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+        val nodeDelegators = neighborInfo.nodeInfos.collect {
+          case NeighborNodeInfo(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
+            val returnType = fullScalaType(neighborNode, cardinality)
             s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
         }.mkString("\n")
-        s"""$specificNodeBasedDelegators
-           |$genericEdgeBasedDelegators""".stripMargin
+
+        s"""def $edgeAccessorName = get().$edgeAccessorName
+           |override def _$edgeAccessorName = get()._$edgeAccessorName
+           |$nodeDelegators
+           |""".stripMargin
       }.mkString("\n")
 
       val nodeRefImpl = {
@@ -1046,7 +1070,8 @@ class CodeGen(schema: Schema) {
            |  $mixinTraits {
            |  $propertyDelegators
            |  $delegatingContainedNodeAccessors
-           |  $neighborDelegators
+           |  $neighborAccessorDelegators
+           |
            |  override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode): Unit = get().fromNewNode(newNode, mapping)
            |  override def valueMap: java.util.Map[String, AnyRef] = get.valueMap
            |  override def canEqual(that: Any): Boolean = get.canEqual(that)
@@ -1070,25 +1095,26 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
       }
 
-      val neighborAccessors = neighborInfos.map { case (NeighborInfo(edge, neighborNodeInfo, offsetPos), direction) =>
-        val accessorNameForEdge = neighborAccessorNameForEdge(edge, direction)
-        val genericEdgeBasedAccessor =
-          s"override def $accessorNameForEdge: java.util.Iterator[StoredNode] = createAdjacentNodeIteratorByOffSet($offsetPos).asInstanceOf[java.util.Iterator[StoredNode]]"
+      val neighborAccessors = neighborInfos.map { case (neighborInfo, direction) =>
+        val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
+        val neighborType = neighborInfo.deriveNeighborNodeType
+        val offsetPosition = neighborInfo.offsetPosition
 
-        val specificNodeBasedAccessors = neighborNodeInfo.map {
-          case NeighborNodeInfo(accessorNameForNode, className, cardinality) =>
-            cardinality match {
-              case Cardinality.List =>
-                s"def $accessorNameForNode: Iterator[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }"
-              case Cardinality.ZeroOrOne =>
-                s"def $accessorNameForNode: Option[$className] = $accessorNameForEdge.asScala.collect { case node: $className => node }.nextOption()"
-              case Cardinality.One =>
-                s"def $accessorNameForNode: $className = $accessorNameForEdge.asScala.collect { case node: $className => node }.next()"
-              case Cardinality.ISeq => ???
+        val nodeAccessors = neighborInfo.nodeInfos.collect {
+          case NeighborNodeInfo(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
+            val returnType = fullScalaType(neighborNode, cardinality)
+            val appendix = cardinality match {
+              case Cardinality.One => ".next()"
+              case Cardinality.ZeroOrOne => s".nextOption()"
+              case _ => ""
             }
+            s"def $accessorNameForNode: $returnType = $edgeAccessorName.collectAll[${neighborNode.className}]$appendix"
         }.mkString("\n")
-        s"""$specificNodeBasedAccessors
-           |$genericEdgeBasedAccessor""".stripMargin
+
+        s"""def $edgeAccessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
+           |override def _$edgeAccessorName = createAdjacentNodeIteratorByOffSet[StoredNode]($offsetPosition)
+           |$nodeAccessors
+           |""".stripMargin
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {

@@ -2,10 +2,11 @@ package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
 import overflowdb.storage.ValueTypes
+
 import scala.collection.mutable
 
 /**
-* @param basePackage: specific for your domain, e.g. `com.example.mydomain`
+ * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
 class Schema(val basePackage: String,
              val properties: Seq[Property],
@@ -14,6 +15,10 @@ class Schema(val basePackage: String,
              val edgeTypes: Seq[EdgeType],
              val constantsByCategory: Map[String, Seq[Constant]],
              val protoOptions: Option[ProtoOptions]) {
+
+  /** nodeTypes and nodeBaseTypes combined */
+  lazy val allNodeTypes: Seq[AbstractNodeType] =
+    nodeTypes ++ nodeBaseTypes
 
   /** properties that are used in node types */
   def nodeProperties: Seq[Property] =
@@ -34,6 +39,9 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
 
+  /** all node types that extend this node */
+  def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType]
+
   override def properties: Seq[Property] = {
     /* only to provide feedback for potential schema optimisation: no need to redefine properties if they are already
      * defined in one of the parents */
@@ -53,6 +61,11 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
   def extendz: Seq[NodeBaseType] =
     _extendz.toSeq
+
+  def extendzRecursively: Seq[NodeBaseType] = {
+    val extendsLevel1 = extendz
+    extendsLevel1 ++ extendsLevel1.flatMap(_.extendzRecursively)
+  }
 
   /**
    * note: allowing to define one outEdge for ONE inNode only - if you are looking for Union Types, please use NodeBaseTypes
@@ -76,10 +89,10 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   }
 
   def outEdges: Seq[AdjacentNode] =
-    (_outEdges ++ _extendz.flatMap(_.outEdges)).toSeq
+    _outEdges.toSeq
 
   def inEdges: Seq[AdjacentNode] =
-    (_inEdges ++ _extendz.flatMap(_.inEdges)).toSeq
+    _inEdges.toSeq
 }
 
 class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
@@ -87,6 +100,9 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   protected val _containedNodes: mutable.Set[ContainedNode] = mutable.Set.empty
 
   lazy val classNameDb = s"${className}Db"
+
+  /** all node types that extend this node */
+  override def subtypes(allNodes: Set[AbstractNodeType]) = Set.empty
 
   def containedNodes: Seq[ContainedNode] =
     _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
@@ -101,6 +117,13 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
 
 class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   extends AbstractNodeType(name, comment, schemaInfo) {
+
+  /** all node types that extend this node */
+  override def subtypes(allNodes: Set[AbstractNodeType]) =
+    allNodes.filter { candidate =>
+      candidate.extendzRecursively.contains(this)
+    }
+
   override def toString = s"NodeBaseType($name)"
 }
 
@@ -148,8 +171,17 @@ object Constant {
     new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
 }
 
-case class NeighborNodeInfo(accessorName: String, className: String, cardinality: Cardinality)
-case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int)
+case class NeighborNodeInfo(accessorName: String, node: AbstractNodeType, cardinality: Cardinality, isInherited: Boolean)
+
+case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int) {
+  lazy val deriveNeighborNodeType: String = {
+    deriveCommonSuperType(nodeInfos.map(_.node).toSet)
+      .map(_.className)
+      .getOrElse("StoredNode")
+  }
+}
+
+case class NeighborContext(adjacentNode: AdjacentNode, isInherited: Boolean)
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
