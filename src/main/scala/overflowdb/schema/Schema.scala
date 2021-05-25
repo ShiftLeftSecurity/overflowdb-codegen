@@ -6,7 +6,7 @@ import overflowdb.storage.ValueTypes
 import scala.collection.mutable
 
 /**
-* @param basePackage: specific for your domain, e.g. `com.example.mydomain`
+ * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
 class Schema(val basePackage: String,
              val properties: Seq[Property],
@@ -89,10 +89,10 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   }
 
   def outEdges: Seq[AdjacentNode] =
-    (_outEdges ++ _extendz.flatMap(_.outEdges)).toSeq
+    _outEdges.toSeq
 
   def inEdges: Seq[AdjacentNode] =
-    (_inEdges ++ _extendz.flatMap(_.inEdges)).toSeq
+    _inEdges.toSeq
 }
 
 class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
@@ -171,7 +171,7 @@ object Constant {
     new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
 }
 
-case class NeighborNodeInfo(accessorName: String, node: AbstractNodeType, cardinality: Cardinality)
+case class NeighborNodeInfo(accessorName: String, node: AbstractNodeType, cardinality: Cardinality, isInherited: Boolean)
 
 case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int) {
   lazy val deriveNeighborNodeType: String = {
@@ -180,6 +180,8 @@ case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offset
       .getOrElse("StoredNode")
   }
 }
+
+case class NeighborContext(adjacentNode: AdjacentNode, isInherited: Boolean)
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
