@@ -705,11 +705,11 @@ class CodeGen(schema: Schema) {
               val className = neighbor.className
               adjacentNode.cardinality match {
                 case Cardinality.List =>
-                  s"def $accessorName: Iterator[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }"
+                  s"def $accessorName: Iterator[$className] = _$edgeAccessorName.asScala.collect { case node: $className => node }"
                 case Cardinality.ZeroOrOne =>
-                  s"def $accessorName: Option[$className] = $edgeAccessorName.asScala.collect { case node: $className => node }.nextOption()"
+                  s"def $accessorName: Option[$className] = _$edgeAccessorName.asScala.collect { case node: $className => node }.nextOption()"
                 case Cardinality.One =>
-                  s"def $accessorName: $className = $edgeAccessorName.asScala.collect { case node: $className => node }.next()"
+                  s"def $accessorName: $className = _$edgeAccessorName.asScala.collect { case node: $className => node }.next()"
                 case Cardinality.ISeq => ???
               }
             }
