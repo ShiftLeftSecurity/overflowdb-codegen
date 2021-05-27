@@ -42,10 +42,10 @@ class SchemaTest extends AnyWordSpec with Matchers {
       neighborInfoWith(Seq(nodeA1, nodeAExt1, baseNodeAExt, baseNodeA)).deriveNeighborNodeType shouldBe baseNodeA.className
     }
 
-    def neighborInfoWith(nodes: Seq[AbstractNodeType]): NeighborInfo =
-      NeighborInfo(
+    def neighborInfoWith(nodes: Seq[AbstractNodeType]): NeighborInfoForEdge =
+      NeighborInfoForEdge(
         edge = null,
-        nodes.map(node => NeighborNodeInfo(accessorName = null, node, cardinality = null, isInherited = false)),
+        nodes.map(node => NeighborNodeInfoForNode(accessorName = null, node, cardinality = null, isInherited = false)),
         offsetPosition = 0)
   }
 

@@ -171,9 +171,7 @@ object Constant {
     new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
 }
 
-case class NeighborNodeInfo(accessorName: String, node: AbstractNodeType, cardinality: Cardinality, isInherited: Boolean)
-
-case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offsetPosition: Int) {
+case class NeighborInfoForEdge(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfoForNode], offsetPosition: Int) {
   lazy val deriveNeighborNodeType: String = {
     deriveCommonSuperType(nodeInfos.map(_.node).toSet)
       .map(_.className)
@@ -181,7 +179,7 @@ case class NeighborInfo(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfo], offset
   }
 }
 
-case class NeighborContext(adjacentNode: AdjacentNode, isInherited: Boolean)
+case class NeighborNodeInfoForNode(accessorName: String, node: AbstractNodeType, cardinality: Cardinality, isInherited: Boolean)
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
