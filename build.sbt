@@ -19,6 +19,7 @@ Compile/scalacOptions ++= Seq(
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
+  "-Ywarn-unused",
   // "-language:existentials",
 )
 

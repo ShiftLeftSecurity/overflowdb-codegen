@@ -335,7 +335,7 @@ class CodeGen(schema: Schema) {
           case Cardinality.ZeroOrOne | Cardinality.List | Cardinality.ISeq => "flatMap"
         }
 
-        def filterStepsForSingleString(propertyName: String) =
+        val filterStepsForSingleString =
           s"""  /**
              |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
              |    * */
@@ -392,7 +392,7 @@ class CodeGen(schema: Schema) {
              |
              |""".stripMargin
 
-        def filterStepsForOptionalString(propertyName: String) =
+        val filterStepsForOptionalString =
           s"""  /**
              |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
              |    * */
@@ -449,7 +449,7 @@ class CodeGen(schema: Schema) {
              |
              |""".stripMargin
 
-        def filterStepsForSingleBoolean(propertyName: String) =
+        val filterStepsForSingleBoolean =
           s"""  /**
              |    * Traverse to nodes where the $nameCamelCase equals the given `value`
              |    * */
@@ -463,7 +463,7 @@ class CodeGen(schema: Schema) {
              |    traversal.filter{_.$nameCamelCase != value}
              |""".stripMargin
 
-        def filterStepsForOptionalBoolean(propertyName: String) =
+        val filterStepsForOptionalBoolean =
           s"""  /**
              |    * Traverse to nodes where the $nameCamelCase equals the given `value`
              |    * */
@@ -477,7 +477,7 @@ class CodeGen(schema: Schema) {
              |    traversal.filter{node => !node.${nameCamelCase}.isDefined || node.$nameCamelCase.get == value}
              |""".stripMargin
 
-        def filterStepsForSingleInt(propertyName: String) =
+        val filterStepsForSingleInt =
           s"""  /**
              |    * Traverse to nodes where the $nameCamelCase equals the given `value`
              |    * */
@@ -531,7 +531,7 @@ class CodeGen(schema: Schema) {
              |  }
              |""".stripMargin
 
-        def filterStepsForOptionalInt(propertyName: String) =
+        val filterStepsForOptionalInt =
           s"""  /**
              |    * Traverse to nodes where the $nameCamelCase equals the given `value`
              |    * */
@@ -585,7 +585,7 @@ class CodeGen(schema: Schema) {
              |  }
              |""".stripMargin
 
-        def filterStepsGenericSingle(propertyName: String) =
+        val filterStepsGenericSingle =
           s"""  /**
              |    * Traverse to nodes where the $nameCamelCase equals the given `value`
              |    * */
@@ -614,7 +614,8 @@ class CodeGen(schema: Schema) {
              |    traversal.filter{node => !vset.contains(node.$nameCamelCase)}
              |  }
              |""".stripMargin
-        def filterStepsGenericOption(propertyName: String) =
+
+        val filterStepsGenericOption =
           s"""  /**
              |    * Traverse to nodes where the $nameCamelCase equals the given `value`
              |    * */
@@ -646,14 +647,14 @@ class CodeGen(schema: Schema) {
 
         val filterSteps = (cardinality, property.valueType) match {
           case (Cardinality.List | Cardinality.ISeq, _) => ""
-          case (Cardinality.One, ValueTypes.STRING) => filterStepsForSingleString(property.name)
-          case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString(property.name)
-          case (Cardinality.One, ValueTypes.BOOLEAN) => filterStepsForSingleBoolean(property.name)
-          case (Cardinality.ZeroOrOne, ValueTypes.BOOLEAN) => filterStepsForOptionalBoolean(property.name)
-          case (Cardinality.One, ValueTypes.INTEGER) => filterStepsForSingleInt(property.name)
-          case (Cardinality.ZeroOrOne, ValueTypes.INTEGER) => filterStepsForOptionalInt(property.name)
-          case (Cardinality.One, _) => filterStepsGenericSingle(property.name)
-          case (Cardinality.ZeroOrOne, _) => filterStepsGenericOption(property.name)
+          case (Cardinality.One, ValueTypes.STRING) => filterStepsForSingleString
+          case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString
+          case (Cardinality.One, ValueTypes.BOOLEAN) => filterStepsForSingleBoolean
+          case (Cardinality.ZeroOrOne, ValueTypes.BOOLEAN) => filterStepsForOptionalBoolean
+          case (Cardinality.One, ValueTypes.INTEGER) => filterStepsForSingleInt
+          case (Cardinality.ZeroOrOne, ValueTypes.INTEGER) => filterStepsForOptionalInt
+          case (Cardinality.One, _) => filterStepsGenericSingle
+          case (Cardinality.ZeroOrOne, _) => filterStepsGenericOption
           case _ => ""
 
         }
@@ -1010,12 +1011,12 @@ class CodeGen(schema: Schema) {
       }
 
       val productElementLabels =
-        productElements.map { case ProductElement(name, accessorSrc, index) =>
+        productElements.map { case ProductElement(name, _, index) =>
           s"""case $index => "$name" """
         }.mkString("\n")
 
       val productElementAccessors =
-        productElements.map { case ProductElement(name, accessorSrc, index) =>
+        productElements.map { case ProductElement(_, accessorSrc, index) =>
           s"case $index => $accessorSrc"
         }.mkString("\n")
 
@@ -1320,15 +1321,6 @@ class CodeGen(schema: Schema) {
       val defaultsVal = fieldDescriptions.reverse
         .map {case (name, typ, Some(default)) => s"var $name: $typ = $default"
               case (name, typ, None)          => s"var $name: $typ"}
-        .mkString(", ")
-
-      val defaultsNoVal = fieldDescriptions.reverse
-        .map {case (name, typ, Some(default)) => s"$name: $typ = $default"
-              case (name, typ, None)          => s"$name: $typ"}
-        .mkString(", ")
-
-      val paramId = fieldDescriptions.reverse
-        .map {case (name, _, _) => s"$name = $name"}
         .mkString(", ")
 
       val valueMapImpl = {

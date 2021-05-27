@@ -2,7 +2,6 @@ package overflowdb.schema.testschema1
 
 import java.io.File
 import overflowdb.codegen.CodeGen
-import overflowdb.schema.SchemaInfo.forClass
 import overflowdb.schema.{Cardinality, Constant, SchemaBuilder, SchemaInfo}
 import overflowdb.storage.ValueTypes
 
