@@ -1,7 +1,7 @@
 package overflowdb.schema.testschema3
 
 import overflowdb.codegen.CodeGen
-import overflowdb.schema.{Cardinality, Constant, SchemaBuilder}
+import overflowdb.schema.{Cardinality, SchemaBuilder}
 
 import java.io.File
 
