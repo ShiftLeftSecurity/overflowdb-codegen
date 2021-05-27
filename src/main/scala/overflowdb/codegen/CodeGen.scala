@@ -761,21 +761,23 @@ class CodeGen(schema: Schema) {
 
         def createNeighborNodeInfo(node: AbstractNodeType, edgeAndDirection: String, cardinality: Cardinality, isInherited: Boolean) = {
           val accessorName = s"_${camelCase(node.name)}Via${edgeAndDirection.capitalize}"
-          NeighborNodeInfo(Helpers.escapeIfKeyword(accessorName), node, cardinality, isInherited)
+          NeighborNodeInfoForNode(Helpers.escapeIfKeyword(accessorName), node, cardinality, isInherited)
         }
+
+        case class NeighborContext(adjacentNode: AdjacentNode, isInherited: Boolean)
 
         def neighborContexts(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[NeighborContext] = {
           adjacentNodes(nodeType).map(NeighborContext(_, false)) ++
             nodeType.extendzRecursively.flatMap(adjacentNodes).map(NeighborContext(_, true))
         }
 
-        def createNeighborInfos(neighborContexts: Seq[NeighborContext], direction: Direction.Value): Seq[NeighborInfo] = {
+        def createNeighborInfos(neighborContexts: Seq[NeighborContext], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
           neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edgeType, neighborContexts) =>
             val viaEdgeAndDirection = edgeType.className + camelCaseCaps(direction.toString)
-            val neighborNodeInfos = neighborContexts.map { case NeighborContext(adjacentNode, isInherited) =>
+            val neighborInfoForNodes = neighborContexts.map { case NeighborContext(adjacentNode, isInherited) =>
               createNeighborNodeInfo(adjacentNode.neighbor, viaEdgeAndDirection, adjacentNode.cardinality, isInherited)
             }
-            NeighborInfo(edgeType, neighborNodeInfos, nextOffsetPos)
+            NeighborInfoForEdge(edgeType, neighborInfoForNodes, nextOffsetPos)
           }.toSeq
         }
 
@@ -784,10 +786,10 @@ class CodeGen(schema: Schema) {
         (neighborOutInfos, neighborInInfos)
       }
 
-      val neighborInfos: Seq[(NeighborInfo, Direction.Value)] =
+      val neighborInfos: Seq[(NeighborInfoForEdge, Direction.Value)] =
         neighborOutInfos.map((_, Direction.OUT)) ++ neighborInInfos.map((_, Direction.IN))
 
-      def toLayoutInformationEntry(neighborInfos: Seq[NeighborInfo]): String = {
+      def toLayoutInformationEntry(neighborInfos: Seq[NeighborInfoForEdge]): String = {
         neighborInfos.sortBy(_.offsetPosition).map { neighborInfo =>
           val edgeClass = neighborInfo.edge.className
           s"$edgesPackage.$edgeClass.layoutInformation"
@@ -1047,7 +1049,7 @@ class CodeGen(schema: Schema) {
       val neighborAccessorDelegators = neighborInfos.map { case (neighborInfo, direction) =>
         val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
         val nodeDelegators = neighborInfo.nodeInfos.collect {
-          case NeighborNodeInfo(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
+          case NeighborNodeInfoForNode(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
             val returnType = fullScalaType(neighborNode, cardinality)
             s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
         }.mkString("\n")
@@ -1101,7 +1103,7 @@ class CodeGen(schema: Schema) {
         val offsetPosition = neighborInfo.offsetPosition
 
         val nodeAccessors = neighborInfo.nodeInfos.collect {
-          case NeighborNodeInfo(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
+          case NeighborNodeInfoForNode(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
             val returnType = fullScalaType(neighborNode, cardinality)
             val appendix = cardinality match {
               case Cardinality.One => ".next()"
