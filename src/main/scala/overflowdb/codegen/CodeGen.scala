@@ -711,7 +711,7 @@ class CodeGen(schema: Schema) {
               }
               s"def $accessorName: ${fullScalaType(neighbor, cardinality)} = $edgeAccessorName.collectAll[${neighbor.className}]$appendix"
             }
-          }.mkString("\n\n")
+          }.distinct.mkString("\n\n")
 
           s"""$genericEdgeAccessor
              |
