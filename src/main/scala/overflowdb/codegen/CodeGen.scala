@@ -212,13 +212,6 @@ class CodeGen(schema: Schema) {
         accessor = neighborAccessorNameForEdge(edgeType, direction)
       } yield s"def _$accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
 
-      val keyBasedTraits =
-        schema.nodeProperties.map { property =>
-          val camelCaseName = camelCase(property.name)
-          val tpe = getCompleteType(property)
-          s"trait Has${property.className} { def $camelCaseName: $tpe }"
-        }.mkString("\n") + "\n"
-
       val factories = {
         val nodeFactories =
           schema.nodeTypes.map(nodeType => nodeType.className + ".factory").mkString(", ")
@@ -272,7 +265,6 @@ class CodeGen(schema: Schema) {
          |  ${genericNeighborAccessors.mkString("\n")}
          |}
          |
-         |  $keyBasedTraits
          |  $factories
          |""".stripMargin
     }
