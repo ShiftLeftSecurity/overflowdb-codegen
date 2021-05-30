@@ -1052,7 +1052,7 @@ class CodeGen(schema: Schema) {
         val nodeDelegators = neighborInfo.nodeInfos.collect {
           case NeighborNodeInfoForNode(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
             val returnType = fullScalaType(neighborNode, cardinality)
-            s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
+            s"def _$accessorNameForNode: $returnType = get()._$accessorNameForNode"
         }.mkString("\n")
 
         s"""def $edgeAccessorName = get().$edgeAccessorName
@@ -1111,7 +1111,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.ZeroOrOne => s".nextOption()"
               case _ => ""
             }
-            s"def $accessorNameForNode: $returnType = $edgeAccessorName.collectAll[${neighborNode.className}]$appendix"
+            s"def _$accessorNameForNode: $returnType = $edgeAccessorName.collectAll[${neighborNode.className}]$appendix"
         }.mkString("\n")
 
         s"""def $edgeAccessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
