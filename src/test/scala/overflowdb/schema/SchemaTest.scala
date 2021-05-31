@@ -45,7 +45,7 @@ class SchemaTest extends AnyWordSpec with Matchers {
     def neighborInfoWith(nodes: Seq[AbstractNodeType]): NeighborInfoForEdge =
       NeighborInfoForEdge(
         edge = null,
-        nodes.map(node => NeighborNodeInfoForNode(accessorName = null, node, cardinality = null, isInherited = false)),
+        nodes.map(node => NeighborInfoForNode(neighborNode = node, edge = null, direction = null, cardinality = null, isInherited = false)),
         offsetPosition = 0)
   }
 
