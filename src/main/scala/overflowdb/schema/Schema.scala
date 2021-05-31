@@ -2,7 +2,6 @@ package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
 import overflowdb.storage.ValueTypes
-
 import scala.collection.mutable
 
 /**
@@ -64,7 +63,7 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
   def extendzRecursively: Seq[NodeBaseType] = {
     val extendsLevel1 = extendz
-    extendsLevel1 ++ extendsLevel1.flatMap(_.extendzRecursively)
+    (extendsLevel1 ++ extendsLevel1.flatMap(_.extendzRecursively)).distinct
   }
 
   /**
@@ -171,15 +170,43 @@ object Constant {
     new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
 }
 
-case class NeighborInfoForEdge(edge: EdgeType, nodeInfos: Seq[NeighborNodeInfoForNode], offsetPosition: Int) {
+case class NeighborInfoForEdge(edge: EdgeType, nodeInfos: Seq[NeighborInfoForNode], offsetPosition: Int) {
   lazy val deriveNeighborNodeType: String = {
-    deriveCommonSuperType(nodeInfos.map(_.node).toSet)
+    deriveCommonSuperType(nodeInfos.map(_.neighborNode).toSet)
       .map(_.className)
       .getOrElse("StoredNode")
   }
 }
 
-case class NeighborNodeInfoForNode(accessorName: String, node: AbstractNodeType, cardinality: Cardinality, isInherited: Boolean)
+case class NeighborInfoForNode(
+  neighborNode: AbstractNodeType,
+  edge: EdgeType,
+  direction: Direction.Value,
+  cardinality: Cardinality,
+  isInherited: Boolean) {
+
+  lazy val accessorName = s"_${camelCase(neighborNode.name)}Via${edge.className}${camelCaseCaps(direction.toString)}"
+
+  /** handling some accidental complexity within the schema: if a relationship is defined on a base node and
+   * separately on a concrete node, with different cardinalities, we need to use the highest cardinality  */
+  lazy val consolidatedCardinality: Cardinality = {
+    val inheritedCardinalities = neighborNode.extendzRecursively.flatMap(_.inEdges).collect {
+      case AdjacentNode(viaEdge, neighbor, cardinality)
+        if viaEdge == edge && neighbor == neighborNode => cardinality
+    }
+    val allCardinalities = cardinality +: inheritedCardinalities
+    allCardinalities.distinct.sortBy {
+      case Cardinality.List => 0
+      case Cardinality.ISeq => 1
+      case Cardinality.ZeroOrOne => 2
+      case Cardinality.One => 3
+    }.head
+  }
+
+  lazy val returnType: String =
+    fullScalaType(neighborNode, consolidatedCardinality)
+
+}
 
 object HigherValueType extends Enumeration {
   type HigherValueType = Value
