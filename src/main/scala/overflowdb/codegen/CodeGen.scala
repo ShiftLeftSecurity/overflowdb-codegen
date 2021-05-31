@@ -759,32 +759,38 @@ class CodeGen(schema: Schema) {
         var _currOffsetPos = -1
         def nextOffsetPos: Int = { _currOffsetPos += 1; _currOffsetPos }
 
-        case class NeighborContext(adjacentNode: AdjacentNode, isInherited: Boolean)
+        case class AjacentNodeWithInheritanceStatus(adjacentNode: AdjacentNode, isInherited: Boolean)
 
-        def neighborContexts(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[NeighborContext] = {
-          val inherited: Seq[AdjacentNode] = nodeType.extendzRecursively.flatMap(adjacentNodes).distinct
-          val inheritedWithoutCardinality: Set[(EdgeType, AbstractNodeType)] =
-            inherited.map { case AdjacentNode(viaEdge, neighbor, _) => (viaEdge, neighbor) }.toSet
+        /** For all adjacent nodes, figure out if they are inherited or not.
+         *  Later on, we will create edge accessors for all inherited neighbors, but only create the node accessors
+         *  on the base types (if they are defined there). Note: they may even be inherited with a different cardinality */
+        def adjacentNodesWithInheritanceStatus(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[AjacentNodeWithInheritanceStatus] = {
+          val inherited = nodeType.extendzRecursively
+            .flatMap(adjacentNodes)
+            .map(AjacentNodeWithInheritanceStatus(_, true))
 
-          val direct: Seq[NeighborContext] = adjacentNodes(nodeType).map { adjacentNode =>
-            val isInherited = inheritedWithoutCardinality.contains((adjacentNode.viaEdge, adjacentNode.neighbor))
-            NeighborContext(adjacentNode, isInherited)
+          // only edge and neighbor node matter, not the cardinality
+          val inheritedLookup: Set[(EdgeType, AbstractNodeType)] =
+            inherited.map(_.adjacentNode).map { case AdjacentNode(viaEdge, neighbor, _) => (viaEdge, neighbor) }.toSet
+
+          val direct = adjacentNodes(nodeType).map { adjacentNode =>
+            val isInherited = inheritedLookup.contains((adjacentNode.viaEdge, adjacentNode.neighbor))
+            AjacentNodeWithInheritanceStatus(adjacentNode, isInherited)
           }
-          val inherited2: Seq[NeighborContext] = inherited.map(NeighborContext(_, true))
-          (direct ++ inherited2).distinct
+          (direct ++ inherited).distinct
         }
 
-        def createNeighborInfos(neighborContexts: Seq[NeighborContext], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
-          neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edgeType, neighborContexts) =>
-            val neighborInfoForNodes = neighborContexts.map { case NeighborContext(adjacentNode, isInherited) =>
-              NeighborInfoForNode(adjacentNode.neighbor, edgeType, direction, adjacentNode.cardinality, isInherited)
+        def createNeighborInfos(neighborContexts: Seq[AjacentNodeWithInheritanceStatus], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
+          neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edge, neighborContexts) =>
+            val neighborInfoForNodes = neighborContexts.map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
+              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited)
             }
-            NeighborInfoForEdge(edgeType, neighborInfoForNodes, nextOffsetPos)
+            NeighborInfoForEdge(edge, neighborInfoForNodes, nextOffsetPos)
           }.toSeq
         }
 
-        val neighborOutInfos = createNeighborInfos(neighborContexts(_.outEdges), Direction.OUT)
-        val neighborInInfos = createNeighborInfos(neighborContexts(_.inEdges), Direction.IN)
+        val neighborOutInfos = createNeighborInfos(adjacentNodesWithInheritanceStatus(_.outEdges), Direction.OUT)
+        val neighborInInfos = createNeighborInfos(adjacentNodesWithInheritanceStatus(_.inEdges), Direction.IN)
         (neighborOutInfos, neighborInInfos)
       }
 
