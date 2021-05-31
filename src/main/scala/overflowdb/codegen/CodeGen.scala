@@ -762,13 +762,19 @@ class CodeGen(schema: Schema) {
         case class NeighborContext(adjacentNode: AdjacentNode, isInherited: Boolean)
 
         def neighborContexts(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[NeighborContext] = {
-          adjacentNodes(nodeType).map(NeighborContext(_, false)) ++
-            nodeType.extendzRecursively.flatMap(adjacentNodes).map(NeighborContext(_, true))
+          val inherited: Seq[AdjacentNode] = nodeType.extendzRecursively.flatMap(adjacentNodes)
+          val direct: Seq[AdjacentNode] = adjacentNodes(nodeType).filter(inherited.contains)
+          // TODO idea: just filter out the inherited ones here?
+          direct.map(NeighborContext(_, false)) ++ inherited.map(NeighborContext(_, true))
+//          adjacentNodes(nodeType).map(NeighborContext(_, false)) ++
+//            nodeType.extendzRecursively.flatMap(adjacentNodes).map(NeighborContext(_, true))
         }
 
         def createNeighborInfos(neighborContexts: Seq[NeighborContext], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
           neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edgeType, neighborContexts) =>
             val neighborInfoForNodes = neighborContexts.map { case NeighborContext(adjacentNode, isInherited) =>
+              // TODO derive that for both FieldIdentifier and Call, the CFG edge is inherited
+//              println(nodeType)
               NeighborInfoForNode(adjacentNode.neighbor, edgeType, direction, adjacentNode.cardinality, isInherited)
             }
             NeighborInfoForEdge(edgeType, neighborInfoForNodes, nextOffsetPos)
