@@ -757,12 +757,7 @@ class CodeGen(schema: Schema) {
          * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
          * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
         var _currOffsetPos = -1
-        def nextOffsetPos = { _currOffsetPos += 1; _currOffsetPos }
-
-        def createNeighborNodeInfo(node: AbstractNodeType, edge: EdgeType, direction: Direction.Value, cardinality: Cardinality, isInherited: Boolean) = {
-          val accessorName = s"_${camelCase(node.name)}Via${edge.className}${camelCaseCaps(direction.toString)}"
-          NeighborInfoForNode(node, edge, Helpers.escapeIfKeyword(accessorName), cardinality, isInherited)
-        }
+        def nextOffsetPos: Int = { _currOffsetPos += 1; _currOffsetPos }
 
         case class NeighborContext(adjacentNode: AdjacentNode, isInherited: Boolean)
 
@@ -774,7 +769,7 @@ class CodeGen(schema: Schema) {
         def createNeighborInfos(neighborContexts: Seq[NeighborContext], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
           neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edgeType, neighborContexts) =>
             val neighborInfoForNodes = neighborContexts.map { case NeighborContext(adjacentNode, isInherited) =>
-              createNeighborNodeInfo(adjacentNode.neighbor, edgeType, direction, adjacentNode.cardinality, isInherited)
+              NeighborInfoForNode(adjacentNode.neighbor, edgeType, direction, adjacentNode.cardinality, isInherited)
             }
             NeighborInfoForEdge(edgeType, neighborInfoForNodes, nextOffsetPos)
           }.toSeq
@@ -1108,7 +1103,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.ZeroOrOne => s".nextOption()"
               case _ => ""
             }
-            s"def ${neighborNodeInfo.accessorName}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.node.className}]$appendix"
+            s"def ${neighborNodeInfo.accessorName}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
         }.mkString("\n")
 
         s"""def $edgeAccessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
