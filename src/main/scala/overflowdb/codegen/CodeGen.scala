@@ -4,7 +4,6 @@ import better.files._
 import overflowdb.codegen.CodeGen.ConstantContext
 import overflowdb.schema._
 import overflowdb.storage.ValueTypes
-
 import scala.collection.mutable
 
 /** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
@@ -1052,7 +1051,7 @@ class CodeGen(schema: Schema) {
         val nodeDelegators = neighborInfo.nodeInfos.collect {
           case NeighborNodeInfoForNode(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
             val returnType = fullScalaType(neighborNode, cardinality)
-            s"def _$accessorNameForNode: $returnType = get()._$accessorNameForNode"
+            s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
         }.mkString("\n")
 
         s"""def $edgeAccessorName = get().$edgeAccessorName
@@ -1105,13 +1104,26 @@ class CodeGen(schema: Schema) {
 
         val nodeAccessors = neighborInfo.nodeInfos.collect {
           case NeighborNodeInfoForNode(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
-            val returnType = fullScalaType(neighborNode, cardinality)
-            val appendix = cardinality match {
+            /** handling some accidental complexity within the schema: if a relationship is defined on a base node and
+             * separately on a concrete node, with different cardinalities, we need to use the highest cardinality  */
+            val inheritedCardinalities = neighborNode.extendzRecursively.flatMap(_.inEdges).collect {
+              case AdjacentNode(viaEdge, neighbor, cardinality)
+                if viaEdge == neighborInfo.edge && neighbor == neighborNode => cardinality
+            }
+            val allCardinalities = cardinality +: inheritedCardinalities
+            val consolidatedCardinality = allCardinalities.distinct.sortBy {
+              case Cardinality.List => 0
+              case Cardinality.ISeq => 1
+              case Cardinality.ZeroOrOne => 2
+              case Cardinality.One => 3
+            }.head
+            val returnType = fullScalaType(neighborNode, consolidatedCardinality)
+            val appendix = consolidatedCardinality match {
               case Cardinality.One => ".next()"
               case Cardinality.ZeroOrOne => s".nextOption()"
               case _ => ""
             }
-            s"def _$accessorNameForNode: $returnType = $edgeAccessorName.collectAll[${neighborNode.className}]$appendix"
+            s"def $accessorNameForNode: $returnType = $edgeAccessorName.collectAll[${neighborNode.className}]$appendix"
         }.mkString("\n")
 
         s"""def $edgeAccessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
