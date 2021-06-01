@@ -4,7 +4,6 @@ import better.files._
 import overflowdb.codegen.CodeGen.ConstantContext
 import overflowdb.schema._
 import overflowdb.storage.ValueTypes
-
 import scala.collection.mutable
 
 /** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
@@ -711,7 +710,7 @@ class CodeGen(schema: Schema) {
               }
               s"def $accessorName: ${fullScalaType(neighbor, cardinality)} = $edgeAccessorName.collectAll[${neighbor.className}]$appendix"
             }
-          }.mkString("\n\n")
+          }.distinct.mkString("\n\n")
 
           s"""$genericEdgeAccessor
              |
@@ -758,32 +757,40 @@ class CodeGen(schema: Schema) {
          * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
          * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
         var _currOffsetPos = -1
-        def nextOffsetPos = { _currOffsetPos += 1; _currOffsetPos }
+        def nextOffsetPos: Int = { _currOffsetPos += 1; _currOffsetPos }
 
-        def createNeighborNodeInfo(node: AbstractNodeType, edgeAndDirection: String, cardinality: Cardinality, isInherited: Boolean) = {
-          val accessorName = s"_${camelCase(node.name)}Via${edgeAndDirection.capitalize}"
-          NeighborNodeInfoForNode(Helpers.escapeIfKeyword(accessorName), node, cardinality, isInherited)
+        case class AjacentNodeWithInheritanceStatus(adjacentNode: AdjacentNode, isInherited: Boolean)
+
+        /** For all adjacent nodes, figure out if they are inherited or not.
+         *  Later on, we will create edge accessors for all inherited neighbors, but only create the node accessors
+         *  on the base types (if they are defined there). Note: they may even be inherited with a different cardinality */
+        def adjacentNodesWithInheritanceStatus(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[AjacentNodeWithInheritanceStatus] = {
+          val inherited = nodeType.extendzRecursively
+            .flatMap(adjacentNodes)
+            .map(AjacentNodeWithInheritanceStatus(_, true))
+
+          // only edge and neighbor node matter, not the cardinality
+          val inheritedLookup: Set[(EdgeType, AbstractNodeType)] =
+            inherited.map(_.adjacentNode).map { case AdjacentNode(viaEdge, neighbor, _) => (viaEdge, neighbor) }.toSet
+
+          val direct = adjacentNodes(nodeType).map { adjacentNode =>
+            val isInherited = inheritedLookup.contains((adjacentNode.viaEdge, adjacentNode.neighbor))
+            AjacentNodeWithInheritanceStatus(adjacentNode, isInherited)
+          }
+          (direct ++ inherited).distinct
         }
 
-        case class NeighborContext(adjacentNode: AdjacentNode, isInherited: Boolean)
-
-        def neighborContexts(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[NeighborContext] = {
-          adjacentNodes(nodeType).map(NeighborContext(_, false)) ++
-            nodeType.extendzRecursively.flatMap(adjacentNodes).map(NeighborContext(_, true))
-        }
-
-        def createNeighborInfos(neighborContexts: Seq[NeighborContext], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
-          neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edgeType, neighborContexts) =>
-            val viaEdgeAndDirection = edgeType.className + camelCaseCaps(direction.toString)
-            val neighborInfoForNodes = neighborContexts.map { case NeighborContext(adjacentNode, isInherited) =>
-              createNeighborNodeInfo(adjacentNode.neighbor, viaEdgeAndDirection, adjacentNode.cardinality, isInherited)
+        def createNeighborInfos(neighborContexts: Seq[AjacentNodeWithInheritanceStatus], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
+          neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edge, neighborContexts) =>
+            val neighborInfoForNodes = neighborContexts.map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
+              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited)
             }
-            NeighborInfoForEdge(edgeType, neighborInfoForNodes, nextOffsetPos)
+            NeighborInfoForEdge(edge, neighborInfoForNodes, nextOffsetPos)
           }.toSeq
         }
 
-        val neighborOutInfos = createNeighborInfos(neighborContexts(_.outEdges), Direction.OUT)
-        val neighborInInfos = createNeighborInfos(neighborContexts(_.inEdges), Direction.IN)
+        val neighborOutInfos = createNeighborInfos(adjacentNodesWithInheritanceStatus(_.outEdges), Direction.OUT)
+        val neighborInInfos = createNeighborInfos(adjacentNodesWithInheritanceStatus(_.inEdges), Direction.IN)
         (neighborOutInfos, neighborInInfos)
       }
 
@@ -1050,9 +1057,9 @@ class CodeGen(schema: Schema) {
       val neighborAccessorDelegators = neighborInfos.map { case (neighborInfo, direction) =>
         val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
         val nodeDelegators = neighborInfo.nodeInfos.collect {
-          case NeighborNodeInfoForNode(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
-            val returnType = fullScalaType(neighborNode, cardinality)
-            s"def $accessorNameForNode: $returnType = get().$accessorNameForNode"
+          case neighborNodeInfo if !neighborNodeInfo.isInherited =>
+            val accessorNameForNode = neighborNodeInfo.accessorName
+            s"def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode"
         }.mkString("\n")
 
         s"""def $edgeAccessorName = get().$edgeAccessorName
@@ -1104,14 +1111,13 @@ class CodeGen(schema: Schema) {
         val offsetPosition = neighborInfo.offsetPosition
 
         val nodeAccessors = neighborInfo.nodeInfos.collect {
-          case NeighborNodeInfoForNode(accessorNameForNode, neighborNode, cardinality, isInherited) if !isInherited =>
-            val returnType = fullScalaType(neighborNode, cardinality)
-            val appendix = cardinality match {
+          case neighborNodeInfo if !neighborNodeInfo.isInherited =>
+            val appendix = neighborNodeInfo.consolidatedCardinality match {
               case Cardinality.One => ".next()"
               case Cardinality.ZeroOrOne => s".nextOption()"
               case _ => ""
             }
-            s"def $accessorNameForNode: $returnType = $edgeAccessorName.collectAll[${neighborNode.className}]$appendix"
+            s"def ${neighborNodeInfo.accessorName}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
         }.mkString("\n")
 
         s"""def $edgeAccessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
