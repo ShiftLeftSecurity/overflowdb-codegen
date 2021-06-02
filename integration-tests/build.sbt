@@ -15,7 +15,7 @@ val schemas = project.in(file("schemas"))
       } else {
         Def.task {
           FileUtils.deleteRecursively(outputRoot)
-          (Compile/runMain).toTask(s" io.shiftleft.codepropertygraph.schema.Codegen schema/target/odb-codegen").value
+          (Compile/runMain).toTask(s" CodegenForAllSchemas integration-tests/schemas/target/odb-codegen").value
           lastSchemaMd5(currentSchemaMd5)
           FileUtils.listFilesRecursively(outputRoot)
         }

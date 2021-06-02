@@ -1,12 +1,8 @@
-package schema01
-
-import java.io.File
-import overflowdb.codegen.CodeGen
-import overflowdb.schema.{Cardinality, Constant, SchemaBuilder, SchemaInfo}
+import overflowdb.schema._
 import overflowdb.storage.ValueTypes
 
-// TODO create integration test from this
-object TestSchema1 extends App {
+object Schema01 {
+  // TODO use different namespace - automatically based on this object's name? abstract out?
   val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
 
   implicit val schemaInfo = SchemaInfo.forClass(getClass)
@@ -238,5 +234,7 @@ object TestSchema1 extends App {
     )
   )
 
-  new CodeGen(builder.build).run(new File("target"))
+  // TODO drop
+  // new CodeGen(builder.build).run(new File("target"))
+  val instance = builder.build
 }
