@@ -6,5 +6,5 @@ object CodegenForAllSchemas extends App {
   val outputDir =
     args.headOption.map(new File(_)).getOrElse(throw new AssertionError("please pass outputDir as first parameter"))
 
-  new CodeGen(Schema01.instance).run(outputDir)
+  new CodeGen(new TestSchema01().instance).run(outputDir)
 }
