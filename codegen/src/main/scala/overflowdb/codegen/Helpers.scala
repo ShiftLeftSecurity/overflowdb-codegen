@@ -10,6 +10,9 @@ object DefaultNodeTypes {
   /** root type for all nodes */
   val AbstractNodeName = "ABSTRACT_NODE"
   val AbstractNodeClassname = "AbstractNode"
+
+  val StoredNodeName = "STORED_NODE"
+  val StoredNodeClassname = "StoredNode"
 }
 
 // TODO drop
