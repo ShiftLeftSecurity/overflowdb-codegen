@@ -15,13 +15,21 @@ class SchemaBuilder(basePackage: String) {
   var protoOptions: Option[ProtoOptions] = None
 
   /** root node trait for all nodes - use if you want to be explicitly unspecific
-   * TODO handle differently - it's a cpg-specific special type at the moment, which isn't nice.
-   * it's not even part of the regular base types, but instead defined in the RootTypes.scala
-   * */
+    * n.b. 1: this one allows for StoredNode and NewNode
+    * n.b. 2: this it's not even part of the regular base types, but instead defined in the RootTypes.scala */
   lazy val anyNode: NodeBaseType =
     new NodeBaseType(
       DefaultNodeTypes.AbstractNodeName,
       Some("generic node base trait - use if you want to be explicitly unspecific"),
+      SchemaInfo.forClass(getClass)
+    )
+
+  /** root node trait for all stored nodes - use if you want to be explicitly unspecific
+    * n.b.: this it's not even part of the regular base types, but instead defined in the RootTypes.scala */
+  lazy val storedNode: NodeBaseType =
+    new NodeBaseType(
+      DefaultNodeTypes.StoredNodeName,
+      Some("generic stored node base trait - use if you want to be explicitly unspecific"),
       SchemaInfo.forClass(getClass)
     )
 

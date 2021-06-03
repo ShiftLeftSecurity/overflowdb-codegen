@@ -66,7 +66,6 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
   def extendzRecursively: Seq[NodeBaseType] = {
     val extendsLevel1 = extendz
-    if (extendsLevel1.nonEmpty) println(extendsLevel1)
     (extendsLevel1 ++ extendsLevel1.flatMap(_.extendzRecursively)).distinct
   }
 
