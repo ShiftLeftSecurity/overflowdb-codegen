@@ -2,7 +2,6 @@ name := "overflowdb-codegen-root"
 
 ThisBuild/organization := "io.shiftleft"
 ThisBuild/scalaVersion := "2.13.6"
-ThisBuild/crossScalaVersions := Seq("2.12.13", "2.13.6")
 
 val codegen = Projects.codegen
 val integrationTests = Projects.integrationTests
