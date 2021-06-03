@@ -45,13 +45,16 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
     /* only to provide feedback for potential schema optimisation: no need to redefine properties if they are already
      * defined in one of the parents */
     for {
-      property <- _properties
-      baseType <- _extendz
+      property <- propertiesSeq
+      baseType <- extendz
       if baseType.properties.contains(property)
     } println(s"[info]: $this wouldn't need to have $property added explicitly - $baseType already brings it in")
 
-    (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
+    propertiesSeq ++ extendz.flatMap(_.properties)
   }
+
+  private def propertiesSeq: Seq[Property] =
+    _properties.toSeq.sortBy(_.className)
 
   def extendz(additional: NodeBaseType*): this.type = {
     additional.foreach(_extendz.add)
@@ -59,10 +62,11 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   }
 
   def extendz: Seq[NodeBaseType] =
-    _extendz.toSeq
+    _extendz.toSeq.sortBy(_.className)
 
   def extendzRecursively: Seq[NodeBaseType] = {
     val extendsLevel1 = extendz
+    if (extendsLevel1.nonEmpty) println(extendsLevel1)
     (extendsLevel1 ++ extendsLevel1.flatMap(_.extendzRecursively)).distinct
   }
 
