@@ -694,7 +694,10 @@ class CodeGen(schema: Schema) {
       def abstractEdgeAccessors(neighbors: Seq[AdjacentNode], direction: Direction.Value) =
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
-          val neighborNodesType = deriveCommonSuperType(neighbors.map(_.neighbor).toSet).map(_.className).getOrElse("StoredNode")
+          // in theory we can get multiple results here - ignoring that for now
+          val neighborNodesType = lowestCommonAncestor(neighbors.map(_.neighbor))
+            .map(_.className)
+            .getOrElse(DefaultNodeTypes.StoredNodeClassname)
           val genericEdgeAccessor = s"def $edgeAccessorName: Traversal[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
