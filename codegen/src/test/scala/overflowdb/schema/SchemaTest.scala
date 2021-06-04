@@ -42,6 +42,14 @@ class SchemaTest extends AnyWordSpec with Matchers {
       neighborInfoWith(Seq(nodeA1, nodeAExt1, baseNodeAExt, baseNodeA)).deriveNeighborNodeType shouldBe baseNodeA.className
     }
 
+    // TODO drop debug code
+    "foo" in {
+      val baseNodeA = new NodeBaseType(name = "BASE_A", comment = None, SchemaInfo.Unknown)
+      val nodeA1 = new NodeType(name = "A1", comment = None, SchemaInfo.Unknown).extendz(baseNodeA)
+
+      neighborInfoWith(Seq(nodeA1, baseNodeA)).deriveNeighborNodeType shouldBe baseNodeA.className
+    }
+
     def neighborInfoWith(nodes: Seq[AbstractNodeType]): NeighborInfoForEdge =
       NeighborInfoForEdge(
         edge = null,

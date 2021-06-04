@@ -1,6 +1,5 @@
 package overflowdb.codegen
 
-import overflowdb.algorithm.LowestCommonAncestors
 import overflowdb.schema._
 import overflowdb.storage.ValueTypes
 
@@ -183,9 +182,6 @@ object Helpers {
     if (scalaReservedKeywords.contains(value)) s"`$value`"
     else value
 
-  def allTypes(node: AbstractNodeType): Seq[AbstractNodeType] =
-    node +: node.extendzRecursively
-
   def fullScalaType(neighborNode: AbstractNodeType, cardinality: Cardinality): String = {
     val neighborNodeClass = neighborNode.className
     cardinality match {
@@ -198,8 +194,38 @@ object Helpers {
 
   /** in theory there can be multiple candidates - ignoring for now */
   def lowestCommonAncestor(nodes: Seq[AbstractNodeType]): Option[AbstractNodeType] = {
-    val lowestCommonAncestors = LowestCommonAncestors(nodes.toSet)(_.extendzRecursively.toSet)
-    lowestCommonAncestors.headOption
+    LowestCommonAncestors1(nodes.toSet)(_.extendzRecursively.toSet).headOption
+  }
+
+}
+
+object LowestCommonAncestors1 {
+
+  def apply[A](nodes: Set[A])(parents: A => Set[A]): Set[A] = {
+
+    def allNodes(node: A): Set[A] = {
+      Set(node) ++ parentsRecursive(node)
+    }
+
+    def parentsRecursive(node: A): Set[A] = {
+      val nodeParents = parents(node)
+      nodeParents ++ nodeParents.flatMap(parentsRecursive)
+    }
+
+    if (nodes.size <= 1) {
+      nodes
+    } else {
+      val (head, tail) = (nodes.head, nodes.tail)
+      val parentsIntersection = tail.foldLeft(allNodes(head)) {
+        case (res, next) =>
+          res.intersect(allNodes(next))
+      }
+
+      parentsIntersection.filter { node =>
+        val childCount = parentsIntersection.count(allNodes(_).contains(node))
+        childCount == 0
+      }
+    }
   }
 
 }
