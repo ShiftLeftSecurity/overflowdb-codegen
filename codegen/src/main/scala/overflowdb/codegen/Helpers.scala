@@ -190,7 +190,6 @@ object Helpers {
        * Trying to at least keep it deterministic...
        * Idea: take one nodeType and check if it's type or any of it's supertypes are declared in *all* other nodeTypes
        * */
-
       val sorted = nodeTypes.toSeq.sortBy(_.className)
 
       val (first, otherNodes) = (sorted.head, sorted.tail)
