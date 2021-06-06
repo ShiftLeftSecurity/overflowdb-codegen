@@ -13,6 +13,8 @@ object DefaultNodeTypes {
 
   val StoredNodeName = "STORED_NODE"
   val StoredNodeClassname = "StoredNode"
+
+  lazy val AllClassNames = Set(AbstractNodeClassname, StoredNodeClassname)
 }
 
 // TODO drop
@@ -108,10 +110,11 @@ object Helpers {
   }
 
   def getCompleteType(containedNode: ContainedNode): String = {
-    val tpe = if (containedNode.nodeType.className != DefaultNodeTypes.AbstractNodeClassname) {
-      containedNode.nodeType.className + "Base"
+    val className = containedNode.nodeType.className
+    val tpe = if (DefaultNodeTypes.AllClassNames.contains(className)) {
+      className
     } else {
-      containedNode.nodeType.className
+      className + "Base"
     }
 
     containedNode.cardinality match {
