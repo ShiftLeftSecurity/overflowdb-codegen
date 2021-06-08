@@ -47,7 +47,7 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
      * defined in one of the parents */
     for {
       property <- _properties
-      baseType <- _extendz
+      baseType <- extendzRecursively
       if baseType.properties.contains(property)
     } println(s"[info]: $this wouldn't need to have $property added explicitly - $baseType already brings it in")
 
