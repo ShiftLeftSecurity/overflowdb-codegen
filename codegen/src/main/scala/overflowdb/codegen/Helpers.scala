@@ -192,7 +192,7 @@ object Helpers {
     }
   }
 
-  /** in theory there can be multiple candidates - ignoring for now */
+  /** in theory there can be multiple candidates - we're just returning one of those for now */
   def lowestCommonAncestor(nodes: Seq[AbstractNodeType]): Option[AbstractNodeType] = {
     LowestCommonAncestors1(nodes.toSet)(_.extendzRecursively.toSet).headOption
   }
