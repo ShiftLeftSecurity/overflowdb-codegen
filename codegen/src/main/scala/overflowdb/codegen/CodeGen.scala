@@ -14,10 +14,25 @@ class CodeGen(schema: Schema) {
   val edgesPackage = s"$basePackage.edges"
 
   def run(outputDir: java.io.File): Seq[java.io.File] = {
+    warnForDuplicatePropertyDefinitions()
     val _outputDir = outputDir.toScala
     val results = writeConstants(_outputDir) ++ writeEdgeFiles(_outputDir) ++ writeNodeFiles(_outputDir) :+ writeNewNodeFile(_outputDir)
     println(s"generated ${results.size} files in ${_outputDir}")
     results.map(_.toJava)
+  }
+
+  /* to provide feedback for potential schema optimisation: no need to redefine properties if they are already
+   * defined in one of the parents */
+  protected def warnForDuplicatePropertyDefinitions() = {
+    val warnings = for {
+      nodeType <- schema.allNodeTypes
+      property <- nodeType.properties
+      baseType <- nodeType.extendzRecursively
+      if baseType.properties.contains(property)
+    } yield s"[info]: $nodeType wouldn't need to have $property added explicitly - $baseType already brings it in"
+
+    println(s"${warnings.size} warnings found:")
+    warnings.sorted.foreach(println)
   }
 
   protected def writeConstants(outputDir: File): Seq[File] = {
