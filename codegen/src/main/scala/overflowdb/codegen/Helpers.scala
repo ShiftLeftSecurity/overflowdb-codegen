@@ -1,5 +1,6 @@
 package overflowdb.codegen
 
+import overflowdb.algorithm.LowestCommonAncestors
 import overflowdb.schema._
 import overflowdb.storage.ValueTypes
 
@@ -182,31 +183,6 @@ object Helpers {
     if (scalaReservedKeywords.contains(value)) s"`$value`"
     else value
 
-  def deriveCommonSuperType(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] = {
-    if (nodeTypes.size == 1) {
-      Some(nodeTypes.head)
-    } else if (nodeTypes.size > 1) {
-      /** Trying to find common supertype. This is nontrivial and we're probably missing a few cases.
-       * Trying to at least keep it deterministic...
-       * Idea: take one nodeType and check if it's type or any of it's supertypes are declared in *all* other nodeTypes
-       * */
-
-      val sorted = nodeTypes.toSeq.sortBy(_.className)
-
-      val (first, otherNodes) = (sorted.head, sorted.tail)
-      allTypes(first).find { candidate =>
-        otherNodes.forall { otherNode =>
-          allTypes(otherNode).contains(candidate)
-        }
-      }
-    } else {
-      None
-    }
-  }
-
-  def allTypes(node: AbstractNodeType): Seq[AbstractNodeType] =
-    node +: node.extendzRecursively
-
   def fullScalaType(neighborNode: AbstractNodeType, cardinality: Cardinality): String = {
     val neighborNodeClass = neighborNode.className
     cardinality match {
@@ -216,5 +192,39 @@ object Helpers {
       case Cardinality.ISeq => ???
     }
   }
+
+  // TODO return AbstractNodeType - need DefaultNodeTypes.StoredNode: AbstractNodeType
+  def deriveCommonRootType(neighborNodeInfos: Set[AbstractNodeType]): String = {
+    lowestCommonAncestor(neighborNodeInfos)
+      .orElse(findSharedRoot(neighborNodeInfos))
+      .map(_.className)
+      .getOrElse(DefaultNodeTypes.StoredNodeClassname)
+  }
+
+  /** in theory there can be multiple candidates - we're just returning one of those for now */
+  def lowestCommonAncestor(nodes: Set[AbstractNodeType]): Option[AbstractNodeType] = {
+    LowestCommonAncestors(nodes)(_.extendzRecursively.toSet).headOption
+  }
+
+  /** from the given node types, find one that is part of the complete type hierarchy of *all* other node types */
+  def findSharedRoot(nodeTypes: Set[AbstractNodeType]): Option[AbstractNodeType] = {
+    if (nodeTypes.size == 1) {
+      Some(nodeTypes.head)
+    } else if (nodeTypes.size > 1) {
+      // trying to keep it deterministic...
+      val sorted = nodeTypes.toSeq.sortBy(_.className)
+      val (first, otherNodes) = (sorted.head, sorted.tail)
+      completeTypeHierarchy(first).find { candidate =>
+        otherNodes.forall { otherNode =>
+          completeTypeHierarchy(otherNode).contains(candidate)
+        }
+      }
+    } else {
+      None
+    }
+  }
+
+  def completeTypeHierarchy(node: AbstractNodeType): Seq[AbstractNodeType] =
+    node +: node.extendzRecursively
 
 }
