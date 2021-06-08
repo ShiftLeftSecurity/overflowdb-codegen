@@ -1,6 +1,5 @@
 package overflowdb.schema
 
-import overflowdb.codegen.DefaultNodeTypes
 import overflowdb.codegen.Helpers._
 import overflowdb.storage.ValueTypes
 
@@ -174,11 +173,8 @@ object Constant {
 }
 
 case class NeighborInfoForEdge(edge: EdgeType, nodeInfos: Seq[NeighborInfoForNode], offsetPosition: Int) {
-  lazy val deriveNeighborNodeType: String = {
-    lowestCommonAncestor(nodeInfos.map(_.neighborNode))
-      .map(_.className)
-      .getOrElse(DefaultNodeTypes.StoredNodeClassname)
-  }
+  lazy val deriveNeighborNodeType: String =
+    deriveCommonRootType(nodeInfos.map(_.neighborNode).toSet)
 }
 
 case class NeighborInfoForNode(
