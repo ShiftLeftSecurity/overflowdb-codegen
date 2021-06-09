@@ -28,7 +28,8 @@ val integrationTests = project.in(file("tests"))
   .settings(Seq(
     libraryDependencies ++= Seq(
       "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
-      "org.scalatest" %% "scalatest" % "3.2.9" % Test),
+      "org.scalatest" %% "scalatest" % "3.2.9" % Test,
+    ),
     Compile/sourceGenerators += schemas / generateDomainClasses,
     publish/skip := true
   ))
