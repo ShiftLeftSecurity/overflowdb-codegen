@@ -20,6 +20,7 @@ val integrationTests = project.in(file("tests"))
       "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
       "org.scalatest" %% "scalatest" % "3.2.9" % Test,
     ),
+    scalacOptions -= "-Xfatal-warnings",
     Compile/sourceGenerators += schemas / generateDomainClasses,
     publish/skip := true
   ))

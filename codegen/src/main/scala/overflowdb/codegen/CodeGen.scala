@@ -738,9 +738,45 @@ class CodeGen(schema: Schema) {
              |$specificNodeAccessors""".stripMargin
         }.mkString("\n")
 
+
+      val companionObject = {
+        val propertyNames = nodeBaseType.properties.map(_.name)
+        val propertyNameDefs = propertyNames.map { name =>
+          s"""val ${camelCaseCaps(name)} = "$name" """
+        }.mkString("\n|    ")
+
+        val propertyDefs = properties.map { p =>
+          propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
+        }.mkString("\n|    ")
+
+        val Seq(outEdgeNames, inEdgeNames) =
+          Seq(nodeBaseType.outEdges, nodeBaseType.inEdges).map { edges =>
+          edges.map(_.viaEdge.name).sorted.map(quote).mkString(",")
+        }
+
+        s"""object $className {
+           |  object PropertyNames {
+           |    $propertyNameDefs
+           |    val all: Set[String] = Set(${propertyNames.map(camelCaseCaps).mkString(", ")})
+           |  }
+           |
+           |  object Properties {
+           |    $propertyDefs
+           |  }
+           |
+           |  object Edges {
+           |    val Out: Array[String] = Array($outEdgeNames)
+           |    val In: Array[String] = Array($inEdgeNames)
+           |  }
+           |
+           |}""".stripMargin
+      }
+
       s"""package $nodesPackage
          |
          |import overflowdb.traversal.Traversal
+         |
+         |$companionObject
          |
          |trait ${className}Base extends AbstractNode
          |$mixins

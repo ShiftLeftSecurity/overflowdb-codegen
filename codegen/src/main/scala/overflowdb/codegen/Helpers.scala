@@ -27,7 +27,10 @@ object Helpers {
 
   /* surrounds input with `"` */
   def quoted(strings: Iterable[String]): Iterable[String] =
-    strings.map(string => s""""$string"""")
+    strings.map(quote)
+
+  def quote(string: String): String =
+    s""""$string""""
 
   def stringToOption(s: String): Option[String] = s.trim match {
     case "" => None
@@ -150,7 +153,7 @@ object Helpers {
       case Cardinality.List      => s"Seq[$baseType]"
       case Cardinality.ISeq=> s"IndexedSeq[$baseType]"
     }
-    s"""val ${camelCaseCaps(name)} = new PropertyKey[$completeType]("$name") """
+    s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }
 
   val propertyErrorRegisterImpl =
