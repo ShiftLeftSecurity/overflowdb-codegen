@@ -1,6 +1,9 @@
 import overflowdb.schema._
 import overflowdb.storage.ValueTypes
 
+/** For testing base node type functionality, e.g. defining properties and edges on
+  * base node types.
+  */
 class TestSchema02 extends TestSchema {
   val name = builder.addProperty(
     name = "NAME",

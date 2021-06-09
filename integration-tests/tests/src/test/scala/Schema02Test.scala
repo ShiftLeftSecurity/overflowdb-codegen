@@ -13,6 +13,11 @@ class Schema02Test extends AnyWordSpec with Matchers {
     BaseNode.PropertyNames.Name shouldBe "NAME"
     BaseNode.Edges.Out shouldBe Array(Edge1.Label)
     BaseNode.Edges.In shouldBe Array(Edge2.Label)
+
+    Node1.Properties.Name.name shouldBe "NAME"
+    Node1.PropertyNames.Name shouldBe "NAME"
+    Node1.Edges.Out shouldBe Array(Edge1.Label)
+    Node1.Edges.In shouldBe Array(Edge2.Label)
   }
 
   "working with a concrete sample graph" can {
@@ -25,6 +30,7 @@ class Schema02Test extends AnyWordSpec with Matchers {
 
     "lookup and traverse nodes/edges/properties" in {
       def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
+
       val baseNode = baseNodeTraversal.head
       baseNode.edge2In.l shouldBe Seq(node2)
       baseNode.edge1Out.l shouldBe Seq(node2)
@@ -32,6 +38,4 @@ class Schema02Test extends AnyWordSpec with Matchers {
       baseNode._node2ViaEdge1Out.l shouldBe Seq(node2)
     }
   }
-
-
 }
