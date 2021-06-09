@@ -749,6 +749,11 @@ class CodeGen(schema: Schema) {
           propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
         }.mkString("\n|    ")
 
+        val Seq(outEdgeNames, inEdgeNames) =
+          Seq(nodeBaseType.outEdges, nodeBaseType.inEdges).map { edges =>
+          edges.map(_.viaEdge.name).sorted.map(quote).mkString(",")
+        }
+
         s"""object $className {
            |  object PropertyNames {
            |    $propertyNameDefs
@@ -757,6 +762,11 @@ class CodeGen(schema: Schema) {
            |
            |  object Properties {
            |    $propertyDefs
+           |  }
+           |
+           |  object Edges {
+           |    val Out: Array[String] = Array($outEdgeNames)
+           |    val In: Array[String] = Array($inEdgeNames)
            |  }
            |
            |}""".stripMargin

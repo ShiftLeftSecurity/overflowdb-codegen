@@ -27,7 +27,10 @@ object Helpers {
 
   /* surrounds input with `"` */
   def quoted(strings: Iterable[String]): Iterable[String] =
-    strings.map(string => s""""$string"""")
+    strings.map(quote)
+
+  def quote(string: String): String =
+    s""""$string""""
 
   def stringToOption(s: String): Option[String] = s.trim match {
     case "" => None
