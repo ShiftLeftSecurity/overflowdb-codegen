@@ -150,7 +150,7 @@ object Helpers {
       case Cardinality.List      => s"Seq[$baseType]"
       case Cardinality.ISeq=> s"IndexedSeq[$baseType]"
     }
-    s"""val ${camelCaseCaps(name)} = new PropertyKey[$completeType]("$name") """
+    s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }
 
   val propertyErrorRegisterImpl =
