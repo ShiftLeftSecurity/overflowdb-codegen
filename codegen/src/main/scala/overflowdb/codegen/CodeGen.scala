@@ -1371,7 +1371,6 @@ class CodeGen(schema: Schema) {
                 s"""  if ($memberName != null && $memberName.nonEmpty) { res += "${key.name}" -> $memberName }"""
             }
           }
-          .mkString("\n")
       val putRefsImpl = nodeType.containedNodes.map { key =>
           val memberName = key.localName
           key.cardinality match {
@@ -1383,14 +1382,20 @@ class CodeGen(schema: Schema) {
               s"""  if ($memberName != null && $memberName.nonEmpty) { res += "$memberName" -> $memberName }"""
           }
         }
-        .mkString("\n")
 
+        val propertiesImpl = {
+          val lines = putKeysImpl ++ putRefsImpl
+          if (lines.nonEmpty) {
+            s"""  var res = Map[String, Any]()
+               |${lines.mkString("\n")}
+               |  res""".stripMargin
+          } else {
+            "Map.empty"
+          }
+        }
 
         s"""override def properties: Map[String, Any] = {
-           |  var res = Map[String, Any]()
-           |$putKeysImpl
-           |$putRefsImpl
-           |  res
+           |$propertiesImpl
            |}""".stripMargin
       }
 
