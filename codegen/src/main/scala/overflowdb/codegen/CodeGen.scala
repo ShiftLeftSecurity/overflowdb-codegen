@@ -922,20 +922,28 @@ class CodeGen(schema: Schema) {
       }
 
       val fromNew = {
-        val initKeysImpl = properties
-          .map { key: Property =>
-            val memberName = camelCase(key.name)
-            key.cardinality match {
-              case Cardinality.One =>
-                s"""   this._$memberName = other.$memberName""".stripMargin
-              case Cardinality.ZeroOrOne =>
-                s"""   this._$memberName = if(other.$memberName != null) other.$memberName else None""".stripMargin
-              case Cardinality.List =>
-                s"""   this._$memberName = if(other.$memberName != null) other.$memberName else Nil""".stripMargin
-              case Cardinality.ISeq => ???
+        val initKeysImpl = {
+          if (properties.nonEmpty) {
+            val lines = properties.map { key: Property =>
+              val memberName = camelCase(key.name)
+              key.cardinality match {
+                case Cardinality.One =>
+                  s"""   this._$memberName = other.$memberName""".stripMargin
+                case Cardinality.ZeroOrOne =>
+                  s"""   this._$memberName = if(other.$memberName != null) other.$memberName else None""".stripMargin
+                case Cardinality.List =>
+                  s"""   this._$memberName = if(other.$memberName != null) other.$memberName else Nil""".stripMargin
+                case Cardinality.ISeq => ???
+              }
             }
+            s"""//this will throw for bad types -- no need to check by hand, we don't have a better error message
+               |  val other = someNewNode.asInstanceOf[New${nodeType.className}]
+               |  ${lines.mkString("\n")}
+               |""".stripMargin
+          } else {
+            ""
           }
-          .mkString("\n")
+        }
 
         val initRefsImpl = {
           nodeType.containedNodes.map { containedNode =>
@@ -986,8 +994,6 @@ class CodeGen(schema: Schema) {
         }
 
         s"""override def fromNewNode(someNewNode: NewNode, mapping: NewNode => StoredNode):Unit = {
-           |  //this will throw for bad types -- no need to check by hand, we don't have a better error message
-           |  val other = someNewNode.asInstanceOf[New${nodeType.className}]
            |$initKeysImpl
            |$initRefsImpl
            |$registerFullName
