@@ -42,8 +42,8 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   /** all node types that extend this node */
   def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType]
 
-  override def properties: Seq[Property] = {
-    (_properties ++ _extendz.flatMap(_.properties)).toSeq.sortBy(_.name.toLowerCase)
+  def propertiesRecursively: Seq[Property] = {
+    (properties ++ _extendz.flatMap(_.properties)).sortBy(_.name.toLowerCase)
   }
 
   def extendz(additional: NodeBaseType*): this.type = {
@@ -240,7 +240,7 @@ trait HasProperties {
     this
   }
 
-  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name)
+  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name.toLowerCase)
 }
 
 trait HasOptionalProtoId {

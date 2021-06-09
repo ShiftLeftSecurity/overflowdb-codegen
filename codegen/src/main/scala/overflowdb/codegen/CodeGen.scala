@@ -37,7 +37,7 @@ class CodeGen(schema: Schema) {
       if baseType.properties.contains(property) && !noWarnList.contains((nodeType, property))
     } yield s"[info]: $nodeType wouldn't need to have $property added explicitly - $baseType already brings it in"
 
-    println(s"${warnings.size} warnings found:")
+    if (warnings.size > 0) println(s"${warnings.size} warnings found:")
     warnings.sorted.foreach(println)
   }
 
@@ -698,9 +698,9 @@ class CodeGen(schema: Schema) {
 
     def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
       val className = nodeBaseType.className
-      val properties = nodeBaseType.properties
+      val properties = nodeBaseType.propertiesRecursively
 
-      val mixins = nodeBaseType.properties.map { property =>
+      val mixins = nodeBaseType.propertiesRecursively.map { property =>
         s"with Has${property.className}"
       }.mkString(" ")
 
@@ -740,7 +740,7 @@ class CodeGen(schema: Schema) {
 
 
       val companionObject = {
-        val propertyNames = nodeBaseType.properties.map(_.name)
+        val propertyNames = nodeBaseType.propertiesRecursively.map(_.name)
         val propertyNameDefs = propertyNames.map { name =>
           s"""val ${camelCaseCaps(name)} = "$name" """
         }.mkString("\n|    ")
@@ -794,9 +794,9 @@ class CodeGen(schema: Schema) {
     }
 
     def generateNodeSource(nodeType: NodeType) = {
-      val properties = nodeType.properties
+      val properties = nodeType.propertiesRecursively
 
-      val propertyNames = nodeType.properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
+      val propertyNames = properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
       val propertyNameDefs = propertyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
@@ -1486,7 +1486,7 @@ class CodeGen(schema: Schema) {
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.properties)
+      generateNewNodeSource(nodeType, nodeType.propertiesRecursively)
     }.mkString("\n")
     outfile.write(s"""$staticHeader
                      |$src
