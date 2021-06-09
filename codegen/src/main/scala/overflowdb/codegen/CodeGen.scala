@@ -922,20 +922,28 @@ class CodeGen(schema: Schema) {
       }
 
       val fromNew = {
-        val initKeysImpl = properties
-          .map { key: Property =>
-            val memberName = camelCase(key.name)
-            key.cardinality match {
-              case Cardinality.One =>
-                s"""   this._$memberName = other.$memberName""".stripMargin
-              case Cardinality.ZeroOrOne =>
-                s"""   this._$memberName = if(other.$memberName != null) other.$memberName else None""".stripMargin
-              case Cardinality.List =>
-                s"""   this._$memberName = if(other.$memberName != null) other.$memberName else Nil""".stripMargin
-              case Cardinality.ISeq => ???
+        val initKeysImpl = {
+          if (properties.nonEmpty) {
+            val lines = properties.map { key: Property =>
+              val memberName = camelCase(key.name)
+              key.cardinality match {
+                case Cardinality.One =>
+                  s"""   this._$memberName = other.$memberName""".stripMargin
+                case Cardinality.ZeroOrOne =>
+                  s"""   this._$memberName = if(other.$memberName != null) other.$memberName else None""".stripMargin
+                case Cardinality.List =>
+                  s"""   this._$memberName = if(other.$memberName != null) other.$memberName else Nil""".stripMargin
+                case Cardinality.ISeq => ???
+              }
             }
+            s"""//this will throw for bad types -- no need to check by hand, we don't have a better error message
+               |  val other = someNewNode.asInstanceOf[New${nodeType.className}]
+               |  ${lines.mkString("\n")}
+               |""".stripMargin
+          } else {
+            ""
           }
-          .mkString("\n")
+        }
 
         val initRefsImpl = {
           nodeType.containedNodes.map { containedNode =>
@@ -986,8 +994,6 @@ class CodeGen(schema: Schema) {
         }
 
         s"""override def fromNewNode(someNewNode: NewNode, mapping: NewNode => StoredNode):Unit = {
-           |  //this will throw for bad types -- no need to check by hand, we don't have a better error message
-           |  val other = someNewNode.asInstanceOf[New${nodeType.className}]
            |$initKeysImpl
            |$initRefsImpl
            |$registerFullName
@@ -1365,7 +1371,6 @@ class CodeGen(schema: Schema) {
                 s"""  if ($memberName != null && $memberName.nonEmpty) { res += "${key.name}" -> $memberName }"""
             }
           }
-          .mkString("\n")
       val putRefsImpl = nodeType.containedNodes.map { key =>
           val memberName = key.localName
           key.cardinality match {
@@ -1377,14 +1382,20 @@ class CodeGen(schema: Schema) {
               s"""  if ($memberName != null && $memberName.nonEmpty) { res += "$memberName" -> $memberName }"""
           }
         }
-        .mkString("\n")
 
+        val propertiesImpl = {
+          val lines = putKeysImpl ++ putRefsImpl
+          if (lines.nonEmpty) {
+            s"""  var res = Map[String, Any]()
+               |${lines.mkString("\n")}
+               |  res""".stripMargin
+          } else {
+            "Map.empty"
+          }
+        }
 
         s"""override def properties: Map[String, Any] = {
-           |  var res = Map[String, Any]()
-           |$putKeysImpl
-           |$putRefsImpl
-           |  res
+           |$propertiesImpl
            |}""".stripMargin
       }
 
