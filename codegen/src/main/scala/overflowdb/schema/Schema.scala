@@ -43,7 +43,8 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType]
 
   def propertiesRecursively: Seq[Property] = {
-    (properties ++ _extendz.flatMap(_.propertiesRecursively)).sortBy(_.name.toLowerCase)
+    val entireClassHierarchy = this +: extendzRecursively
+    entireClassHierarchy.flatMap(_.properties).distinct.sortBy(_.name.toLowerCase)
   }
 
   def extendz(additional: NodeBaseType*): this.type = {
