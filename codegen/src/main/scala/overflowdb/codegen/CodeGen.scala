@@ -796,7 +796,7 @@ class CodeGen(schema: Schema) {
     def generateNodeSource(nodeType: NodeType) = {
       val properties = nodeType.propertiesRecursively
 
-      val propertyNames = properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
+      val propertyNames = (properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)).distinct
       val propertyNameDefs = propertyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
