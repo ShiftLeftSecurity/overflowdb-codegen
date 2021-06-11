@@ -32,9 +32,9 @@ class CodeGen(schema: Schema) {
   protected def warnForDuplicatePropertyDefinitions() = {
     val warnings = for {
       nodeType <- schema.allNodeTypes
-      property <- nodeType.properties
+      property <- nodeType.propertiesWithoutInheritance
       baseType <- nodeType.extendzRecursively
-      if baseType.properties.contains(property) && !noWarnList.contains((nodeType, property))
+      if baseType.propertiesWithoutInheritance.contains(property) && !noWarnList.contains((nodeType, property))
     } yield s"[info]: $nodeType wouldn't need to have $property added explicitly - $baseType already brings it in"
 
     if (warnings.size > 0) println(s"${warnings.size} warnings found:")
@@ -698,9 +698,9 @@ class CodeGen(schema: Schema) {
 
     def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
       val className = nodeBaseType.className
-      val properties = nodeBaseType.propertiesRecursively
+      val properties = nodeBaseType.properties
 
-      val mixins = nodeBaseType.propertiesRecursively.map { property =>
+      val mixins = nodeBaseType.properties.map { property =>
         s"with Has${property.className}"
       }.mkString(" ")
 
@@ -740,7 +740,7 @@ class CodeGen(schema: Schema) {
 
 
       val companionObject = {
-        val propertyNames = nodeBaseType.propertiesRecursively.map(_.name)
+        val propertyNames = nodeBaseType.properties.map(_.name)
         val propertyNameDefs = propertyNames.map { name =>
           s"""val ${camelCaseCaps(name)} = "$name" """
         }.mkString("\n|    ")
@@ -794,7 +794,7 @@ class CodeGen(schema: Schema) {
     }
 
     def generateNodeSource(nodeType: NodeType) = {
-      val properties = nodeType.propertiesRecursively
+      val properties = nodeType.properties
 
       val propertyNames = (properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)).distinct
       val propertyNameDefs = propertyNames.map { name =>
@@ -1481,7 +1481,7 @@ class CodeGen(schema: Schema) {
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.propertiesRecursively)
+      generateNewNodeSource(nodeType, nodeType.properties)
     }.mkString("\n")
     outfile.write(s"""$staticHeader
                      |$src
