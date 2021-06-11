@@ -32,9 +32,9 @@ class CodeGen(schema: Schema) {
   protected def warnForDuplicatePropertyDefinitions() = {
     val warnings = for {
       nodeType <- schema.allNodeTypes
-      property <- nodeType.properties
+      property <- nodeType.propertiesWithoutInheritance
       baseType <- nodeType.extendzRecursively
-      if baseType.properties.contains(property) && !noWarnList.contains((nodeType, property))
+      if baseType.propertiesWithoutInheritance.contains(property) && !noWarnList.contains((nodeType, property))
     } yield s"[info]: $nodeType wouldn't need to have $property added explicitly - $baseType already brings it in"
 
     if (warnings.size > 0) println(s"${warnings.size} warnings found:")
@@ -698,9 +698,9 @@ class CodeGen(schema: Schema) {
 
     def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
       val className = nodeBaseType.className
-      val properties = nodeBaseType.propertiesRecursively
+      val properties = nodeBaseType.properties
 
-      val mixins = nodeBaseType.propertiesRecursively.map { property =>
+      val mixins = nodeBaseType.properties.map { property =>
         s"with Has${property.className}"
       }.mkString(" ")
 
@@ -740,7 +740,7 @@ class CodeGen(schema: Schema) {
 
 
       val companionObject = {
-        val propertyNames = nodeBaseType.propertiesRecursively.map(_.name)
+        val propertyNames = nodeBaseType.properties.map(_.name)
         val propertyNameDefs = propertyNames.map { name =>
           s"""val ${camelCaseCaps(name)} = "$name" """
         }.mkString("\n|    ")
@@ -794,9 +794,9 @@ class CodeGen(schema: Schema) {
     }
 
     def generateNodeSource(nodeType: NodeType) = {
-      val properties = nodeType.propertiesRecursively
+      val properties = nodeType.properties
 
-      val propertyNames = properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)
+      val propertyNames = (properties.map(_.name) ++ nodeType.containedNodes.map(_.localName)).distinct
       val propertyNameDefs = propertyNames.map { name =>
         s"""val ${camelCaseCaps(name)} = "$name" """
       }.mkString("\n|    ")
@@ -958,27 +958,22 @@ class CodeGen(schema: Schema) {
       }
 
       val fromNew = {
+        val newNodeCasted = s"newNode.asInstanceOf[New${nodeType.className}]"
+
         val initKeysImpl = {
-          if (properties.nonEmpty) {
-            val lines = properties.map { key: Property =>
-              val memberName = camelCase(key.name)
-              key.cardinality match {
-                case Cardinality.One =>
-                  s"""   this._$memberName = other.$memberName""".stripMargin
-                case Cardinality.ZeroOrOne =>
-                  s"""   this._$memberName = if(other.$memberName != null) other.$memberName else None""".stripMargin
-                case Cardinality.List =>
-                  s"""   this._$memberName = if(other.$memberName != null) other.$memberName else Nil""".stripMargin
-                case Cardinality.ISeq => ???
-              }
+          val lines = properties.map { key: Property =>
+            val memberName = camelCase(key.name)
+            key.cardinality match {
+              case Cardinality.One =>
+                s"""   this._$memberName = $newNodeCasted.$memberName""".stripMargin
+              case Cardinality.ZeroOrOne =>
+                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else None""".stripMargin
+              case Cardinality.List =>
+                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else Nil""".stripMargin
+              case Cardinality.ISeq => ???
             }
-            s"""//this will throw for bad types -- no need to check by hand, we don't have a better error message
-               |  val other = someNewNode.asInstanceOf[New${nodeType.className}]
-               |  ${lines.mkString("\n")}
-               |""".stripMargin
-          } else {
-            ""
           }
+          lines.mkString("\n")
         }
 
         val initRefsImpl = {
@@ -988,21 +983,21 @@ class CodeGen(schema: Schema) {
 
             containedNode.cardinality match {
               case Cardinality.One =>
-                s"""  this._$memberName = other.$memberName match {
+                s"""  this._$memberName = $newNodeCasted.$memberName match {
                    |    case null => null
                    |    case newNode: NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
                    |    case oldNode: StoredNode => oldNode.asInstanceOf[$containedNodeType]
                    |    case _ => throw new MatchError("unreachable")
                    |  }""".stripMargin
               case Cardinality.ZeroOrOne =>
-                s"""  this._$memberName = other.$memberName match {
+                s"""  this._$memberName = $newNodeCasted.$memberName match {
                    |    case null | None => None
                    |    case Some(newNode:NewNode) => Some(mapping(newNode).asInstanceOf[$containedNodeType])
                    |    case Some(oldNode:StoredNode) => Some(oldNode.asInstanceOf[$containedNodeType])
                    |    case _ => throw new MatchError("unreachable")
                    |  }""".stripMargin
               case Cardinality.List => // need java list, e.g. for NodeSerializer
-                s"""  this._$memberName = if(other.$memberName == null) Nil else other.$memberName.map { nodeRef => nodeRef match {
+                s"""  this._$memberName = if($newNodeCasted.$memberName == null) Nil else $newNodeCasted.$memberName.map { nodeRef => nodeRef match {
                    |    case null => throw new NullPointerException("Nullpointers forbidden in contained nodes")
                    |    case newNode:NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
                    |    case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
@@ -1010,8 +1005,8 @@ class CodeGen(schema: Schema) {
                    |  }}""".stripMargin
               case Cardinality.ISeq =>
                 s"""{
-                   |  val arr = if(other.$memberName == null || other.$memberName.isEmpty) null
-                   |    else other.$memberName.map { nodeRef => nodeRef match {
+                   |  val arr = if($newNodeCasted.$memberName == null || $newNodeCasted.$memberName.isEmpty) null
+                   |    else $newNodeCasted.$memberName.map { nodeRef => nodeRef match {
                    |      case null => throw new NullPointerException("Nullpointers forbidden in contained nodes")
                    |      case newNode:NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
                    |      case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
@@ -1026,10 +1021,10 @@ class CodeGen(schema: Schema) {
         }.mkString("\n\n")
 
         val registerFullName = if(!properties.map{_.name}.contains("FULL_NAME")) "" else {
-          s"""  graph.indexManager.putIfIndexed("FULL_NAME", other.fullName, this.ref)"""
+          s"""  graph.indexManager.putIfIndexed("FULL_NAME", $newNodeCasted.fullName, this.ref)"""
         }
 
-        s"""override def fromNewNode(someNewNode: NewNode, mapping: NewNode => StoredNode):Unit = {
+        s"""override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = {
            |$initKeysImpl
            |$initRefsImpl
            |$registerFullName
@@ -1486,7 +1481,7 @@ class CodeGen(schema: Schema) {
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.propertiesRecursively)
+      generateNewNodeSource(nodeType, nodeType.properties)
     }.mkString("\n")
     outfile.write(s"""$staticHeader
                      |$src

@@ -42,9 +42,15 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   /** all node types that extend this node */
   def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType]
 
-  def propertiesRecursively: Seq[Property] = {
-    (properties ++ _extendz.flatMap(_.properties)).sortBy(_.name.toLowerCase)
+
+  /** properties (including potentially inherited properties) */
+  override def properties: Seq[Property] = {
+    val entireClassHierarchy = this +: extendzRecursively
+    entireClassHierarchy.flatMap(_.propertiesWithoutInheritance).distinct.sortBy(_.name.toLowerCase)
   }
+
+  def propertiesWithoutInheritance: Seq[Property] =
+    _properties.toSeq.sortBy(_.name.toLowerCase)
 
   def extendz(additional: NodeBaseType*): this.type = {
     additional.foreach(_extendz.add)
@@ -139,6 +145,10 @@ object Cardinality {
 class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
   extends HasClassName with HasProperties with HasOptionalProtoId with HasSchemaInfo {
   override def toString = s"EdgeType($name)"
+
+  /** properties (including potentially inherited properties) */
+  def properties: Seq[Property] =
+    _properties.toSeq.sortBy(_.name.toLowerCase)
 }
 
 class Property(val name: String,
@@ -240,7 +250,8 @@ trait HasProperties {
     this
   }
 
-  def properties: Seq[Property] = _properties.toSeq.sortBy(_.name.toLowerCase)
+  /** properties (including potentially inherited properties) */
+  def properties: Seq[Property]
 }
 
 trait HasOptionalProtoId {
