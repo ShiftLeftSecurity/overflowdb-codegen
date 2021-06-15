@@ -5,6 +5,7 @@ import overflowdb.{Config, Graph}
 import testschema02._
 import testschema02.edges._
 import testschema02.nodes._
+import testschema02.traversal._
 
 class Schema02Test extends AnyWordSpec with Matchers {
 
