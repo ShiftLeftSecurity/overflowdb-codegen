@@ -12,6 +12,7 @@ class CodeGen(schema: Schema) {
   val basePackage = schema.basePackage
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
+  val traversalsPackage = s"$basePackage.traversal"
   private val noWarnList: mutable.Set[(AbstractNodeType, Property)] = mutable.Set.empty
 
   def dontWarnForDuplicateProperty(nodeType: AbstractNodeType, property: Property): CodeGen = {
@@ -22,7 +23,7 @@ class CodeGen(schema: Schema) {
   def run(outputDir: java.io.File): Seq[java.io.File] = {
     warnForDuplicatePropertyDefinitions()
     val _outputDir = outputDir.toScala
-    val results = writeConstants(_outputDir) ++ writeEdgeFiles(_outputDir) ++ writeNodeFiles(_outputDir) :+ writeNewNodeFile(_outputDir)
+    val results = writeConstants(_outputDir) ++ writeEdgeFiles(_outputDir) ++ writeNodeFiles(_outputDir) ++ writeNodeTraversalFiles(_outputDir) :+ writeNewNodeFile(_outputDir)
     println(s"generated ${results.size} files in ${_outputDir}")
     results.map(_.toJava)
   }
@@ -305,397 +306,6 @@ class CodeGen(schema: Schema) {
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
-    lazy val nodeTraversalImplicits = {
-      def implicitForNodeType(name: String) = {
-        val traversalName = s"${name}Traversal"
-        s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
-      }
-
-      def implicitForNewNodeBuilder(name : String) = {
-        val newNodeName = s"New${name}"
-        val newNodeBuilderName = s"${newNodeName}Builder"
-        s"implicit def ${newNodeBuilderName}To${newNodeName}(x : $newNodeBuilderName) : $newNodeName = x.build"
-      }
-
-      val implicitsForNodeTraversals =
-        schema.nodeTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
-
-      val implicitsForNodeBaseTypeTraversals =
-        schema.nodeBaseTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
-
-      val nonBaseTypes = (schema.nodeTypes.map(_.className).toSet -- schema.nodeBaseTypes.map(_.className).toSet).toList.sorted
-      val implicitsForNewNodeBuilders =
-        nonBaseTypes.map(implicitForNewNodeBuilder).mkString("\n")
-
-      s"""package $nodesPackage
-         |
-         |import overflowdb.traversal.Traversal
-         |
-         |trait NodeTraversalImplicits extends NodeBaseTypeTraversalImplicits {
-         |  $implicitsForNodeTraversals
-         |
-         |  $implicitsForNewNodeBuilders
-         |}
-         |
-         |// lower priority implicits for base types
-         |trait NodeBaseTypeTraversalImplicits {
-         |  $implicitsForNodeBaseTypeTraversals
-         |}
-         |""".stripMargin
-    }
-
-    def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
-      val propertyTraversals = properties.map { property =>
-        val nameCamelCase = camelCase(property.name)
-        val baseType = typeFor(property.valueType)
-        val cardinality = property.cardinality
-
-        val mapOrFlatMap = cardinality match {
-          case Cardinality.One => "map"
-          case Cardinality.ZeroOrOne | Cardinality.List | Cardinality.ISeq => "flatMap"
-        }
-
-        val filterStepsForSingleString =
-          s"""  /**
-             |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
-             |    * */
-             |  def $nameCamelCase(pattern: $baseType): Traversal[NodeType] = {
-             |    if(!Misc.isRegex(pattern)){
-             |      traversal.filter{node => node.${nameCamelCase} == pattern}
-             |    } else {
-             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
-             |    traversal.filter{node =>  matcher.reset(node.$nameCamelCase); matcher.matches()}
-             |    }
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
-             |    * */
-             |  def $nameCamelCase(patterns: $baseType*): Traversal[NodeType] = {
-             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
-             |    traversal.filter{node => matchers.exists{ matcher => matcher.reset(node.$nameCamelCase); matcher.matches()}}
-             |   }
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
-             |    * */
-             |  def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.${nameCamelCase} == value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
-             |    * */
-             |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.to(Set)
-             |    traversal.filter{node => vset.contains(node.${nameCamelCase})}
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
-             |    * */
-             |  def ${nameCamelCase}Not(pattern: $baseType): Traversal[NodeType] = {
-             |    if(!Misc.isRegex(pattern)){
-             |      traversal.filter{node => node.${nameCamelCase} != pattern}
-             |    } else {
-             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
-             |    traversal.filter{node =>  matcher.reset(node.$nameCamelCase); !matcher.matches()}
-             |    }
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
-             |    * */
-             |  def ${nameCamelCase}Not(patterns: $baseType*): Traversal[NodeType] = {
-             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
-             |    traversal.filter{node => !matchers.exists{ matcher => matcher.reset(node.$nameCamelCase); matcher.matches()}}
-             |   }
-             |
-             |""".stripMargin
-
-        val filterStepsForOptionalString =
-          s"""  /**
-             |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
-             |    * */
-             |  def $nameCamelCase(pattern: $baseType): Traversal[NodeType] = {
-             |    if(!Misc.isRegex(pattern)){
-             |      traversal.filter{node => node.$nameCamelCase.isDefined && node.${nameCamelCase}.get == pattern}
-             |    } else {
-             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && {matcher.reset(node.$nameCamelCase.get); matcher.matches()}}
-             |    }
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
-             |    * */
-             |  def $nameCamelCase(patterns: $baseType*): Traversal[NodeType] = {
-             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && matchers.exists{ matcher => matcher.reset(node.$nameCamelCase.get); matcher.matches()}}
-             |   }
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
-             |    * */
-             |  def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.${nameCamelCase}.get == value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
-             |    * */
-             |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.to(Set)
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && vset.contains(node.${nameCamelCase}.get)}
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
-             |    * */
-             |  def ${nameCamelCase}Not(pattern: $baseType): Traversal[NodeType] = {
-             |    if(!Misc.isRegex(pattern)){
-             |      traversal.filter{node => node.$nameCamelCase.isEmpty || node.${nameCamelCase}.get != pattern}
-             |    } else {
-             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
-             |    traversal.filter{node => node.$nameCamelCase.isEmpty || {matcher.reset(node.$nameCamelCase.get); !matcher.matches()}}
-             |    }
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
-             |    * */
-             |  def ${nameCamelCase}Not(patterns: $baseType*): Traversal[NodeType] = {
-             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
-             |    traversal.filter{node => node.$nameCamelCase.isEmpty || !matchers.exists{ matcher => matcher.reset(node.$nameCamelCase.get); matcher.matches()}}
-             |   }
-             |
-             |""".stripMargin
-
-        val filterStepsForSingleBoolean =
-          s"""  /**
-             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
-             |    * */
-             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase == value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
-             |    * */
-             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase != value}
-             |""".stripMargin
-
-        val filterStepsForOptionalBoolean =
-          s"""  /**
-             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
-             |    * */
-             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.${nameCamelCase}.isDefined && node.$nameCamelCase.get == value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
-             |    * */
-             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => !node.${nameCamelCase}.isDefined || node.$nameCamelCase.get == value}
-             |""".stripMargin
-
-        val filterStepsForSingleInt =
-          s"""  /**
-             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
-             |    * */
-             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase == value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
-             |    * */
-             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.toSet
-             |    traversal.filter{node => vset.contains(node.$nameCamelCase)}
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase is greater than the given `value`
-             |    * */
-             |  def ${nameCamelCase}Gt(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase > value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase is greater than or equal the given `value`
-             |    * */
-             |  def ${nameCamelCase}Gte(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase >= value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase is less than the given `value`
-             |    * */
-             |  def ${nameCamelCase}Lt(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase < value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase is less than or equal the given `value`
-             |    * */
-             |  def ${nameCamelCase}Lte(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase <= value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
-             |    * */
-             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase != value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
-             |    * */
-             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.toSet
-             |    traversal.filter{node => !vset.contains(node.$nameCamelCase)}
-             |  }
-             |""".stripMargin
-
-        val filterStepsForOptionalInt =
-          s"""  /**
-             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
-             |    * */
-             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get == value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
-             |    * */
-             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.toSet
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && vset.contains(node.$nameCamelCase.get)}
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase is greater than the given `value`
-             |    * */
-             |  def ${nameCamelCase}Gt(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get > value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase is greater than or equal the given `value`
-             |    * */
-             |  def ${nameCamelCase}Gte(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get >= value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase is less than the given `value`
-             |    * */
-             |  def ${nameCamelCase}Lt(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get < value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase is less than or equal the given `value`
-             |    * */
-             |  def ${nameCamelCase}Lte(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get <= value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
-             |    * */
-             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => !node.$nameCamelCase.isDefined || node.$nameCamelCase.get != value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
-             |    * */
-             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.toSet
-             |    traversal.filter{node => !node.$nameCamelCase.isDefined || !vset.contains(node.$nameCamelCase.get)}
-             |  }
-             |""".stripMargin
-
-        val filterStepsGenericSingle =
-          s"""  /**
-             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
-             |    * */
-             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase == value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
-             |    * */
-             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.toSet
-             |    traversal.filter{node => !vset.contains(node.$nameCamelCase)}
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
-             |    * */
-             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{_.$nameCamelCase != value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
-             |    * */
-             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.toSet
-             |    traversal.filter{node => !vset.contains(node.$nameCamelCase)}
-             |  }
-             |""".stripMargin
-
-        val filterStepsGenericOption =
-          s"""  /**
-             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
-             |    * */
-             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get == value}
-             |
-             |  /**
-             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
-             |    * */
-             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.toSet
-             |    traversal.filter{node => node.$nameCamelCase.isDefined && !vset.contains(node.$nameCamelCase.get)}
-             |  }
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
-             |    * */
-             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
-             |    traversal.filter{node => !node.$nameCamelCase.isDefined || node.$nameCamelCase.get != value}
-             |
-             |  /**
-             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
-             |    * */
-             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
-             |    val vset = values.toSet
-             |    traversal.filter{node => !node.$nameCamelCase.isDefined || !vset.contains(node.$nameCamelCase.get)}
-             |  }
-             |""".stripMargin
-
-        val filterSteps = (cardinality, property.valueType) match {
-          case (Cardinality.List | Cardinality.ISeq, _) => ""
-          case (Cardinality.One, ValueTypes.STRING) => filterStepsForSingleString
-          case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString
-          case (Cardinality.One, ValueTypes.BOOLEAN) => filterStepsForSingleBoolean
-          case (Cardinality.ZeroOrOne, ValueTypes.BOOLEAN) => filterStepsForOptionalBoolean
-          case (Cardinality.One, ValueTypes.INTEGER) => filterStepsForSingleInt
-          case (Cardinality.ZeroOrOne, ValueTypes.INTEGER) => filterStepsForOptionalInt
-          case (Cardinality.One, _) => filterStepsGenericSingle
-          case (Cardinality.ZeroOrOne, _) => filterStepsGenericOption
-          case _ => ""
-
-        }
-
-        s"""  /** Traverse to $nameCamelCase property */
-           |  def $nameCamelCase: Traversal[$baseType] =
-           |    traversal.$mapOrFlatMap(_.$nameCamelCase)
-           |
-           |  $filterSteps
-           |""".stripMargin
-      }.mkString("\n")
-
-      s"""
-         |/** Traversal steps for $className */
-         |class ${className}Traversal[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
-         |
-         |$propertyTraversals
-         |
-         |}""".stripMargin
-    }
-
     def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
       val className = nodeBaseType.className
       val properties = nodeBaseType.properties
@@ -751,8 +361,8 @@ class CodeGen(schema: Schema) {
 
         val Seq(outEdgeNames, inEdgeNames) =
           Seq(nodeBaseType.outEdges, nodeBaseType.inEdges).map { edges =>
-          edges.map(_.viaEdge.name).sorted.map(quote).mkString(",")
-        }
+            edges.map(_.viaEdge.name).sorted.map(quote).mkString(",")
+          }
 
         s"""object $className {
            |  object PropertyNames {
@@ -786,11 +396,7 @@ class CodeGen(schema: Schema) {
          |$mixinTraits {
          |${abstractEdgeAccessors(nodeBaseType.outEdges, Direction.OUT)}
          |${abstractEdgeAccessors(nodeBaseType.inEdges, Direction.IN)}
-         |}
-         |
-         |${generatePropertyTraversals(className, properties)}
-         |
-         |""".stripMargin
+         |}""".stripMargin
     }
 
     def generateNodeSource(nodeType: NodeType) = {
@@ -811,16 +417,16 @@ class CodeGen(schema: Schema) {
 
       val (neighborOutInfos, neighborInInfos) = {
         /** the offsetPos determines the index into the adjacent nodes array of a given node type
-         * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
-         * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
+          * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
+          * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
         var _currOffsetPos = -1
         def nextOffsetPos: Int = { _currOffsetPos += 1; _currOffsetPos }
 
         case class AjacentNodeWithInheritanceStatus(adjacentNode: AdjacentNode, isInherited: Boolean)
 
         /** For all adjacent nodes, figure out if they are inherited or not.
-         *  Later on, we will create edge accessors for all inherited neighbors, but only create the node accessors
-         *  on the base types (if they are defined there). Note: they may even be inherited with a different cardinality */
+          *  Later on, we will create edge accessors for all inherited neighbors, but only create the node accessors
+          *  on the base types (if they are defined there). Note: they may even be inherited with a different cardinality */
         def adjacentNodesWithInheritanceStatus(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[AjacentNodeWithInheritanceStatus] = {
           val inherited = nodeType.extendzRecursively
             .flatMap(adjacentNodes)
@@ -950,11 +556,11 @@ class CodeGen(schema: Schema) {
         }.mkString("\n")
 
         s""" {
-        |  val properties = new java.util.HashMap[String, AnyRef]
-        |$putKeysImpl
-        |$putRefsImpl
-        |  properties
-        |}""".stripMargin
+           |  val properties = new java.util.HashMap[String, AnyRef]
+           |$putKeysImpl
+           |$putRefsImpl
+           |  properties
+           |}""".stripMargin
       }
 
       val fromNew = {
@@ -1307,22 +913,444 @@ class CodeGen(schema: Schema) {
          |$nodeBaseImpl
          |$nodeRefImpl
          |$classImpl
-         |${generatePropertyTraversals(className, properties)}
          |""".stripMargin
     }
-
-    val packageObject =
-      s"""package $basePackage
-         |package object nodes extends NodeTraversalImplicits
-         |""".stripMargin
 
     val results = mutable.Buffer.empty[File]
     val baseDir = outputDir / nodesPackage.replaceAll("\\.", "/")
     if (baseDir.exists) baseDir.delete()
     baseDir.createDirectories()
+    results.append(baseDir.createChild("RootTypes.scala").write(rootTypeImpl))
+    schema.nodeBaseTypes.foreach { nodeBaseTrait =>
+      val src = generateNodeBaseTypeSource(nodeBaseTrait)
+      val srcFile = nodeBaseTrait.className + ".scala"
+      results.append(baseDir.createChild(srcFile).write(src))
+    }
+    schema.nodeTypes.foreach { nodeType =>
+      val src = generateNodeSource(nodeType)
+      val srcFile = nodeType.className + ".scala"
+      results.append(baseDir.createChild(srcFile).write(src))
+    }
+    results.toSeq
+  }
+
+  protected def writeNodeTraversalFiles(outputDir: File): Seq[File] = {
+    val staticHeader =
+      s"""package $traversalsPackage
+         |
+         |import overflowdb._
+         |import overflowdb.traversal.Traversal
+         |import scala.jdk.CollectionConverters._
+         |import $nodesPackage._
+         |""".stripMargin
+
+    lazy val nodeTraversalImplicits = {
+      def implicitForNodeType(name: String) = {
+        val traversalName = s"${name}Traversal"
+        s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
+      }
+
+      val implicitsForNodeTraversals =
+        schema.nodeTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+
+      val implicitsForNodeBaseTypeTraversals =
+        schema.nodeBaseTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+
+      s"""package $traversalsPackage
+         |
+         |import overflowdb.traversal.Traversal
+         |import $nodesPackage._
+         |
+         |trait NodeTraversalImplicits extends NodeBaseTypeTraversalImplicits {
+         |  $implicitsForNodeTraversals
+         |}
+         |
+         |// lower priority implicits for base types
+         |trait NodeBaseTypeTraversalImplicits {
+         |  $implicitsForNodeBaseTypeTraversals
+         |}
+         |""".stripMargin
+    }
+
+    def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
+      val propertyTraversals = properties.map { property =>
+        val nameCamelCase = camelCase(property.name)
+        val baseType = typeFor(property.valueType)
+        val cardinality = property.cardinality
+
+        val mapOrFlatMap = cardinality match {
+          case Cardinality.One => "map"
+          case Cardinality.ZeroOrOne | Cardinality.List | Cardinality.ISeq => "flatMap"
+        }
+
+        val filterStepsForSingleString =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
+             |    * */
+             |  def $nameCamelCase(pattern: $baseType): Traversal[NodeType] = {
+             |    if(!Misc.isRegex(pattern)){
+             |      traversal.filter{node => node.${nameCamelCase} == pattern}
+             |    } else {
+             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
+             |    traversal.filter{node =>  matcher.reset(node.$nameCamelCase); matcher.matches()}
+             |    }
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
+             |    * */
+             |  def $nameCamelCase(patterns: $baseType*): Traversal[NodeType] = {
+             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
+             |    traversal.filter{node => matchers.exists{ matcher => matcher.reset(node.$nameCamelCase); matcher.matches()}}
+             |   }
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
+             |    * */
+             |  def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.${nameCamelCase} == value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
+             |    * */
+             |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.to(Set)
+             |    traversal.filter{node => vset.contains(node.${nameCamelCase})}
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(pattern: $baseType): Traversal[NodeType] = {
+             |    if(!Misc.isRegex(pattern)){
+             |      traversal.filter{node => node.${nameCamelCase} != pattern}
+             |    } else {
+             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
+             |    traversal.filter{node =>  matcher.reset(node.$nameCamelCase); !matcher.matches()}
+             |    }
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(patterns: $baseType*): Traversal[NodeType] = {
+             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
+             |    traversal.filter{node => !matchers.exists{ matcher => matcher.reset(node.$nameCamelCase); matcher.matches()}}
+             |   }
+             |
+             |""".stripMargin
+
+        val filterStepsForOptionalString =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
+             |    * */
+             |  def $nameCamelCase(pattern: $baseType): Traversal[NodeType] = {
+             |    if(!Misc.isRegex(pattern)){
+             |      traversal.filter{node => node.$nameCamelCase.isDefined && node.${nameCamelCase}.get == pattern}
+             |    } else {
+             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && {matcher.reset(node.$nameCamelCase.get); matcher.matches()}}
+             |    }
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
+             |    * */
+             |  def $nameCamelCase(patterns: $baseType*): Traversal[NodeType] = {
+             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && matchers.exists{ matcher => matcher.reset(node.$nameCamelCase.get); matcher.matches()}}
+             |   }
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase matches `value` exactly.
+             |    * */
+             |  def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.${nameCamelCase}.get == value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
+             |    * */
+             |  def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.to(Set)
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && vset.contains(node.${nameCamelCase}.get)}
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(pattern: $baseType): Traversal[NodeType] = {
+             |    if(!Misc.isRegex(pattern)){
+             |      traversal.filter{node => node.$nameCamelCase.isEmpty || node.${nameCamelCase}.get != pattern}
+             |    } else {
+             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
+             |    traversal.filter{node => node.$nameCamelCase.isEmpty || {matcher.reset(node.$nameCamelCase.get); !matcher.matches()}}
+             |    }
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(patterns: $baseType*): Traversal[NodeType] = {
+             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
+             |    traversal.filter{node => node.$nameCamelCase.isEmpty || !matchers.exists{ matcher => matcher.reset(node.$nameCamelCase.get); matcher.matches()}}
+             |   }
+             |
+             |""".stripMargin
+
+        val filterStepsForSingleBoolean =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase == value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase != value}
+             |""".stripMargin
+
+        val filterStepsForOptionalBoolean =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.${nameCamelCase}.isDefined && node.$nameCamelCase.get == value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => !node.${nameCamelCase}.isDefined || node.$nameCamelCase.get == value}
+             |""".stripMargin
+
+        val filterStepsForSingleInt =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase == value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+             |    * */
+             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.toSet
+             |    traversal.filter{node => vset.contains(node.$nameCamelCase)}
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is greater than the given `value`
+             |    * */
+             |  def ${nameCamelCase}Gt(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase > value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is greater than or equal the given `value`
+             |    * */
+             |  def ${nameCamelCase}Gte(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase >= value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is less than the given `value`
+             |    * */
+             |  def ${nameCamelCase}Lt(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase < value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is less than or equal the given `value`
+             |    * */
+             |  def ${nameCamelCase}Lte(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase <= value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase != value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.toSet
+             |    traversal.filter{node => !vset.contains(node.$nameCamelCase)}
+             |  }
+             |""".stripMargin
+
+        val filterStepsForOptionalInt =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get == value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+             |    * */
+             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.toSet
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && vset.contains(node.$nameCamelCase.get)}
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is greater than the given `value`
+             |    * */
+             |  def ${nameCamelCase}Gt(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get > value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is greater than or equal the given `value`
+             |    * */
+             |  def ${nameCamelCase}Gte(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get >= value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is less than the given `value`
+             |    * */
+             |  def ${nameCamelCase}Lt(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get < value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase is less than or equal the given `value`
+             |    * */
+             |  def ${nameCamelCase}Lte(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get <= value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => !node.$nameCamelCase.isDefined || node.$nameCamelCase.get != value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.toSet
+             |    traversal.filter{node => !node.$nameCamelCase.isDefined || !vset.contains(node.$nameCamelCase.get)}
+             |  }
+             |""".stripMargin
+
+        val filterStepsGenericSingle =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase == value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+             |    * */
+             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.toSet
+             |    traversal.filter{node => !vset.contains(node.$nameCamelCase)}
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{_.$nameCamelCase != value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.toSet
+             |    traversal.filter{node => !vset.contains(node.$nameCamelCase)}
+             |  }
+             |""".stripMargin
+
+        val filterStepsGenericOption =
+          s"""  /**
+             |    * Traverse to nodes where the $nameCamelCase equals the given `value`
+             |    * */
+             |  def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get == value}
+             |
+             |  /**
+             |    * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
+             |    * */
+             |  def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.toSet
+             |    traversal.filter{node => node.$nameCamelCase.isDefined && !vset.contains(node.$nameCamelCase.get)}
+             |  }
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
+             |    * */
+             |  def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |    traversal.filter{node => !node.$nameCamelCase.isDefined || node.$nameCamelCase.get != value}
+             |
+             |  /**
+             |    * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
+             |    * */
+             |  def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
+             |    val vset = values.toSet
+             |    traversal.filter{node => !node.$nameCamelCase.isDefined || !vset.contains(node.$nameCamelCase.get)}
+             |  }
+             |""".stripMargin
+
+        val filterSteps = (cardinality, property.valueType) match {
+          case (Cardinality.List | Cardinality.ISeq, _) => ""
+          case (Cardinality.One, ValueTypes.STRING) => filterStepsForSingleString
+          case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString
+          case (Cardinality.One, ValueTypes.BOOLEAN) => filterStepsForSingleBoolean
+          case (Cardinality.ZeroOrOne, ValueTypes.BOOLEAN) => filterStepsForOptionalBoolean
+          case (Cardinality.One, ValueTypes.INTEGER) => filterStepsForSingleInt
+          case (Cardinality.ZeroOrOne, ValueTypes.INTEGER) => filterStepsForOptionalInt
+          case (Cardinality.One, _) => filterStepsGenericSingle
+          case (Cardinality.ZeroOrOne, _) => filterStepsGenericOption
+          case _ => ""
+        }
+
+        s"""  /** Traverse to $nameCamelCase property */
+           |  def $nameCamelCase: Traversal[$baseType] =
+           |    traversal.$mapOrFlatMap(_.$nameCamelCase)
+           |
+           |  $filterSteps
+           |""".stripMargin
+      }.mkString("\n")
+
+      s"""
+         |/** Traversal steps for $className */
+         |class ${className}Traversal[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
+         |
+         |$propertyTraversals
+         |
+         |}""".stripMargin
+    }
+
+    def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
+      s"""package $traversalsPackage
+         |
+         |import overflowdb.traversal.Traversal
+         |import $nodesPackage._
+         |
+         |${generatePropertyTraversals(nodeBaseType.className, nodeBaseType.properties)}
+         |
+         |""".stripMargin
+    }
+
+    def generateNodeSource(nodeType: NodeType) = {
+      s"""$staticHeader
+         |${generatePropertyTraversals(nodeType.className, nodeType.properties)}
+         |""".stripMargin
+    }
+
+    val packageObject =
+      s"""package $basePackage
+         |package object traversal extends NodeTraversalImplicits
+         |""".stripMargin
+
+    val results = mutable.Buffer.empty[File]
+    val baseDir = outputDir / traversalsPackage.replaceAll("\\.", "/")
+    if (baseDir.exists) baseDir.delete()
+    baseDir.createDirectories()
     results.append(baseDir.createChild("package.scala").write(packageObject))
     results.append(baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits))
-    results.append(baseDir.createChild("RootTypes.scala").write(rootTypeImpl))
     schema.nodeBaseTypes.foreach { nodeBaseTrait =>
       val src = generateNodeBaseTypeSource(nodeBaseTrait)
       val srcFile = nodeBaseTrait.className + ".scala"
