@@ -2,17 +2,12 @@
   * similar to what we use in docker-ext schema extension
   */
 class TestSchema03 extends TestSchema {
-  val expression = builder.addNodeBaseType(name = "EXPRESSION")
-  val block = builder.addNodeType(name = "BLOCK").extendz(expression)
-  val typeDecl = builder.addNodeType(name = "TYPE_DECL").extendz(expression)
-  val file = builder.addNodeType(name = "FILE")
+  val abstractNode1 = builder.addNodeBaseType(name = "ABSTRACT_NODE1")
+  val nodeExt1 = builder.addNodeType(name = "NODE_EXT1").extendz(abstractNode1)
+  val nodeExt2 = builder.addNodeType(name = "NODE_EXT2").extendz(abstractNode1)
+  val otherNode = builder.addNodeType(name = "OTHER_NODE")
+  val edge1 = builder.addEdgeType(name = "EDGE1")
 
-  val instruction = builder.addNodeBaseType(name = "INSTRUCTION").extendz(expression)
-  val otherInstruction = builder.addNodeType(name = "OTHER_INSTRUCTION").extendz(instruction)
-
-  val ast = builder.addEdgeType(name = "AST")
-
-  block.addOutEdge(edge = ast, inNode = typeDecl)
-  block.addOutEdge(edge = ast, inNode = expression)
-  file.addOutEdge(edge = ast, inNode = otherInstruction)
+  nodeExt1.addOutEdge(edge = edge1, inNode = abstractNode1)
+  otherNode.addOutEdge(edge = edge1, inNode = nodeExt2)
 }
