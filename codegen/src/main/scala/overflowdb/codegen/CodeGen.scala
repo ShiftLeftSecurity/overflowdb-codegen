@@ -322,10 +322,18 @@ class CodeGen(schema: Schema) {
         s"with ${baseTrait.className}Base"
       }.mkString(" ")
 
-      def abstractEdgeAccessors(neighbors: Seq[AdjacentNode], direction: Direction.Value) =
+      def abstractEdgeAccessors(nodeBaseType: NodeBaseType, neighbors: Seq[AdjacentNode], direction: Direction.Value) =
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
-          val neighborNodesType = deriveCommonRootType(neighbors.map(_.neighbor).toSet)
+          val neighborNodesType = {
+            val subtypesWithSameEdgeAndDirection =
+              nodeBaseType.subtypes(schema.allNodeTypes.toSet)
+              // TODO consider actual direction: in/out
+              .flatMap(_.outEdges.filter(_.viaEdge == edge))
+
+            val relevantNeighbors = (neighbors ++ subtypesWithSameEdgeAndDirection).map(_.neighbor).toSet
+            deriveCommonRootType(relevantNeighbors)
+          }
           val genericEdgeAccessor = s"def $edgeAccessorName: Traversal[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
@@ -394,8 +402,8 @@ class CodeGen(schema: Schema) {
          |
          |trait $className extends StoredNode with ${className}Base
          |$mixinTraits {
-         |${abstractEdgeAccessors(nodeBaseType.outEdges, Direction.OUT)}
-         |${abstractEdgeAccessors(nodeBaseType.inEdges, Direction.IN)}
+         |${abstractEdgeAccessors(nodeBaseType, nodeBaseType.outEdges, Direction.OUT)}
+         |${abstractEdgeAccessors(nodeBaseType, nodeBaseType.inEdges, Direction.IN)}
          |}""".stripMargin
     }
 

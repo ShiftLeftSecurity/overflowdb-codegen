@@ -7,6 +7,9 @@ class TestSchema03 extends TestSchema {
   val otherNode = builder.addNodeType(name = "OTHER_NODE")
   val edge1 = builder.addEdgeType(name = "EDGE1")
 
-  nodeExt1.addOutEdge(edge = edge1, inNode = abstractNode1)
-  otherNode.addOutEdge(edge = edge1, inNode = nodeExt1)
+//  nodeExt1.addOutEdge(edge = edge1, inNode = abstractNode1)
+//  otherNode.addOutEdge(edge = edge1, inNode = nodeExt1) //when using `inNode = abstractNode1` the generated code works
+
+  abstractNode1.addOutEdge(edge = edge1, inNode = nodeExt1)
+       nodeExt1.addOutEdge(edge = edge1, inNode = otherNode)
 }
