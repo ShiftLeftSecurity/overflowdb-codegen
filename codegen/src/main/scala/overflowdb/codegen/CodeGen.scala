@@ -302,7 +302,6 @@ class CodeGen(schema: Schema) {
       s"""package $nodesPackage
          |
          |import overflowdb._
-         |import overflowdb.traversal.Traversal
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
@@ -326,7 +325,7 @@ class CodeGen(schema: Schema) {
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
           val neighborNodesType = deriveCommonRootType(neighbors.map(_.neighbor).toSet)
-          val genericEdgeAccessor = s"def $edgeAccessorName: Traversal[$neighborNodesType]"
+          val genericEdgeAccessor = s"def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
@@ -383,8 +382,6 @@ class CodeGen(schema: Schema) {
       }
 
       s"""package $nodesPackage
-         |
-         |import overflowdb.traversal.Traversal
          |
          |$companionObject
          |
@@ -784,7 +781,7 @@ class CodeGen(schema: Schema) {
             s"def ${neighborNodeInfo.accessorName}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
         }.mkString("\n")
 
-        s"""def $edgeAccessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
+        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborType] = overflowdb.traversal.Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
            |override def _$edgeAccessorName = createAdjacentNodeIteratorByOffSet[StoredNode]($offsetPosition)
            |$nodeAccessors
            |""".stripMargin
@@ -938,9 +935,7 @@ class CodeGen(schema: Schema) {
     val staticHeader =
       s"""package $traversalsPackage
          |
-         |import overflowdb._
          |import overflowdb.traversal.Traversal
-         |import scala.jdk.CollectionConverters._
          |import $nodesPackage._
          |""".stripMargin
 
