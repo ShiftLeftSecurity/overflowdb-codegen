@@ -8,7 +8,9 @@ object CodegenForAllSchemas extends App {
 
   Seq(
     new TestSchema01,
-    new TestSchema02
+    new TestSchema02,
+    new TestSchema03a,
+    new TestSchema03b,
   ).foreach { schema =>
     new CodeGen(schema.instance).run(outputDir)
   }

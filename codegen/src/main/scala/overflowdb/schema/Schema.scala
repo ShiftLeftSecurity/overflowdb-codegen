@@ -91,6 +91,12 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
   def inEdges: Seq[AdjacentNode] =
     _inEdges.toSeq
+
+  def edges(direction: Direction.Value): Seq[AdjacentNode] =
+    direction match {
+      case Direction.IN => inEdges
+      case Direction.OUT => outEdges
+    }
 }
 
 class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
