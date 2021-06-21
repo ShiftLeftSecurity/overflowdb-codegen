@@ -302,7 +302,6 @@ class CodeGen(schema: Schema) {
       s"""package $nodesPackage
          |
          |import overflowdb._
-         |import overflowdb.traversal.Traversal
          |import scala.jdk.CollectionConverters._
          |""".stripMargin
 
@@ -326,7 +325,7 @@ class CodeGen(schema: Schema) {
         neighbors.groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
           val neighborNodesType = deriveCommonRootType(neighbors.map(_.neighbor).toSet)
-          val genericEdgeAccessor = s"def $edgeAccessorName: Traversal[$neighborNodesType]"
+          val genericEdgeAccessor = s"def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
@@ -383,8 +382,6 @@ class CodeGen(schema: Schema) {
       }
 
       s"""package $nodesPackage
-         |
-         |import overflowdb.traversal.Traversal
          |
          |$companionObject
          |
@@ -784,7 +781,7 @@ class CodeGen(schema: Schema) {
             s"def ${neighborNodeInfo.accessorName}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
         }.mkString("\n")
 
-        s"""def $edgeAccessorName: Traversal[$neighborType] = Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
+        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborType] = overflowdb.traversal.Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
            |override def _$edgeAccessorName = createAdjacentNodeIteratorByOffSet[StoredNode]($offsetPosition)
            |$nodeAccessors
            |""".stripMargin
@@ -938,15 +935,13 @@ class CodeGen(schema: Schema) {
     val staticHeader =
       s"""package $traversalsPackage
          |
-         |import overflowdb._
          |import overflowdb.traversal.Traversal
-         |import scala.jdk.CollectionConverters._
          |import $nodesPackage._
          |""".stripMargin
 
     lazy val nodeTraversalImplicits = {
       def implicitForNodeType(name: String) = {
-        val traversalName = s"${name}Traversal"
+        val traversalName = s"${name}TraversalExtGen"
         s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
       }
 
@@ -1316,7 +1311,7 @@ class CodeGen(schema: Schema) {
 
       s"""
          |/** Traversal steps for $className */
-         |class ${className}Traversal[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
+         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
          |
          |$propertyTraversals
          |
@@ -1376,10 +1371,14 @@ class CodeGen(schema: Schema) {
          |  def properties: Map[String, Any]
          |}
          |
-         |trait NewNodeBuilder {
-         |  def id : Long
-         |  def id(x: Long) : NewNodeBuilder
-         |  def build : NewNode
+         |trait NewNodeBuilder[A <: NewNode] {
+         |  def id: Long
+         |  def id(x: Long): NewNodeBuilder[A]
+         |  def build: A
+         |}
+         |
+         |object NewNodeBuilder {
+         |  implicit def newNodeBuilderToNewNode[A <: NewNode](builder: NewNodeBuilder[A]): A = builder.build
          |}
          |""".stripMargin
 
@@ -1462,25 +1461,27 @@ class CodeGen(schema: Schema) {
         .map {case (name, typ, _) => s"def ${name}(x : $typ) : New${nodeType.className}Builder = { result = result.copy($name = x); this }" }
         .mkString("\n")
 
+      val nodeClassName = nodeType.className
+
       s"""
-         |object New${nodeType.className}Builder {
-         |  def apply() : New${nodeType.className}Builder = new New${nodeType.className}Builder()
+         |object New${nodeClassName}Builder {
+         |  def apply(): New${nodeClassName}Builder = new New${nodeClassName}Builder()
          |}
          |
-         |class New${nodeType.className}Builder extends NewNodeBuilder {
-         |   var result : New${nodeType.className} = new New${nodeType.className}()
-         |   private var _id : Long = -1L
+         |class New${nodeClassName}Builder extends NewNodeBuilder[New$nodeClassName] {
+         |   var result: New$nodeClassName = new New${nodeClassName}()
+         |   private var _id: Long = -1L
          |   def id: Long = _id
-         |   def id(x: Long): New${nodeType.className}Builder = { _id = x; this }
+         |   def id(x: Long): New${nodeClassName}Builder = { _id = x; this }
          |
          |   $builderSetters
          |
-         |   def build : New${nodeType.className} = result
+         |   def build: New${nodeClassName} = result
          |
-         |   def canEqual(other: Any): Boolean = other.isInstanceOf[New${nodeType.className}Builder]
+         |   def canEqual(other: Any): Boolean = other.isInstanceOf[New${nodeClassName}Builder]
          |
          |   override def equals(other: Any): Boolean = other match {
-         |      case that: New${nodeType.className}Builder => (that canEqual this) && _id == that._id
+         |      case that: New${nodeClassName}Builder => (that canEqual this) && _id == that._id
          |      case _ => false
          |   }
          |
@@ -1489,15 +1490,15 @@ class CodeGen(schema: Schema) {
          |      state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
          |   }
          |
-         |   override def toString = s"New${nodeType.className}Builder($${_id})"
+         |   override def toString = s"New${nodeClassName}Builder($${_id})"
          |}
          |
-         |object New${nodeType.className}{
-         |  def apply() : New${nodeType.className}Builder = New${nodeType.className}Builder()
+         |object New${nodeClassName}{
+         |  def apply(): New${nodeClassName}Builder = New${nodeClassName}Builder()
          |}
          |
-         |case class New${nodeType.className} private[nodes] ($defaultsVal) extends NewNode with ${nodeType.className}Base {
-         |  override def label:String = "${nodeType.name}"
+         |case class New${nodeClassName} private[nodes] ($defaultsVal) extends NewNode with ${nodeClassName}Base {
+         |  override def label: String = "${nodeType.name}"
          |
          |  $valueMapImpl
          |}
