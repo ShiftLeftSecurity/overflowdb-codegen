@@ -189,7 +189,7 @@ object Helpers {
   def fullScalaType(neighborNode: AbstractNodeType, cardinality: Cardinality): String = {
     val neighborNodeClass = neighborNode.className
     cardinality match {
-      case Cardinality.List => s"Traversal[$neighborNodeClass]"
+      case Cardinality.List => s"overflowdb.traversal.Traversal[$neighborNodeClass]"
       case Cardinality.ZeroOrOne => s"Option[$neighborNodeClass]"
       case Cardinality.One => s"$neighborNodeClass"
       case Cardinality.ISeq => ???
