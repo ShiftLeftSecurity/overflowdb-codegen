@@ -941,7 +941,7 @@ class CodeGen(schema: Schema) {
 
     lazy val nodeTraversalImplicits = {
       def implicitForNodeType(name: String) = {
-        val traversalName = s"${name}Traversal"
+        val traversalName = s"${name}TraversalExtGen"
         s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
       }
 
@@ -1311,7 +1311,7 @@ class CodeGen(schema: Schema) {
 
       s"""
          |/** Traversal steps for $className */
-         |class ${className}Traversal[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
+         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
          |
          |$propertyTraversals
          |
