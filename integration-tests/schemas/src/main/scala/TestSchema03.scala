@@ -22,14 +22,14 @@ class TestSchema03b extends TestSchema {
 }
 
 class TestSchema03c extends TestSchema {
-  val ast = builder.addEdgeType(name = "AST")
-  val expression = builder.addNodeBaseType(name = "EXPRESSION")
+  val edge1 = builder.addEdgeType(name = "edge1")
+  val abstractNode = builder.addNodeBaseType(name = "ABSTRACT_NODE1")
 
-  val typeRef = builder.addNodeType(name = "TYPE_REF")
-    .extendz(expression)
-    .addOutEdge(edge = ast, inNode = expression)
+  val node1 = builder.addNodeType(name = "NODE1")
+    .extendz(abstractNode)
+    .addOutEdge(edge = edge1, inNode = abstractNode)
 
-  val otherInstruction = builder.addNodeType(name = "OTHER_INSTRUCTION")
-    .extendz(expression)
-    .addOutEdge(edge = ast, inNode = typeRef)
+  val node2 = builder.addNodeType(name = "NODE2")
+    .extendz(abstractNode)
+    .addOutEdge(edge = edge1, inNode = node1)
 }

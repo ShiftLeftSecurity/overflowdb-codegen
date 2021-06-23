@@ -27,16 +27,18 @@ class Schema03bTest {
 }
 
 class Schema03cTest {
-  // TODO
-//  import testschema03c._
-//  import testschema03c.edges._
-//  import testschema03c.nodes._
-//  import testschema03c.traversal._
-//
-//  // just verifying that the following code compiles
-//  val abstractNode3: AbstractNode3 = ???
-//  def edge3In: Traversal[StoredNode] = abstractNode3.edge3In
-//  def _abstractNode3ViaEdge3In: Traversal[AbstractNode3] = abstractNode3._abstractNode3ViaEdge3In
-//  def _nodeExt3ViaEdge3In: Traversal[NodeExt3] = abstractNode3._nodeExt3ViaEdge3In
+  import testschema03c._
+  import testschema03c.edges._
+  import testschema03c.nodes._
+  import testschema03c.traversal._
 
+  // just verifying that the following code compiles
+  val abstractNode: AbstractNode1 = ???
+  def x0: Traversal[StoredNode] = abstractNode.edge1In
+
+  val node1: Node1 = ???
+  def x1: Traversal[AbstractNode1] = node1.edge1In
+
+  val node2: Node2 = ???
+  def x2: Traversal[Node1] = node2.edge1In
 }
