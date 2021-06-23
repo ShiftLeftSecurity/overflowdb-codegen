@@ -11,6 +11,7 @@ object CodegenForAllSchemas extends App {
     new TestSchema02,
     new TestSchema03a,
     new TestSchema03b,
+    new TestSchema03c,
   ).foreach { schema =>
     new CodeGen(schema.instance).run(outputDir)
   }
