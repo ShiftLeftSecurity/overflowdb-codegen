@@ -324,14 +324,26 @@ class CodeGen(schema: Schema) {
       def abstractEdgeAccessors(nodeBaseType: NodeBaseType, direction: Direction.Value) = {
         nodeBaseType.edges(direction).groupBy(_.viaEdge).map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
-          val neighborNodesType = {
-            val subtypesWithSameEdgeAndDirection =
-              nodeBaseType.subtypes(schema.allNodeTypes.toSet)
-                .flatMap(_.edges(direction).filter(_.viaEdge == edge))
-
-            val relevantNeighbors = (neighbors ++ subtypesWithSameEdgeAndDirection).map(_.neighbor).toSet
-            deriveCommonRootType(relevantNeighbors)
-          }
+          /** TODO bring this back, but not as direct accessors on the type, but via extension methods
+            * context: in complex schema hierarchies, type inheritance between base nodes
+            * and nodes can lead to very convoluted accessor types. E.g. in TestSchema03c in the integration tests:
+            *
+            * AbstractNode1.edge1In: Traversal[AbstractNode1]
+            * Node1.edge1In:         Traversal[AbstractNode1]
+            * Node2.edge1In:         Traversal[NodeExt]
+            *
+            * which is technically correct based on the schema, but the JVM doesn't allow this because
+            * both Node1 and Node2 extend AbstractNode, and therefor Node2.edge1In doesn't compile
+            */
+//          val neighborNodesType = {
+//            val subtypesWithSameEdgeAndDirection =
+//              nodeBaseType.subtypes(schema.allNodeTypes.toSet)
+//                .flatMap(_.edges(direction).filter(_.viaEdge == edge))
+//
+//            val relevantNeighbors = (neighbors ++ subtypesWithSameEdgeAndDirection).map(_.neighbor).toSet
+//            deriveCommonRootType(relevantNeighbors)
+//          }
+          val neighborNodesType = "_ <: StoredNode"
           val genericEdgeAccessor = s"def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>

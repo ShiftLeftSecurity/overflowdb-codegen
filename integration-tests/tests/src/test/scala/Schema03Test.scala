@@ -24,5 +24,21 @@ class Schema03bTest {
   def edge2In: Traversal[StoredNode] = abstractNode2.edge2In
   def _abstractNode2ViaEdge2In: Traversal[AbstractNode2] = abstractNode2._abstractNode2ViaEdge2In
   def _nodeExt2ViaEdge2In: Traversal[NodeExt2] = abstractNode2._nodeExt2ViaEdge2In
+}
 
+class Schema03cTest {
+  import testschema03c._
+  import testschema03c.edges._
+  import testschema03c.nodes._
+  import testschema03c.traversal._
+
+  // just verifying that the following code compiles
+  val abstractNode: AbstractNode1 = ???
+  def x0: Traversal[StoredNode] = abstractNode.edge1In
+
+  val node1: Node1 = ???
+  def x1: Traversal[AbstractNode1] = node1.edge1In
+
+  val node2: Node2 = ???
+  def x2: Traversal[Node1] = node2.edge1In
 }
