@@ -52,7 +52,7 @@ object Helpers {
     case ValueTypes.CHARACTER => "java.lang.Character"
   }
 
-  def isNodeBaseTrait(baseTraits: List[NodeBaseType], nodeName: String): Boolean =
+  def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.AbstractNodeName || baseTraits.map(_.name).contains(nodeName)
 
   def camelCaseCaps(snakeCase: String): String = camelCase(snakeCase).capitalize
@@ -62,7 +62,7 @@ object Helpers {
       if (snakeCase.startsWith("_")) snakeCase.drop(1)
       else snakeCase
 
-    val elements: List[String] = corrected.split("_").map(_.toLowerCase).toList match {
+    val elements: Seq[String] = corrected.split("_").map(_.toLowerCase).toList match {
       case head :: tail => head :: tail.map(_.capitalize)
       case Nil          => Nil
     }
@@ -109,7 +109,7 @@ object Helpers {
     getHigherType(property.cardinality) match {
       case HigherValueType.None   => valueType
       case HigherValueType.Option => s"Option[$valueType]"
-      case HigherValueType.List   => s"List[$valueType]"
+      case HigherValueType.List   => s"Seq[$valueType]"
     }
   }
 
@@ -138,7 +138,7 @@ object Helpers {
         getHigherType(property.cardinality) match {
           case HigherValueType.None   => (valueType, valueType, fieldName)
           case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)")
-          case HigherValueType.List   => (s"List[$valueType]", s"List[$valueType]", fieldName)
+          case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName)
         }
       }
 

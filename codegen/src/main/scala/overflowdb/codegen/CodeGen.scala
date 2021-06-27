@@ -127,7 +127,7 @@ class CodeGen(schema: Schema) {
       val factories = {
         val edgeFactories = schema.edgeTypes.map(edgeType => edgeType.className + ".factory").mkString(", ")
         s"""object Factories {
-           |  lazy val all: List[EdgeFactory[_]] = List($edgeFactories)
+           |  lazy val all: Seq[EdgeFactory[_]] = Seq($edgeFactories)
            |  lazy val allAsJava: java.util.List[EdgeFactory[_]] = all.asJava
            |}
            |""".stripMargin
@@ -815,10 +815,10 @@ class CodeGen(schema: Schema) {
               s"value.asInstanceOf[$baseType]"
             case Cardinality.List =>
               s"""value match {
-                 |        case singleValue: $baseType => List(singleValue)
+                 |        case singleValue: $baseType => Seq(singleValue)
                  |        case null | None | Nil => Nil
                  |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
-                 |        case _: List[_] => value.asInstanceOf[List[$baseType]]
+                 |        case _: Seq[_] => value.asInstanceOf[Seq[$baseType]]
                  |      }""".stripMargin
             case Cardinality.ISeq =>
               s"""value match {
@@ -1409,7 +1409,7 @@ class CodeGen(schema: Schema) {
           else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.BOOLEAN)
             Some("false")
           else if (getHigherType(key.cardinality) == HigherValueType.List)
-            Some("List()")
+            Some("Seq.empty")
           else if (getHigherType(key.cardinality) == HigherValueType.None)
             Some("null")
           else None
@@ -1418,7 +1418,7 @@ class CodeGen(schema: Schema) {
       }
       for (containedNode <- nodeType.containedNodes) {
         val optionalDefault = containedNode.cardinality match {
-          case Cardinality.List      => Some("List()")
+          case Cardinality.List      => Some("Seq.empty")
           case Cardinality.ZeroOrOne => Some("None")
           case Cardinality.ISeq      => Some("IndexedSeq.empty")
           case Cardinality.One       => Some("null")
