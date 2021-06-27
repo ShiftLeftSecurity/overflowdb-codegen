@@ -129,22 +129,23 @@ object Helpers {
     }
   }
 
-  def propertyBasedFields(properties: Seq[Property]): String =
+  def propertyBasedFields(properties: Seq[Property]): String = {
     properties.map { property =>
-      val name = camelCase(property.name)
-      val tpe = getCompleteType(property)
-      val unsetValue = propertyUnsetValue(property.cardinality)
+      val publicName = camelCase(property.name)
+      val fieldName = s"_$publicName"
+      val (publicType, tpeForField, fieldAccessor) = {
+        val valueType = typeFor(property.valueType)
+        getHigherType(property.cardinality) match {
+          case HigherValueType.None   => (valueType, valueType, fieldName)
+          case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)")
+          case HigherValueType.List   => (s"List[$valueType]", s"List[$valueType]", fieldName)
+        }
+      }
 
-      s"""private var _$name: $tpe = $unsetValue
-         |def $name: $tpe = _$name""".stripMargin
+      s"""private var $fieldName: $tpeForField = null
+         |def $publicName: $publicType = $fieldAccessor""".stripMargin
     }.mkString("\n\n")
-
-  def propertyUnsetValue(cardinality: Cardinality): String =
-    getHigherType(cardinality) match {
-      case HigherValueType.None => "null"
-      case HigherValueType.Option => "None"
-      case HigherValueType.List => "Nil"
-    }
+  }
 
   def propertyKeyDef(name: String, baseType: String, cardinality: Cardinality) = {
     val completeType = cardinality match {

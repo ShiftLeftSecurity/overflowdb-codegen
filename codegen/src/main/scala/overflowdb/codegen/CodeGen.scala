@@ -177,7 +177,7 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      def propertyBasedFieldAccessors(properties: Seq[Property]): String =
+      def propertyBasedFieldAccessors(properties: Seq[Property]): String = {
         properties.map { property =>
           val name = camelCase(property.name)
           val tpe = getCompleteType(property)
@@ -196,6 +196,7 @@ class CodeGen(schema: Schema) {
                  |}""".stripMargin
           }
         }.mkString("\n\n")
+      }
 
       val classImpl =
         s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
@@ -590,7 +591,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.One =>
                 s"""   this._$memberName = $newNodeCasted.$memberName""".stripMargin
               case Cardinality.ZeroOrOne =>
-                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else None""".stripMargin
+                s"""   this._$memberName = $newNodeCasted.$memberName.orNull""".stripMargin
               case Cardinality.List =>
                 s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else Nil""".stripMargin
               case Cardinality.ISeq => ???
@@ -810,13 +811,8 @@ class CodeGen(schema: Schema) {
       val updateSpecificPropertyImpl: String = {
         def caseEntry(name: String, accessorName: String, cardinality: Cardinality, baseType: String) = {
           val setter = cardinality match {
-            case Cardinality.One =>
+            case Cardinality.One | Cardinality.ZeroOrOne =>
               s"value.asInstanceOf[$baseType]"
-            case Cardinality.ZeroOrOne =>
-              s"""value match {
-                 |        case null | None => None
-                 |        case someVal: $baseType => Some(someVal)
-                 |      }""".stripMargin
             case Cardinality.List =>
               s"""value match {
                  |        case singleValue: $baseType => List(singleValue)
@@ -865,7 +861,7 @@ class CodeGen(schema: Schema) {
         }
 
         val forKeys = properties.map(key =>
-          caseEntry(key.name, camelCase(key.name), key.cardinality)
+          s"""|      case "${key.name}" => this._${camelCase(key.name)}"""
         ).mkString("\n")
 
         val forContainedKeys = nodeType.containedNodes.map(containedNode =>
