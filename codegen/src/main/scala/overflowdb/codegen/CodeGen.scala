@@ -1402,19 +1402,15 @@ class CodeGen(schema: Schema) {
     def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
       val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, Option[String])] // fieldName, type, default
       for (key <- keys) {
-        val optionalDefault =
-          if (getHigherType(key.cardinality) == HigherValueType.Option) Some("None")
-          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.STRING)
-            Some("\"\"")
-          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.BOOLEAN)
-            Some("false")
-          else if (getHigherType(key.cardinality) == HigherValueType.List)
-            Some("Seq.empty")
-          else if (getHigherType(key.cardinality) == HigherValueType.ISeq) {
-            Some("IndexedSeq.empty")
-          } else if (getHigherType(key.cardinality) == HigherValueType.None)
-            Some("null")
-          else None
+        val optionalDefault = getHigherType(key.cardinality) match {
+          case HigherValueType.None if key.valueType == ValueTypes.STRING => Some("\"\"")
+          case HigherValueType.None if key.valueType == ValueTypes.BOOLEAN => Some("false")
+          case HigherValueType.None => Some("null")
+          case HigherValueType.Option => Some("None")
+          case HigherValueType.List => Some("Seq.empty")
+          case HigherValueType.ISeq => Some("IndexedSeq.empty")
+          case _ => None
+        }
         val typ = getCompleteType(key)
         fieldDescriptions += ((camelCase(key.name), typ, optionalDefault))
       }
