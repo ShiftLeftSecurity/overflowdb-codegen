@@ -105,7 +105,7 @@ class CodeGen(schema: Schema) {
           case Cardinality.One => valueType
           case Cardinality.ZeroOrOne => valueType
           case Cardinality.List => s"scala.collection.Seq<$valueType>"
-          case Cardinality.ISeq => s"collection.immutable.IndexedSeq<$valueType>"
+          case Cardinality.ISeq => s"scala.collection.immutable.IndexedSeq<$valueType>"
         }
         s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
       }
@@ -594,7 +594,8 @@ class CodeGen(schema: Schema) {
                 s"""   this._$memberName = $newNodeCasted.$memberName.orNull""".stripMargin
               case Cardinality.List =>
                 s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else Nil""".stripMargin
-              case Cardinality.ISeq => ???
+              case Cardinality.ISeq =>
+                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else IndexedSeq.empty""".stripMargin
             }
           }
           lines.mkString("\n")
@@ -1403,14 +1404,15 @@ class CodeGen(schema: Schema) {
       for (key <- keys) {
         val optionalDefault =
           if (getHigherType(key.cardinality) == HigherValueType.Option) Some("None")
-          else if (key.valueType == ValueTypes.INTEGER) Some("-1")
           else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.STRING)
             Some("\"\"")
           else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.BOOLEAN)
             Some("false")
           else if (getHigherType(key.cardinality) == HigherValueType.List)
             Some("Seq.empty")
-          else if (getHigherType(key.cardinality) == HigherValueType.None)
+          else if (getHigherType(key.cardinality) == HigherValueType.ISeq) {
+            Some("IndexedSeq.empty")
+          } else if (getHigherType(key.cardinality) == HigherValueType.None)
             Some("null")
           else None
         val typ = getCompleteType(key)

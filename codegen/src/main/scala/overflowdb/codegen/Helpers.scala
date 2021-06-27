@@ -101,7 +101,7 @@ object Helpers {
       case Cardinality.One       => HigherValueType.None
       case Cardinality.ZeroOrOne => HigherValueType.Option
       case Cardinality.List      => HigherValueType.List
-      case  Cardinality.ISeq => ???
+      case Cardinality.ISeq      => HigherValueType.ISeq
     }
 
   def getCompleteType(property: Property): String = {
@@ -110,6 +110,7 @@ object Helpers {
       case HigherValueType.None   => valueType
       case HigherValueType.Option => s"Option[$valueType]"
       case HigherValueType.List   => s"Seq[$valueType]"
+      case HigherValueType.ISeq   => s"IndexedSeq[$valueType]"
     }
   }
 
@@ -133,16 +134,17 @@ object Helpers {
     properties.map { property =>
       val publicName = camelCase(property.name)
       val fieldName = s"_$publicName"
-      val (publicType, tpeForField, fieldAccessor) = {
+      val (publicType, tpeForField, fieldAccessor, defaultValue) = {
         val valueType = typeFor(property.valueType)
         getHigherType(property.cardinality) match {
-          case HigherValueType.None   => (valueType, valueType, fieldName)
-          case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)")
-          case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName)
+          case HigherValueType.None   => (valueType, valueType, fieldName, "null")
+          case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
+          case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
+          case HigherValueType.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
         }
       }
 
-      s"""private var $fieldName: $tpeForField = null
+      s"""private var $fieldName: $tpeForField = $defaultValue
          |def $publicName: $publicType = $fieldAccessor""".stripMargin
     }.mkString("\n\n")
   }
