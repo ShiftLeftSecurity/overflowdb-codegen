@@ -36,6 +36,13 @@ class TestSchema01 extends TestSchema {
     comment = "sample node 2"
   ).addProperties(name, options, placements)
 
+  val node3 = builder.addNodeType(
+    name = "NODE3",
+    comment = "sample node 3"
+  )
+
+  node2.addContainedNode(node3, "node3", Cardinality.ZeroOrOne)
+
   val edge1 = builder.addEdgeType(
     name = "EDGE1",
     comment = "sample edge 1")

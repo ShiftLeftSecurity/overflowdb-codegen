@@ -566,7 +566,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.One =>
                 s"""   if (this._$memberName != null) { properties.put("${memberName}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
-                s"""   if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${memberName}", this._$memberName.get) }"""
+                s"""   $memberName.map { value => properties.put("${memberName}", value) }"""
               case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
                 s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${memberName}", this.$memberName.asJava) }"""
             }
@@ -607,18 +607,11 @@ class CodeGen(schema: Schema) {
             val containedNodeType = containedNode.nodeType.className
 
             containedNode.cardinality match {
-              case Cardinality.One =>
+              case Cardinality.One | Cardinality.ZeroOrOne =>
                 s"""  this._$memberName = $newNodeCasted.$memberName match {
                    |    case null => null
                    |    case newNode: NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
                    |    case oldNode: StoredNode => oldNode.asInstanceOf[$containedNodeType]
-                   |    case _ => throw new MatchError("unreachable")
-                   |  }""".stripMargin
-              case Cardinality.ZeroOrOne =>
-                s"""  this._$memberName = $newNodeCasted.$memberName match {
-                   |    case null | None => None
-                   |    case Some(newNode:NewNode) => Some(mapping(newNode).asInstanceOf[$containedNodeType])
-                   |    case Some(oldNode:StoredNode) => Some(oldNode.asInstanceOf[$containedNodeType])
                    |    case _ => throw new MatchError("unreachable")
                    |  }""".stripMargin
               case Cardinality.List => // need java list, e.g. for NodeSerializer
@@ -668,8 +661,8 @@ class CodeGen(schema: Schema) {
                    |""".stripMargin
               case Cardinality.ZeroOrOne =>
                 s"""
-                   |private var _${containedNode.localName}: Option[$containedNodeType] = None
-                   |def ${containedNode.localName}: Option[$containedNodeType] = this._${containedNode.localName}
+                   |private var _${containedNode.localName}: $containedNodeType = null
+                   |def ${containedNode.localName}: Option[$containedNodeType] = Option(this._${containedNode.localName})
                    |""".stripMargin
               case Cardinality.List =>
                 s"""
@@ -849,25 +842,14 @@ class CodeGen(schema: Schema) {
       }
 
       val propertyImpl: String = {
-        def caseEntry(name: String, accessorName: String, cardinality: Cardinality) = {
-          cardinality match {
-            case Cardinality.One | Cardinality.List =>
-              s"""|      case "$name" => this._$accessorName"""
-            case Cardinality.ZeroOrOne =>
-              s"""|      case "$name" => this._$accessorName.orNull"""
-            case Cardinality.ISeq =>
-              s"""|      case "$name" => this._$accessorName"""
-
-          }
-        }
-
         val forKeys = properties.map(key =>
           s"""|      case "${key.name}" => this._${camelCase(key.name)}"""
         ).mkString("\n")
 
-        val forContainedKeys = nodeType.containedNodes.map(containedNode =>
-          caseEntry(containedNode.localName ,containedNode.localName, containedNode.cardinality)
-        ).mkString("\n")
+        val forContainedKeys = nodeType.containedNodes.map{containedNode =>
+          val name = containedNode.localName
+          s"""|      case "$name" => this._$name"""
+        }.mkString("\n")
 
         s"""override def property(key:String): AnyRef = {
            |    key match {
@@ -1438,7 +1420,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.One =>
                 s"""  if ($memberName != null) { res += "${key.name}" -> $memberName }"""
               case Cardinality.ZeroOrOne =>
-                s"""  if ($memberName != null && $memberName.isDefined) { res += "${key.name}" -> $memberName.get }"""
+                s"""  $memberName.map { value => res += "${key.name}" -> value }"""
               case Cardinality.List | Cardinality.ISeq=>
                 s"""  if ($memberName != null && $memberName.nonEmpty) { res += "${key.name}" -> $memberName }"""
             }
@@ -1449,7 +1431,7 @@ class CodeGen(schema: Schema) {
             case Cardinality.One =>
               s"""  if ($memberName != null) { res += "$memberName" -> $memberName }"""
             case Cardinality.ZeroOrOne =>
-              s"""  if ($memberName != null && $memberName.isDefined) { res += "$memberName" -> $memberName.get }"""
+              s"""  $memberName.map { value => res += "${memberName}" -> value }"""
             case Cardinality.List | Cardinality.ISeq =>
               s"""  if ($memberName != null && $memberName.nonEmpty) { res += "$memberName" -> $memberName }"""
           }
