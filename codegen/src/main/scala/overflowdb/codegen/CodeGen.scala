@@ -188,11 +188,16 @@ class CodeGen(schema: Schema) {
             case HigherValueType.Option =>
               s"""def $name: $tpe = Option(property("${property.name}")).asInstanceOf[$tpe]""".stripMargin
             case HigherValueType.List =>
-              s"""private var _$name: $tpe = Nil
-                 |def $name: $tpe = {
+              s"""def $name: $tpe = {
                  |  val p = property("${property.name}")
-                 |  if (p != null) p.asInstanceOf[JList].asScala
+                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.toSeq
                  |  else Nil
+                 |}""".stripMargin
+            case HigherValueType.ISeq =>
+              s"""def $name: $tpe = {
+                 |  val p = property("${property.name}")
+                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.to(IndexedSeq)
+                 |  else IndexedSeq.empty
                  |}""".stripMargin
           }
         }.mkString("\n\n")

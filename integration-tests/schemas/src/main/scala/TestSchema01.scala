@@ -49,7 +49,8 @@ class TestSchema01 extends TestSchema {
 
   val edge2 = builder.addEdgeType(
     name = "EDGE2",
-    comment = "sample edge 2").addProperty(name)
+    comment = "sample edge 2")
+  .addProperties(name, order, options, placements)
 
   node1.addOutEdge(
     edge = edge1,
