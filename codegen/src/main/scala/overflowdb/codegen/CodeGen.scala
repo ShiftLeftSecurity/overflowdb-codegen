@@ -105,7 +105,7 @@ class CodeGen(schema: Schema) {
           case Cardinality.One => valueType
           case Cardinality.ZeroOrOne => valueType
           case Cardinality.List => s"scala.collection.Seq<$valueType>"
-          case Cardinality.ISeq => s"scala.collection.immutable.IndexedSeq<$valueType>"
+          case Cardinality.ISeq => s"collection.immutable.IndexedSeq<$valueType>"
         }
         s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
       }
@@ -127,7 +127,7 @@ class CodeGen(schema: Schema) {
       val factories = {
         val edgeFactories = schema.edgeTypes.map(edgeType => edgeType.className + ".factory").mkString(", ")
         s"""object Factories {
-           |  lazy val all: Seq[EdgeFactory[_]] = Seq($edgeFactories)
+           |  lazy val all: List[EdgeFactory[_]] = List($edgeFactories)
            |  lazy val allAsJava: java.util.List[EdgeFactory[_]] = all.asJava
            |}
            |""".stripMargin
@@ -177,7 +177,7 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      def propertyBasedFieldAccessors(properties: Seq[Property]): String = {
+      def propertyBasedFieldAccessors(properties: Seq[Property]): String =
         properties.map { property =>
           val name = camelCase(property.name)
           val tpe = getCompleteType(property)
@@ -188,20 +188,14 @@ class CodeGen(schema: Schema) {
             case HigherValueType.Option =>
               s"""def $name: $tpe = Option(property("${property.name}")).asInstanceOf[$tpe]""".stripMargin
             case HigherValueType.List =>
-              s"""def $name: $tpe = {
+              s"""private var _$name: $tpe = Nil
+                 |def $name: $tpe = {
                  |  val p = property("${property.name}")
-                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.toSeq
+                 |  if (p != null) p.asInstanceOf[JList].asScala
                  |  else Nil
-                 |}""".stripMargin
-            case HigherValueType.ISeq =>
-              s"""def $name: $tpe = {
-                 |  val p = property("${property.name}")
-                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.to(IndexedSeq)
-                 |  else IndexedSeq.empty
                  |}""".stripMargin
           }
         }.mkString("\n\n")
-      }
 
       val classImpl =
         s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
@@ -571,7 +565,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.One =>
                 s"""   if (this._$memberName != null) { properties.put("${memberName}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
-                s"""   $memberName.map { value => properties.put("${memberName}", value) }"""
+                s"""   if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${memberName}", this._$memberName.get) }"""
               case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
                 s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${memberName}", this.$memberName.asJava) }"""
             }
@@ -596,11 +590,10 @@ class CodeGen(schema: Schema) {
               case Cardinality.One =>
                 s"""   this._$memberName = $newNodeCasted.$memberName""".stripMargin
               case Cardinality.ZeroOrOne =>
-                s"""   this._$memberName = $newNodeCasted.$memberName.orNull""".stripMargin
+                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else None""".stripMargin
               case Cardinality.List =>
                 s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else Nil""".stripMargin
-              case Cardinality.ISeq =>
-                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else IndexedSeq.empty""".stripMargin
+              case Cardinality.ISeq => ???
             }
           }
           lines.mkString("\n")
@@ -612,11 +605,18 @@ class CodeGen(schema: Schema) {
             val containedNodeType = containedNode.nodeType.className
 
             containedNode.cardinality match {
-              case Cardinality.One | Cardinality.ZeroOrOne =>
+              case Cardinality.One =>
                 s"""  this._$memberName = $newNodeCasted.$memberName match {
                    |    case null => null
                    |    case newNode: NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
                    |    case oldNode: StoredNode => oldNode.asInstanceOf[$containedNodeType]
+                   |    case _ => throw new MatchError("unreachable")
+                   |  }""".stripMargin
+              case Cardinality.ZeroOrOne =>
+                s"""  this._$memberName = $newNodeCasted.$memberName match {
+                   |    case null | None => None
+                   |    case Some(newNode:NewNode) => Some(mapping(newNode).asInstanceOf[$containedNodeType])
+                   |    case Some(oldNode:StoredNode) => Some(oldNode.asInstanceOf[$containedNodeType])
                    |    case _ => throw new MatchError("unreachable")
                    |  }""".stripMargin
               case Cardinality.List => // need java list, e.g. for NodeSerializer
@@ -666,8 +666,8 @@ class CodeGen(schema: Schema) {
                    |""".stripMargin
               case Cardinality.ZeroOrOne =>
                 s"""
-                   |private var _${containedNode.localName}: $containedNodeType = null
-                   |def ${containedNode.localName}: Option[$containedNodeType] = Option(this._${containedNode.localName})
+                   |private var _${containedNode.localName}: Option[$containedNodeType] = None
+                   |def ${containedNode.localName}: Option[$containedNodeType] = this._${containedNode.localName}
                    |""".stripMargin
               case Cardinality.List =>
                 s"""
@@ -810,14 +810,19 @@ class CodeGen(schema: Schema) {
       val updateSpecificPropertyImpl: String = {
         def caseEntry(name: String, accessorName: String, cardinality: Cardinality, baseType: String) = {
           val setter = cardinality match {
-            case Cardinality.One | Cardinality.ZeroOrOne =>
+            case Cardinality.One =>
               s"value.asInstanceOf[$baseType]"
+            case Cardinality.ZeroOrOne =>
+              s"""value match {
+                 |        case null | None => None
+                 |        case someVal: $baseType => Some(someVal)
+                 |      }""".stripMargin
             case Cardinality.List =>
               s"""value match {
-                 |        case singleValue: $baseType => Seq(singleValue)
+                 |        case singleValue: $baseType => List(singleValue)
                  |        case null | None | Nil => Nil
                  |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
-                 |        case _: Seq[_] => value.asInstanceOf[Seq[$baseType]]
+                 |        case _: List[_] => value.asInstanceOf[List[$baseType]]
                  |      }""".stripMargin
             case Cardinality.ISeq =>
               s"""value match {
@@ -847,14 +852,25 @@ class CodeGen(schema: Schema) {
       }
 
       val propertyImpl: String = {
+        def caseEntry(name: String, accessorName: String, cardinality: Cardinality) = {
+          cardinality match {
+            case Cardinality.One | Cardinality.List =>
+              s"""|      case "$name" => this._$accessorName"""
+            case Cardinality.ZeroOrOne =>
+              s"""|      case "$name" => this._$accessorName.orNull"""
+            case Cardinality.ISeq =>
+              s"""|      case "$name" => this._$accessorName"""
+
+          }
+        }
+
         val forKeys = properties.map(key =>
-          s"""|      case "${key.name}" => this._${camelCase(key.name)}"""
+          caseEntry(key.name, camelCase(key.name), key.cardinality)
         ).mkString("\n")
 
-        val forContainedKeys = nodeType.containedNodes.map{containedNode =>
-          val name = containedNode.localName
-          s"""|      case "$name" => this._$name"""
-        }.mkString("\n")
+        val forContainedKeys = nodeType.containedNodes.map(containedNode =>
+          caseEntry(containedNode.localName ,containedNode.localName, containedNode.cardinality)
+        ).mkString("\n")
 
         s"""override def property(key:String): AnyRef = {
            |    key match {
@@ -1389,21 +1405,24 @@ class CodeGen(schema: Schema) {
     def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
       val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, Option[String])] // fieldName, type, default
       for (key <- keys) {
-        val optionalDefault = getHigherType(key.cardinality) match {
-          case HigherValueType.None if key.valueType == ValueTypes.STRING => Some("\"\"")
-          case HigherValueType.None if key.valueType == ValueTypes.BOOLEAN => Some("false")
-          case HigherValueType.None => Some("null")
-          case HigherValueType.Option => Some("None")
-          case HigherValueType.List => Some("Seq.empty")
-          case HigherValueType.ISeq => Some("IndexedSeq.empty")
-          case _ => None
-        }
+        val optionalDefault =
+          if (getHigherType(key.cardinality) == HigherValueType.Option) Some("None")
+          else if (key.valueType == ValueTypes.INTEGER) Some("-1")
+          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.STRING)
+            Some("\"\"")
+          else if (getHigherType(key.cardinality) == HigherValueType.None && key.valueType == ValueTypes.BOOLEAN)
+            Some("false")
+          else if (getHigherType(key.cardinality) == HigherValueType.List)
+            Some("List()")
+          else if (getHigherType(key.cardinality) == HigherValueType.None)
+            Some("null")
+          else None
         val typ = getCompleteType(key)
         fieldDescriptions += ((camelCase(key.name), typ, optionalDefault))
       }
       for (containedNode <- nodeType.containedNodes) {
         val optionalDefault = containedNode.cardinality match {
-          case Cardinality.List      => Some("Seq.empty")
+          case Cardinality.List      => Some("List()")
           case Cardinality.ZeroOrOne => Some("None")
           case Cardinality.ISeq      => Some("IndexedSeq.empty")
           case Cardinality.One       => Some("null")
@@ -1425,7 +1444,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.One =>
                 s"""  if ($memberName != null) { res += "${key.name}" -> $memberName }"""
               case Cardinality.ZeroOrOne =>
-                s"""  $memberName.map { value => res += "${key.name}" -> value }"""
+                s"""  if ($memberName != null && $memberName.isDefined) { res += "${key.name}" -> $memberName.get }"""
               case Cardinality.List | Cardinality.ISeq=>
                 s"""  if ($memberName != null && $memberName.nonEmpty) { res += "${key.name}" -> $memberName }"""
             }
@@ -1436,7 +1455,7 @@ class CodeGen(schema: Schema) {
             case Cardinality.One =>
               s"""  if ($memberName != null) { res += "$memberName" -> $memberName }"""
             case Cardinality.ZeroOrOne =>
-              s"""  $memberName.map { value => res += "${memberName}" -> value }"""
+              s"""  if ($memberName != null && $memberName.isDefined) { res += "$memberName" -> $memberName.get }"""
             case Cardinality.List | Cardinality.ISeq =>
               s"""  if ($memberName != null && $memberName.nonEmpty) { res += "$memberName" -> $memberName }"""
           }
