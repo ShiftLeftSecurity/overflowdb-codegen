@@ -52,7 +52,7 @@ object Helpers {
     case ValueTypes.CHARACTER => "java.lang.Character"
   }
 
-  def isNodeBaseTrait(baseTraits: List[NodeBaseType], nodeName: String): Boolean =
+  def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.AbstractNodeName || baseTraits.map(_.name).contains(nodeName)
 
   def camelCaseCaps(snakeCase: String): String = camelCase(snakeCase).capitalize
@@ -62,7 +62,7 @@ object Helpers {
       if (snakeCase.startsWith("_")) snakeCase.drop(1)
       else snakeCase
 
-    val elements: List[String] = corrected.split("_").map(_.toLowerCase).toList match {
+    val elements: Seq[String] = corrected.split("_").map(_.toLowerCase).toList match {
       case head :: tail => head :: tail.map(_.capitalize)
       case Nil          => Nil
     }
@@ -101,7 +101,7 @@ object Helpers {
       case Cardinality.One       => HigherValueType.None
       case Cardinality.ZeroOrOne => HigherValueType.Option
       case Cardinality.List      => HigherValueType.List
-      case  Cardinality.ISeq => ???
+      case Cardinality.ISeq      => HigherValueType.ISeq
     }
 
   def getCompleteType(property: Property): String = {
@@ -109,7 +109,8 @@ object Helpers {
     getHigherType(property.cardinality) match {
       case HigherValueType.None   => valueType
       case HigherValueType.Option => s"Option[$valueType]"
-      case HigherValueType.List   => s"List[$valueType]"
+      case HigherValueType.List   => s"Seq[$valueType]"
+      case HigherValueType.ISeq   => s"IndexedSeq[$valueType]"
     }
   }
 
@@ -129,22 +130,24 @@ object Helpers {
     }
   }
 
-  def propertyBasedFields(properties: Seq[Property]): String =
+  def propertyBasedFields(properties: Seq[Property]): String = {
     properties.map { property =>
-      val name = camelCase(property.name)
-      val tpe = getCompleteType(property)
-      val unsetValue = propertyUnsetValue(property.cardinality)
+      val publicName = camelCase(property.name)
+      val fieldName = s"_$publicName"
+      val (publicType, tpeForField, fieldAccessor, defaultValue) = {
+        val valueType = typeFor(property.valueType)
+        getHigherType(property.cardinality) match {
+          case HigherValueType.None   => (valueType, valueType, fieldName, "null")
+          case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
+          case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
+          case HigherValueType.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
+        }
+      }
 
-      s"""private var _$name: $tpe = $unsetValue
-         |def $name: $tpe = _$name""".stripMargin
+      s"""private var $fieldName: $tpeForField = $defaultValue
+         |def $publicName: $publicType = $fieldAccessor""".stripMargin
     }.mkString("\n\n")
-
-  def propertyUnsetValue(cardinality: Cardinality): String =
-    getHigherType(cardinality) match {
-      case HigherValueType.None => "null"
-      case HigherValueType.Option => "None"
-      case HigherValueType.List => "Nil"
-    }
+  }
 
   def propertyKeyDef(name: String, baseType: String, cardinality: Cardinality) = {
     val completeType = cardinality match {
