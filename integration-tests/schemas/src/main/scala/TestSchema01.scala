@@ -20,12 +20,6 @@ class TestSchema01 extends TestSchema {
     cardinality = Cardinality.List,
     comment = "Options of a node")
 
-  val placements = builder.addProperty(
-    name = "PLACEMENTS",
-    valueType = ValueTypes.INTEGER,
-    cardinality = Cardinality.ISeq,
-    comment = "placements in some league")
-
   val node1 = builder.addNodeType(
     name = "NODE1",
     comment = "sample node 1"
@@ -34,14 +28,7 @@ class TestSchema01 extends TestSchema {
   val node2 = builder.addNodeType(
     name = "NODE2",
     comment = "sample node 2"
-  ).addProperties(name, options, placements)
-
-  val node3 = builder.addNodeType(
-    name = "NODE3",
-    comment = "sample node 3"
-  )
-
-  node2.addContainedNode(node3, "node3", Cardinality.ZeroOrOne)
+  ).addProperties(name, options)
 
   val edge1 = builder.addEdgeType(
     name = "EDGE1",
@@ -49,8 +36,7 @@ class TestSchema01 extends TestSchema {
 
   val edge2 = builder.addEdgeType(
     name = "EDGE2",
-    comment = "sample edge 2")
-  .addProperties(name, order, options, placements)
+    comment = "sample edge 2").addProperty(name)
 
   node1.addOutEdge(
     edge = edge1,
