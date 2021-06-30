@@ -1392,6 +1392,7 @@ class CodeGen(schema: Schema) {
         val optionalDefault = getHigherType(key.cardinality) match {
           case HigherValueType.None if key.valueType == ValueTypes.STRING => Some("\"\"")
           case HigherValueType.None if key.valueType == ValueTypes.BOOLEAN => Some("false")
+          case HigherValueType.None if key.valueType == ValueTypes.INTEGER => Some("-1")
           case HigherValueType.None => Some("null")
           case HigherValueType.Option => Some("None")
           case HigherValueType.List => Some("Seq.empty")
