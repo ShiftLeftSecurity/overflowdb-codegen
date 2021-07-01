@@ -612,11 +612,18 @@ class CodeGen(schema: Schema) {
             val containedNodeType = containedNode.nodeType.className
 
             containedNode.cardinality match {
-              case Cardinality.One | Cardinality.ZeroOrOne =>
+              case Cardinality.One =>
                 s"""  this._$memberName = $newNodeCasted.$memberName match {
                    |    case null => null
                    |    case newNode: NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
                    |    case oldNode: StoredNode => oldNode.asInstanceOf[$containedNodeType]
+                   |    case _ => throw new MatchError("unreachable")
+                   |  }""".stripMargin
+              case Cardinality.ZeroOrOne =>
+                s"""  this._$memberName = $newNodeCasted.$memberName match {
+                   |    case null | None => null
+                   |    case Some(newNode:NewNode) => mapping(newNode).asInstanceOf[$containedNodeType]
+                   |    case Some(oldNode:StoredNode) => oldNode.asInstanceOf[$containedNodeType]
                    |    case _ => throw new MatchError("unreachable")
                    |  }""".stripMargin
               case Cardinality.List => // need java list, e.g. for NodeSerializer
