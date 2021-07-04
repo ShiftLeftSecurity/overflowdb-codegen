@@ -130,6 +130,18 @@ object Helpers {
     }
   }
 
+  def defaultValueFor(valueType: ValueTypes): String = valueType match {
+    case ValueTypes.BOOLEAN => "false"
+    case ValueTypes.STRING => "\"<[empty]>\""
+    case ValueTypes.BYTE => "0: Byte"
+    case ValueTypes.SHORT => "0: Short"
+    case ValueTypes.INTEGER | ValueTypes.LONG => "0"
+    case ValueTypes.FLOAT => "Float.NaN"
+    case ValueTypes.DOUBLE => "Double.NaN"
+    case ValueTypes.CHARACTER => "'?'"
+    case _ => ???
+  }
+
   def propertyBasedFields(properties: Seq[Property]): String = {
     properties.map { property =>
       val publicName = camelCase(property.name)
@@ -137,7 +149,7 @@ object Helpers {
       val (publicType, tpeForField, fieldAccessor, defaultValue) = {
         val valueType = typeFor(property.valueType)
         getHigherType(property.cardinality) match {
-          case HigherValueType.None   => (valueType, valueType, fieldName, "null")
+          case HigherValueType.None   => (valueType, valueType, fieldName, defaultValueFor(property.valueType))
           case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
           case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
           case HigherValueType.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")

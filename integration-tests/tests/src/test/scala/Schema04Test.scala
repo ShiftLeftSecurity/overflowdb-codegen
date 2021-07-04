@@ -16,13 +16,22 @@ class Schema04Test extends AnyWordSpec with Matchers {
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val edge1 = node1.addEdge(Edge1.Label, node2).asInstanceOf[Edge1]
 
+    // TODO define defaults in codegen?
+    node1.bool shouldBe false
     node1.str shouldBe "<[empty]>"
+    node1.byte shouldBe 0
+    node1.short shouldBe 0
+    node1.int shouldBe 0
+    node1.long shouldBe 0
+    node1.float shouldBe Float.NaN
+    node1.double shouldBe Double.NaN
+    node1.char shouldBe '?'
     node1.valueMap shouldBe Map(
       "STR" -> "<[empty]>",
-      "TODO" -> "foo"
+      "TODO" -> "fill all others"
     )
 
-    // TODO repeat for node, edge, nodeTrav, edgeTrav
+    // TODO repeat for edge, nodeTrav, edgeTrav
     // TODO for all other property value types
     // TODO for custom defined properties
 
