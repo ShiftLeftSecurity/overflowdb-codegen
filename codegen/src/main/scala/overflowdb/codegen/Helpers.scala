@@ -143,25 +143,6 @@ object Helpers {
     case _ => ???
   }
 
-  def propertyBasedFields(properties: Seq[Property]): String = {
-    properties.map { property =>
-      val publicName = camelCase(property.name)
-      val fieldName = s"_$publicName"
-      val (publicType, tpeForField, fieldAccessor, defaultValue) = {
-        val valueType = typeFor(property.valueType)
-        getHigherType(property.cardinality) match {
-          case HigherValueType.None   => (valueType, valueType, fieldName, defaultValueFor(property.valueType))
-          case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
-          case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
-          case HigherValueType.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
-        }
-      }
-
-      s"""private var $fieldName: $tpeForField = $defaultValue
-         |def $publicName: $publicType = $fieldAccessor""".stripMargin
-    }.mkString("\n\n")
-  }
-
   def propertyKeyDef(name: String, baseType: String, cardinality: Cardinality) = {
     val completeType = cardinality match {
       case Cardinality.One       => baseType
