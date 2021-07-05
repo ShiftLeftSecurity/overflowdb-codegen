@@ -389,8 +389,12 @@ class CodeGen(schema: Schema) {
           s"""val ${camelCaseCaps(name)} = "$name" """
         }.mkString("\n|    ")
 
-        val propertyDefs = properties.map { p =>
+        val propertyDefinitions = properties.map { p =>
           propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
+        }.mkString("\n|    ")
+
+        val propertyDefaults = properties.map { p =>
+          s"""val ${p.className} = ${defaultValueFor(p.valueType)} """
         }.mkString("\n|    ")
 
         val Seq(outEdgeNames, inEdgeNames) =
@@ -405,7 +409,11 @@ class CodeGen(schema: Schema) {
            |  }
            |
            |  object Properties {
-           |    $propertyDefs
+           |    $propertyDefinitions
+           |  }
+           |
+           |  object PropertyDefaults {
+           |    $propertyDefaults
            |  }
            |
            |  object Edges {
@@ -445,6 +453,10 @@ class CodeGen(schema: Schema) {
 
       val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
         propertyKeyDef(containedNode.localName, containedNode.nodeType.className, containedNode.cardinality)
+      }.mkString("\n|    ")
+
+      val propertyDefaults = properties.map { p =>
+        s"""val ${p.className} = ${defaultValueFor(p.valueType)} """
       }.mkString("\n|    ")
 
       val (neighborOutInfos, neighborInInfos) = {
@@ -518,6 +530,10 @@ class CodeGen(schema: Schema) {
            |  object Properties {
            |    $propertyDefs
            |    $propertyDefsForContainedNodes
+           |  }
+           |
+           |  object PropertyDefaults {
+           |    $propertyDefaults
            |  }
            |
            |  val layoutInformation = new NodeLayoutInformation(
