@@ -148,8 +148,12 @@ class CodeGen(schema: Schema) {
         s"""val ${p.className} = "${p.name}" """
       }.mkString("\n|    ")
 
-      val propertyDefs = properties.map { p =>
+      val propertyDefinitions = properties.map { p =>
         propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
+      }.mkString("\n|    ")
+
+      val propertyDefaults = properties.map { p =>
+        s"""val ${p.className} = ${defaultValueFor(p.valueType)} """
       }.mkString("\n|    ")
 
       val companionObject =
@@ -163,7 +167,11 @@ class CodeGen(schema: Schema) {
            |  }
            |
            |  object Properties {
-           |    $propertyDefs
+           |    $propertyDefinitions
+           |  }
+           |
+           |  object PropertyDefaults {
+           |    $propertyDefaults
            |  }
            |
            |  val layoutInformation = new EdgeLayoutInformation(Label, PropertyNames.allAsJava)
@@ -179,23 +187,24 @@ class CodeGen(schema: Schema) {
 
       def propertyBasedFieldAccessors(properties: Seq[Property]): String = {
         properties.map { property =>
-          val name = camelCase(property.name)
+          val name = property.name
+          val nameCamelCase = camelCase(name)
           val tpe = getCompleteType(property)
 
           getHigherType(property.cardinality) match {
             case HigherValueType.None =>
-              s"""def $name: $tpe = property("${property.name}").asInstanceOf[$tpe]"""
+              s"""def $nameCamelCase: $tpe = property("$name", $edgeClassName.PropertyDefaults.${property.className}).asInstanceOf[$tpe]"""
             case HigherValueType.Option =>
-              s"""def $name: $tpe = Option(property("${property.name}")).asInstanceOf[$tpe]""".stripMargin
+              s"""def $nameCamelCase: $tpe = Option(property("$name")).asInstanceOf[$tpe]""".stripMargin
             case HigherValueType.List =>
-              s"""def $name: $tpe = {
-                 |  val p = property("${property.name}")
+              s"""def $nameCamelCase: $tpe = {
+                 |  val p = property("$name")
                  |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.toSeq
                  |  else Nil
                  |}""".stripMargin
             case HigherValueType.ISeq =>
-              s"""def $name: $tpe = {
-                 |  val p = property("${property.name}")
+              s"""def $nameCamelCase: $tpe = {
+                 |  val p = property("$name")
                  |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.to(IndexedSeq)
                  |  else IndexedSeq.empty
                  |}""".stripMargin

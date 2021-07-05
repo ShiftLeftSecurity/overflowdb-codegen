@@ -27,17 +27,18 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.valueMap.get("STR") shouldBe "<[empty]>"
     node1.valueMap.get("BOOL") shouldBe false
 
-//    edge1.bool shouldBe false
-//    node1.str shouldBe "<[empty]>"
-//    node1.byte shouldBe 0
-//    node1.short shouldBe 0
-//    node1.int shouldBe 0
-//    node1.long shouldBe 0
-//    node1.float.isNaN shouldBe true
-//    node1.double.isNaN shouldBe true
-//    node1.char shouldBe '?'
-//    node1.valueMap.get("STR") shouldBe "<[empty]>"
-//    node1.valueMap.get("BOOL") shouldBe false
+    edge1.bool shouldBe false
+    edge1.str shouldBe "<[empty]>"
+    edge1.byte shouldBe 0
+    edge1.short shouldBe 0
+    edge1.int shouldBe 0
+    edge1.long shouldBe 0
+    edge1.float.isNaN shouldBe true
+    edge1.double.isNaN shouldBe true
+    edge1.char shouldBe '?'
+    // TODO
+//    edge1.valueMap.get("STR") shouldBe "<[empty]>"
+//    edge1.valueMap.get("BOOL") shouldBe false
 
     // TODO repeat for nodeTrav, edgeTrav
     // TODO add custom defined properties

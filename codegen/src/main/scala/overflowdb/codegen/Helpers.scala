@@ -135,9 +135,10 @@ object Helpers {
     case ValueTypes.STRING => "\"<[empty]>\""
     case ValueTypes.BYTE => "0: Byte"
     case ValueTypes.SHORT => "0: Short"
-    case ValueTypes.INTEGER | ValueTypes.LONG => "0"
-    case ValueTypes.FLOAT => "Float.NaN"
-    case ValueTypes.DOUBLE => "Double.NaN"
+    case ValueTypes.INTEGER => "0: Int"
+    case ValueTypes.LONG => "0: Long"
+    case ValueTypes.FLOAT => "scala.Float.NaN"
+    case ValueTypes.DOUBLE => "scala.Double.NaN"
     case ValueTypes.CHARACTER => "'?'"
     case _ => ???
   }
