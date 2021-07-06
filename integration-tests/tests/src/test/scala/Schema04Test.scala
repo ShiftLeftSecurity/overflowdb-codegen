@@ -26,6 +26,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.double.isNaN shouldBe true
     node1.char shouldBe '?'
     node1.property(Node1.Properties.Str) shouldBe "<[empty]>"
+    node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
 
     edge1.bool shouldBe false
     edge1.str shouldBe "<[empty]>"
@@ -37,6 +38,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
     edge1.double.isNaN shouldBe true
     edge1.char shouldBe '?'
     edge1.property(Edge1.Properties.Str) shouldBe "<[empty]>"
+    edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
 
     node1.valueMap.get("STR") shouldBe "<[empty]>"
     node1.propertyMap.get("STR") shouldBe "<[empty]>"

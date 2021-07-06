@@ -156,10 +156,6 @@ class CodeGen(schema: Schema) {
         s"""val ${p.className} = ${defaultValueFor(p.valueType)}"""
       }.mkString("\n|    ")
 
-      val propertyDefaultValueCases = properties.map { p =>
-        s"""case "${p.name}" => ${defaultValueFor(p.valueType)}"""
-      }.mkString("\n|    ")
-
       val companionObject =
         s"""object $edgeClassName {
            |  val Label = "${edgeType.name}"
@@ -222,11 +218,7 @@ class CodeGen(schema: Schema) {
            |
            |  ${propertyBasedFieldAccessors(properties)}
            |
-           |  override protected def propertyDefaultValue(propertyKey: String) =
-           |    propertyKey match {
-           |      $propertyDefaultValueCases
-           |      case _ => super.propertyDefaultValue(propertyKey)
-           |  }
+           |  ${propertyDefaultValueImpl(properties)}
            |
            |}
            |""".stripMargin
@@ -804,6 +796,7 @@ class CodeGen(schema: Schema) {
            |  with StoredNode
            |  $mixinTraits {
            |  $propertyDelegators
+           |  ${propertyDefaultValueImpl(properties)}
            |  $delegatingContainedNodeAccessors
            |  $neighborAccessorDelegators
            |
@@ -935,6 +928,10 @@ class CodeGen(schema: Schema) {
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
            |${propertyBasedFields(properties)}
+           |
+           |  override def propertyDefaultValue(propertyKey: String) =
+           |    ref.propertyDefaultValue(propertyKey)
+           |
            |$containedNodesAsMembers
            |
            |  /* all properties */

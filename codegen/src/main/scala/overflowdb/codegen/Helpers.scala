@@ -153,6 +153,20 @@ object Helpers {
     s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }
 
+  def propertyDefaultValueImpl(properties: Seq[Property]): String = {
+    val propertyDefaultValueCases = properties.map { p =>
+      s"""case "${p.name}" => ${defaultValueFor(p.valueType)}"""
+    }.mkString("\n|    ")
+
+    s"""
+       |  override def propertyDefaultValue(propertyKey: String) =
+       |    propertyKey match {
+       |      $propertyDefaultValueCases
+       |      case _ => super.propertyDefaultValue(propertyKey)
+       |  }
+       |""".stripMargin
+  }
+
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {
        |  private var errorMap = Set[(Class[_], String)]()
