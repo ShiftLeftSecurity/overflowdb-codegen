@@ -8,6 +8,7 @@ import testschema04.nodes._
 import testschema04.traversal._
 
 class Schema04Test extends AnyWordSpec with Matchers {
+
   "default property values" in {
     val graph = Graph.open(Config.withDefaults, nodes.Factories.allAsJava, edges.Factories.allAsJava)
 
@@ -24,8 +25,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.float.isNaN shouldBe true
     node1.double.isNaN shouldBe true
     node1.char shouldBe '?'
-    node1.valueMap.get("STR") shouldBe "<[empty]>"
-    node1.valueMap.get("BOOL") shouldBe false
+    node1.property(Node1.Properties.Str) shouldBe "<[empty]>"
 
     edge1.bool shouldBe false
     edge1.str shouldBe "<[empty]>"
@@ -36,30 +36,11 @@ class Schema04Test extends AnyWordSpec with Matchers {
     edge1.float.isNaN shouldBe true
     edge1.double.isNaN shouldBe true
     edge1.char shouldBe '?'
-    // TODO
-//    edge1.valueMap.get("STR") shouldBe "<[empty]>"
-//    edge1.valueMap.get("BOOL") shouldBe false
+    edge1.property(Edge1.Properties.Str) shouldBe "<[empty]>"
 
-    // TODO repeat for nodeTrav, edgeTrav
-    // TODO add custom defined properties
-
-//      def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
-//      val baseNode = baseNodeTraversal.head
-//      baseNode.edge2In.l shouldBe Seq(node2)
-//      baseNode.edge1Out.l shouldBe Seq(node2)
-//      baseNode._node2ViaEdge2In shouldBe node2
-//      baseNode._node2ViaEdge1Out.l shouldBe Seq(node2)
-//
-//      baseNodeTraversal.name.l shouldBe Seq("node 01")
-//      baseNodeTraversal.name(".*").size shouldBe 1
-//      baseNodeTraversal.nameExact("node 01").size shouldBe 1
-//      baseNodeTraversal.nameNot("abc").size shouldBe 1
-//
-//      def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
-//      node1Traversal.order.l shouldBe Seq(4)
-//      node1Traversal.orderGt(3).size shouldBe 1
-//      node1Traversal.orderLt(4).size shouldBe 0
-//      node1Traversal.orderLte(4).size shouldBe 1
-//    }
+    node1.valueMap.get("STR") shouldBe "<[empty]>"
+    graph.nodes(Node1.Label).cast[Node1].str.head shouldBe "<[empty]>"
+    graph.nodes(Node1.Label).cast[Node1].property(Node1.Properties.Str).head shouldBe "<[empty]>"
+    graph.edges(Edge1.Label).cast[Edge1].property(Edge1.Properties.Str).head shouldBe "<[empty]>"
   }
 }

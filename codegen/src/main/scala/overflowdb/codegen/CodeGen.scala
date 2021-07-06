@@ -153,7 +153,11 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefaults = properties.map { p =>
-        s"""val ${p.className} = ${defaultValueFor(p.valueType)} """
+        s"""val ${p.className} = ${defaultValueFor(p.valueType)}"""
+      }.mkString("\n|    ")
+
+      val propertyDefaultValueCases = properties.map { p =>
+        s"""case "${p.name}" => ${defaultValueFor(p.valueType)}"""
       }.mkString("\n|    ")
 
       val companionObject =
@@ -215,7 +219,15 @@ class CodeGen(schema: Schema) {
       val classImpl =
         s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
            |extends Edge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
-           |${propertyBasedFieldAccessors(properties)}
+           |
+           |  ${propertyBasedFieldAccessors(properties)}
+           |
+           |  override protected def propertyDefaultValue(propertyKey: String) =
+           |    propertyKey match {
+           |      $propertyDefaultValueCases
+           |      case _ => super.propertyDefaultValue(propertyKey)
+           |  }
+           |
            |}
            |""".stripMargin
 
