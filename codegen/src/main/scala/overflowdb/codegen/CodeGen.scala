@@ -870,14 +870,14 @@ class CodeGen(schema: Schema) {
 
         val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, typeFor(p.valueType))).mkString("\n")
 
-        val forContaintedNodes = nodeType.containedNodes.map(containedNode =>
+        val forContainedNodes = nodeType.containedNodes.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeType.className)
         ).mkString("\n")
 
         s"""  override protected def updateSpecificProperty(key:String, value: Object): Unit = {
            |    key match {
            |    $forKeys
-           |    $forContaintedNodes
+           |    $forContainedNodes
            |      case _ => PropertyErrorRegister.logPropertyErrorIfFirst(getClass, key)
            |    }
            |  }""".stripMargin
