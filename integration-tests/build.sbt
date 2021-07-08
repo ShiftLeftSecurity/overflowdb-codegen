@@ -19,6 +19,7 @@ val integrationTests = project.in(file("tests"))
     libraryDependencies ++= Seq(
       "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
       "org.scalatest" %% "scalatest" % "3.2.9" % Test,
+      "org.slf4j" % "slf4j-simple" % "1.7.28" % Test,
     ),
     scalacOptions -= "-Xfatal-warnings",
     Compile/sourceGenerators += schemas / generateDomainClasses,
