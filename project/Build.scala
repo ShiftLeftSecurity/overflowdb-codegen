@@ -6,5 +6,5 @@ object Projects {
 }
 
 object Versions {
-  val overflowdb = "1.46+4-740b0e45"
+  val overflowdb = "1.46+12-c9b4e151"
 }

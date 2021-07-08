@@ -929,9 +929,6 @@ class CodeGen(schema: Schema) {
            |
            |${propertyBasedFields(properties)}
            |
-           |  override def propertyDefaultValue(propertyKey: String) =
-           |    ref.propertyDefaultValue(propertyKey)
-           |
            |$containedNodesAsMembers
            |
            |  /* all properties */
