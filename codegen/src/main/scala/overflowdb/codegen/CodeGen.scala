@@ -576,20 +576,19 @@ class CodeGen(schema: Schema) {
 
       val propertyBasedTraits = properties.map(p => s"with Has${p.className}").mkString(" ")
 
-      val propertiesMapWithoutDefaultsImpl = {
-        val putKeysImpl = properties
-          .map { key: Property =>
-            val memberName = camelCase(key.name)
-            key.cardinality match {
-              case Cardinality.One =>
-                s"""if ($memberName != null) { properties.put("${key.name}", $memberName) }"""
-              case Cardinality.ZeroOrOne =>
-                s"""$memberName.map { value => properties.put("${key.name}", value) }"""
-              case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
-                s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName.asJava) }"""
-            }
+      val propertiesMapImpl = {
+        val putKeysImpl = properties.map { key: Property =>
+          val memberName = camelCase(key.name)
+          key.cardinality match {
+            case Cardinality.One =>
+              s"""if ($memberName != null) { properties.put("${key.name}", $memberName) }"""
+            case Cardinality.ZeroOrOne =>
+              s"""$memberName.map { value => properties.put("${key.name}", value) }"""
+            case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
+              s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName.asJava) }"""
           }
-          .mkString("\n")
+        }.mkString("\n")
+
         val putRefsImpl = {
           nodeType.containedNodes.map { cnt =>
             val memberName = cnt.localName
@@ -927,7 +926,9 @@ class CodeGen(schema: Schema) {
            |
            |$containedNodesAsMembers
            |
-           |  override def propertiesMapWithoutDefaults: java.util.Map[String, AnyRef] = $propertiesMapWithoutDefaultsImpl
+           |  /** faster than the default implementation */
+           |  override def propertiesMap: java.util.Map[String, AnyRef] =
+           |    $propertiesMapImpl
            |
            |  $neighborAccessors
            |
@@ -1470,7 +1471,7 @@ class CodeGen(schema: Schema) {
               case (name, typ, None)          => s"var $name: $typ"}
         .mkString(", ")
 
-      val propertiesMapWithoutDefaultsImpl = {
+      val propertiesMapImpl = {
         val putKeysImpl = keys
           .map { key: Property =>
             val memberName = camelCase(key.name)
@@ -1554,7 +1555,7 @@ class CodeGen(schema: Schema) {
          |case class New${nodeClassName} private[nodes] ($defaultsVal) extends NewNode with ${nodeClassName}Base {
          |  override def label: String = "${nodeType.name}"
          |
-         |  $propertiesMapWithoutDefaultsImpl
+         |  $propertiesMapImpl
          |}
          |""".stripMargin
     }

@@ -43,6 +43,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.propertiesMap.get("STR") shouldBe "<[empty]>"
     node1.propertiesMap.get("STR") shouldBe "<[empty]>"
     edge1.propertiesMap.get("STR") shouldBe "<[empty]>"
+    node1.get.propertiesMapWithoutDefaults.isEmpty shouldBe true
     graph.nodes(Node1.Label).cast[Node1].str.head shouldBe "<[empty]>"
     graph.nodes(Node1.Label).cast[Node1].property(Node1.Properties.Str).head shouldBe "<[empty]>"
     graph.edges(Edge1.Label).cast[Edge1].property(Edge1.Properties.Str).head shouldBe "<[empty]>"
