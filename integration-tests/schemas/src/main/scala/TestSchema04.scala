@@ -5,8 +5,8 @@ import overflowdb.storage.ValueTypes
   * and allow to override them in the schema. */
 class TestSchema04 extends TestSchema {
   val bool = builder.addProperty("BOOL", ValueTypes.BOOLEAN, Cardinality.One).withDefault(true)
-  val string = builder.addProperty("STR", ValueTypes.STRING, Cardinality.One)
-  val byte = builder.addProperty("BYTE", ValueTypes.BYTE, Cardinality.One)
+  val string = builder.addProperty("STR", ValueTypes.STRING, Cardinality.One).withDefault("<[empty]>")
+  val byte = builder.addProperty("BYTE", ValueTypes.BYTE, Cardinality.One).withDefault(1)
   val short = builder.addProperty("SHORT", ValueTypes.SHORT, Cardinality.One)
   val int  = builder.addProperty("INT", ValueTypes.INTEGER, Cardinality.One)
   val long = builder.addProperty("LONG", ValueTypes.LONG, Cardinality.One)

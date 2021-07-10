@@ -17,18 +17,18 @@ class Schema04Test extends AnyWordSpec with Matchers {
 //    val edge1 = node1.addEdge(Edge1.Label, node2).asInstanceOf[Edge1]
 
     node1.bool shouldBe true
+    node1.str shouldBe "<[empty]>"
+    node1.byte shouldBe 1
+    node1.short shouldBe 2
+    node1.int shouldBe 3
+    node1.long shouldBe 4
+    node1.float.isNaN shouldBe true
+    node1.double.isNaN shouldBe true
+    node1.char shouldBe '?'
+    node1.property(Node1.Properties.Str) shouldBe "<[empty]>"
+    node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
+
     ???
-//    node1.str shouldBe "<[empty]>"
-//    node1.byte shouldBe 0
-//    node1.short shouldBe 0
-//    node1.int shouldBe 0
-//    node1.long shouldBe 0
-//    node1.float.isNaN shouldBe true
-//    node1.double.isNaN shouldBe true
-//    node1.char shouldBe '?'
-//    node1.property(Node1.Properties.Str) shouldBe "<[empty]>"
-//    node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
-//
 //    edge1.bool shouldBe true
 //    edge1.str shouldBe "<[empty]>"
 //    edge1.byte shouldBe 0
