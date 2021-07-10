@@ -152,11 +152,6 @@ class CodeGen(schema: Schema) {
         propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
 
-      val propertyDefaults = properties.collect {
-        case p if p.defaultValue.isDefined =>
-          s"""val ${p.className} = ${defaultValueImpl(p)}"""
-      }.mkString("\n|    ")
-
       val companionObject =
         s"""object $edgeClassName {
            |  val Label = "${edgeType.name}"
@@ -169,10 +164,6 @@ class CodeGen(schema: Schema) {
            |
            |  object Properties {
            |    $propertyDefinitions
-           |  }
-           |
-           |  object PropertyDefaults {
-           |    $propertyDefaults
            |  }
            |
            |  val layoutInformation = new EdgeLayoutInformation(Label, PropertyNames.allAsJava)
@@ -193,8 +184,10 @@ class CodeGen(schema: Schema) {
           val tpe = getCompleteType(property)
 
           getHigherType(property.cardinality) match {
+            case HigherValueType.None if property.hasDefault =>
+              s"""def $nameCamelCase: $tpe = property("$name", ${defaultValueImpl(property)}).asInstanceOf[$tpe]"""
             case HigherValueType.None =>
-              s"""def $nameCamelCase: $tpe = property("$name", $edgeClassName.PropertyDefaults.${property.className}).asInstanceOf[$tpe]"""
+              s"""def $nameCamelCase: $tpe = property("$name").asInstanceOf[$tpe]"""
             case HigherValueType.Option =>
               s"""def $nameCamelCase: $tpe = Option(property("$name")).asInstanceOf[$tpe]""".stripMargin
             case HigherValueType.List =>
@@ -395,11 +388,6 @@ class CodeGen(schema: Schema) {
           propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
         }.mkString("\n|    ")
 
-        val propertyDefaults = properties.collect {
-          case p if p.defaultValue.isDefined =>
-            s"""val ${p.className} = ${defaultValueImpl(p)} """
-        }.mkString("\n|    ")
-
         val Seq(outEdgeNames, inEdgeNames) =
           Seq(nodeBaseType.outEdges, nodeBaseType.inEdges).map { edges =>
             edges.map(_.viaEdge.name).sorted.map(quote).mkString(",")
@@ -413,10 +401,6 @@ class CodeGen(schema: Schema) {
            |
            |  object Properties {
            |    $propertyDefinitions
-           |  }
-           |
-           |  object PropertyDefaults {
-           |    $propertyDefaults
            |  }
            |
            |  object Edges {
@@ -456,11 +440,6 @@ class CodeGen(schema: Schema) {
 
       val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
         propertyKeyDef(containedNode.localName, containedNode.nodeType.className, containedNode.cardinality)
-      }.mkString("\n|    ")
-
-      val propertyDefaults = properties.collect {
-        case p if p.defaultValue.isDefined =>
-          s"""val ${p.className} = ${defaultValueImpl(p)} """
       }.mkString("\n|    ")
 
       val (neighborOutInfos, neighborInInfos) = {
@@ -534,10 +513,6 @@ class CodeGen(schema: Schema) {
            |  object Properties {
            |    $propertyDefs
            |    $propertyDefsForContainedNodes
-           |  }
-           |
-           |  object PropertyDefaults {
-           |    $propertyDefaults
            |  }
            |
            |  val layoutInformation = new NodeLayoutInformation(
@@ -907,7 +882,9 @@ class CodeGen(schema: Schema) {
           val (publicType, tpeForField, fieldAccessor, defaultValue) = {
             val valueType = typeFor(property.valueType)
             getHigherType(property.cardinality) match {
-              case HigherValueType.None   => (valueType, valueType, fieldName, s"$className.PropertyDefaults.${property.className}")
+              case HigherValueType.None if property.hasDefault =>
+                (valueType, valueType, fieldName, s"${defaultValueImpl(property)}")
+              case HigherValueType.None   => (valueType, valueType, fieldName, "null")
               case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
               case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
               case HigherValueType.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")

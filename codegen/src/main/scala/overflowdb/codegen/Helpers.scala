@@ -152,7 +152,7 @@ object Helpers {
 
   def propertyDefaultValueImpl(properties: Seq[Property]): String = {
     val propertyDefaultValueCases = properties.collect {
-      case p if p.defaultValue.isDefined =>
+      case p if p.hasDefault =>
         s"""case "${p.name}" => ${defaultValueImpl(p)}"""
     }.mkString("\n|    ")
 

@@ -164,6 +164,7 @@ class Property(val name: String,
                val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
   private var _defaultValue: Option[_] = None
   def defaultValue: Option[_] = _defaultValue
+  def hasDefault: Boolean = _defaultValue.isDefined
 
   /** define a default value for this property */
   def withDefault(value: Any): Property = {
