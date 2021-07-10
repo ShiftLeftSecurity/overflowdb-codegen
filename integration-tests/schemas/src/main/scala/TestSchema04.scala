@@ -4,7 +4,7 @@ import overflowdb.storage.ValueTypes
 /** For testing default values on properties with Cardinality.One: we have type-dependent defaults,
   * and allow to override them in the schema. */
 class TestSchema04 extends TestSchema {
-  val bool = builder.addProperty("BOOL", ValueTypes.BOOLEAN, Cardinality.One)
+  val bool = builder.addProperty("BOOL", ValueTypes.BOOLEAN, Cardinality.One).withDefault(true)
   val string = builder.addProperty("STR", ValueTypes.STRING, Cardinality.One)
   val byte = builder.addProperty("BYTE", ValueTypes.BYTE, Cardinality.One)
   val short = builder.addProperty("SHORT", ValueTypes.SHORT, Cardinality.One)

@@ -130,19 +130,6 @@ object Helpers {
     }
   }
 
-  def defaultValueFor(valueType: ValueTypes): String = valueType match {
-    case ValueTypes.BOOLEAN => "false"
-    case ValueTypes.STRING => "\"<[empty]>\""
-    case ValueTypes.BYTE => "0: Byte"
-    case ValueTypes.SHORT => "0: Short"
-    case ValueTypes.INTEGER => "0: Int"
-    case ValueTypes.LONG => "0: Long"
-    case ValueTypes.FLOAT => "scala.Float.NaN"
-    case ValueTypes.DOUBLE => "scala.Double.NaN"
-    case ValueTypes.CHARACTER => "'?'"
-    case _ => ???
-  }
-
   def propertyKeyDef(name: String, baseType: String, cardinality: Cardinality) = {
     val completeType = cardinality match {
       case Cardinality.One       => baseType
@@ -153,9 +140,20 @@ object Helpers {
     s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }
 
+  def defaultValueImpl(property: Property): String = {
+    val defaultValue = property.defaultValue.getOrElse(
+      throw new AssertionError(s"property ${property.name} does not have a default value!")
+    )
+    defaultValue match {
+      case str: String => s"\"$str\""
+      case other => s"$other"
+    }
+  }
+
   def propertyDefaultValueImpl(properties: Seq[Property]): String = {
-    val propertyDefaultValueCases = properties.map { p =>
-      s"""case "${p.name}" => ${defaultValueFor(p.valueType)}"""
+    val propertyDefaultValueCases = properties.collect {
+      case p if p.defaultValue.isDefined =>
+        s"""case "${p.name}" => ${defaultValueImpl(p)}"""
     }.mkString("\n|    ")
 
     s"""

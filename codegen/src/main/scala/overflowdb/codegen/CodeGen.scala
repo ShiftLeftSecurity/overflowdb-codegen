@@ -152,8 +152,9 @@ class CodeGen(schema: Schema) {
         propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
 
-      val propertyDefaults = properties.map { p =>
-        s"""val ${p.className} = ${defaultValueFor(p.valueType)}"""
+      val propertyDefaults = properties.collect {
+        case p if p.defaultValue.isDefined =>
+          s"""val ${p.className} = ${defaultValueImpl(p)}"""
       }.mkString("\n|    ")
 
       val companionObject =
@@ -394,8 +395,9 @@ class CodeGen(schema: Schema) {
           propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
         }.mkString("\n|    ")
 
-        val propertyDefaults = properties.map { p =>
-          s"""val ${p.className} = ${defaultValueFor(p.valueType)} """
+        val propertyDefaults = properties.collect {
+          case p if p.defaultValue.isDefined =>
+            s"""val ${p.className} = ${defaultValueImpl(p)} """
         }.mkString("\n|    ")
 
         val Seq(outEdgeNames, inEdgeNames) =
@@ -456,8 +458,9 @@ class CodeGen(schema: Schema) {
         propertyKeyDef(containedNode.localName, containedNode.nodeType.className, containedNode.cardinality)
       }.mkString("\n|    ")
 
-      val propertyDefaults = properties.map { p =>
-        s"""val ${p.className} = ${defaultValueFor(p.valueType)} """
+      val propertyDefaults = properties.collect {
+        case p if p.defaultValue.isDefined =>
+          s"""val ${p.className} = ${defaultValueImpl(p)} """
       }.mkString("\n|    ")
 
       val (neighborOutInfos, neighborInInfos) = {

@@ -162,6 +162,17 @@ class Property(val name: String,
                val valueType: ValueTypes,
                val cardinality: Cardinality,
                val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
+  private var _defaultValue: Option[_] = None
+  def defaultValue: Option[_] = _defaultValue
+
+  /** define a default value for this property */
+  def withDefault(value: Any): Property = {
+    assert(cardinality == Cardinality.One,
+      s"setting a default value only supported for cardinality=One, but this property has cardinality=$cardinality")
+    this._defaultValue = Option(value)
+    this
+  }
+
   override def toString = s"Property($name)"
 }
 
