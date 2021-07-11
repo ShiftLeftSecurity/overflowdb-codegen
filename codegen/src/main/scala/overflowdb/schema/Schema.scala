@@ -9,7 +9,7 @@ import scala.collection.mutable
  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
 class Schema(val basePackage: String,
-             val properties: Seq[Property],
+             val properties: Seq[Property[_]],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
@@ -21,13 +21,13 @@ class Schema(val basePackage: String,
     nodeTypes ++ nodeBaseTypes
 
   /** properties that are used in node types */
-  def nodeProperties: Seq[Property] =
+  def nodeProperties: Seq[Property[_]] =
     properties.filter(property =>
       (nodeTypes ++ nodeBaseTypes).exists(_.properties.contains(property))
     )
 
   /** properties that are used in edge types */
-  def edgeProperties: Seq[Property] =
+  def edgeProperties: Seq[Property[_]] =
     properties.filter(property =>
       edgeTypes.exists(_.properties.contains(property))
     )
@@ -44,12 +44,12 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
 
   /** properties (including potentially inherited properties) */
-  override def properties: Seq[Property] = {
+  override def properties: Seq[Property[_]] = {
     val entireClassHierarchy = this +: extendzRecursively
     entireClassHierarchy.flatMap(_.propertiesWithoutInheritance).distinct.sortBy(_.name.toLowerCase)
   }
 
-  def propertiesWithoutInheritance: Seq[Property] =
+  def propertiesWithoutInheritance: Seq[Property[_]] =
     _properties.toSeq.sortBy(_.name.toLowerCase)
 
   def extendz(additional: NodeBaseType*): this.type = {
@@ -140,7 +140,7 @@ class EdgeType(val name: String, val comment: Option[String], val schemaInfo: Sc
   override def toString = s"EdgeType($name)"
 
   /** properties (including potentially inherited properties) */
-  def properties: Seq[Property] =
+  def properties: Seq[Property[_]] =
     _properties.toSeq.sortBy(_.name.toLowerCase)
 }
 
@@ -155,30 +155,27 @@ object EdgeType {
 
 // TODO rename, move to separate file
 import Property._
-abstract class Property(val name: String,
-                        val cardinality: Cardinality = Cardinality.ZeroOrOne,
-                        val comment: Option[String] = None,
-                        val schemaInfo: SchemaInfo)
+class Property[A : ToOdbStorageType](val name: String,
+                                     val cardinality: Cardinality = Cardinality.ZeroOrOne,
+                                     val comment: Option[String] = None,
+                                     val schemaInfo: SchemaInfo)
   extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
-
-  type ValueType
-  def toOdbStorageType: ToOdbStorageType[ValueType]
-  lazy val odbStorageType: overflowdb.storage.ValueTypes = toOdbStorageType.apply()
+  lazy val odbStorageType: overflowdb.storage.ValueTypes =
+    implicitly[ToOdbStorageType[A]].apply()
 }
-
 
 object Property {
   import overflowdb.storage.ValueTypes
 
-//  class Boolean extends Property
-
   trait ToOdbStorageType[A] {
     def apply(): ValueTypes
   }
-  implicit lazy val booleanToOdb: ToOdbStorageType[Boolean] = () => ValueTypes.BOOLEAN
-  implicit lazy val stringToOdb: ToOdbStorageType[String] = () => ValueTypes.STRING
-  implicit lazy val floatToOdb: ToOdbStorageType[Float] = () => ValueTypes.FLOAT
-  // TODO all others
+  object ToOdbStorageType {
+    implicit lazy val boolean: ToOdbStorageType[Boolean] = () => ValueTypes.BOOLEAN
+    implicit lazy val string: ToOdbStorageType[String] = () => ValueTypes.STRING
+    implicit lazy val float: ToOdbStorageType[Float] = () => ValueTypes.FLOAT
+    // TODO all others
+  }
 
   sealed abstract class Cardinality
   object Cardinality {
@@ -189,13 +186,20 @@ object Property {
   }
 
   case class Default[A: IsDefaultValueImpl](value: A) {
-    def isDefaultValueImpl(valueName: String): String = {
-      implicitly[IsDefaultValueImpl[A]].apply(valueName)
+    def isDefaultValueImpl(valueName: String, defaultValue: String): String = {
+      implicitly[IsDefaultValueImpl[A]].apply(valueName, defaultValue)
     }
   }
 
   trait IsDefaultValueImpl[A] {
-    def apply(valueName: String): String
+    def apply(valueName: String, defaultValue: String): String
+  }
+  object IsDefaultValueImpl {
+//    implicit lazy val boolean: IsDefaultValueImpl[Boolean] = () => ValueTypes.BOOLEAN
+    implicit lazy val string: IsDefaultValueImpl[String] = (valueName, defaultValue) => s"$defaultValue.equals($valueName)"
+//    implicit lazy val float: IsDefaultValueImpl[Float] = () => ValueTypes.FLOAT
+    // TODO all others
+
   }
 }
 
@@ -272,20 +276,20 @@ trait HasClassName {
 }
 
 trait HasProperties {
-  protected val _properties: mutable.Set[Property] = mutable.Set.empty
+  protected val _properties: mutable.Set[Property[_]] = mutable.Set.empty
 
-  def addProperty(additional: Property): this.type = {
+  def addProperty(additional: Property[_]): this.type = {
     _properties.add(additional)
     this
   }
 
-  def addProperties(additional: Property*): this.type = {
+  def addProperties(additional: Property[_]*): this.type = {
     additional.foreach(addProperty)
     this
   }
 
   /** properties (including potentially inherited properties) */
-  def properties: Seq[Property]
+  def properties: Seq[Property[_]]
 }
 
 trait HasOptionalProtoId {

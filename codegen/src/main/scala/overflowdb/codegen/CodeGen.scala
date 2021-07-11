@@ -14,9 +14,9 @@ class CodeGen(schema: Schema) {
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
   val traversalsPackage = s"$basePackage.traversal"
-  private val noWarnList: mutable.Set[(AbstractNodeType, Property)] = mutable.Set.empty
+  private val noWarnList: mutable.Set[(AbstractNodeType, Property[_])] = mutable.Set.empty
 
-  def dontWarnForDuplicateProperty(nodeType: AbstractNodeType, property: Property): CodeGen = {
+  def dontWarnForDuplicateProperty(nodeType: AbstractNodeType, property: Property[_]): CodeGen = {
     noWarnList.addOne((nodeType, property))
     this
   }
@@ -141,7 +141,7 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property]) = {
+    def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property[_]]) = {
       val edgeClassName = edgeType.className
 
       val propertyNames = properties.map(_.className)
@@ -179,7 +179,7 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      def propertyBasedFieldAccessors(properties: Seq[Property]): String = {
+      def propertyBasedFieldAccessors(properties: Seq[Property[_]]): String = {
         import Property.Cardinality
         properties.map { property =>
           val name = property.name
@@ -557,11 +557,11 @@ class CodeGen(schema: Schema) {
 
       val propertiesMapImpl = {
         import Property.Cardinality
-        val putKeysImpl = properties.map { key: Property =>
+        val putKeysImpl = properties.map { key: Property[_] =>
           val memberName = camelCase(key.name)
           key.cardinality match {
             case Cardinality.One(default) =>
-              val isDefaultValueImpl = default.isDefaultValueImpl(memberName)
+              val isDefaultValueImpl = default.isDefaultValueImpl(memberName, defaultValueImpl(default))
               s"""if (!$isDefaultValueImpl) { properties.put("${key.name}", $memberName) }"""
             case Cardinality.ZeroOrOne =>
               s"""$memberName.map { value => properties.put("${key.name}", value) }"""
@@ -575,7 +575,7 @@ class CodeGen(schema: Schema) {
             val memberName = cnt.localName
             cnt.cardinality match {
               case Cardinality.One(default) =>
-                val isDefaultValueImpl = default.isDefaultValueImpl(s"this._$memberName")
+                val isDefaultValueImpl = default.isDefaultValueImpl(s"this._$memberName", defaultValueImpl(default))
                 s"""   if (!$isDefaultValueImpl) { properties.put("${memberName}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
                 s"""   $memberName.map { value => properties.put("${memberName}", value) }"""
@@ -597,7 +597,7 @@ class CodeGen(schema: Schema) {
         val newNodeCasted = s"newNode.asInstanceOf[New${nodeType.className}]"
 
         val initKeysImpl = {
-          val lines = properties.map { key: Property =>
+          val lines = properties.map { key: Property[_] =>
             import Property.Cardinality
             val memberName = camelCase(key.name)
             key.cardinality match {
@@ -884,7 +884,7 @@ class CodeGen(schema: Schema) {
            |  }""".stripMargin
       }
 
-      def propertyBasedFields(properties: Seq[Property]): String = {
+      def propertyBasedFields(properties: Seq[Property[_]]): String = {
         import Property.Cardinality
         properties.map { property =>
           val publicName = camelCase(property.name)
@@ -1013,7 +1013,7 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
+    def generatePropertyTraversals(className: String, properties: Seq[Property[_]]): String = {
       import Property.Cardinality
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
@@ -1429,7 +1429,7 @@ class CodeGen(schema: Schema) {
          |}
          |""".stripMargin
 
-    def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
+    def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property[_]]) = {
       import Property.Cardinality
       val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, String)] // fieldName, type, default
       for (key <- keys) {
@@ -1463,12 +1463,12 @@ class CodeGen(schema: Schema) {
 
       val propertiesMapImpl = {
         val putKeysImpl = keys
-          .map { key: Property =>
+          .map { key: Property[_] =>
             val memberName = camelCase(key.name)
             import Property.Cardinality
             key.cardinality match {
               case Cardinality.One(default) =>
-                val isDefaultValueImpl = default.isDefaultValueImpl(memberName)
+                val isDefaultValueImpl = default.isDefaultValueImpl(memberName, defaultValueImpl(default))
                 s"""  if (!$isDefaultValueImpl) { res += "${key.name}" -> $memberName }"""
               case Cardinality.ZeroOrOne =>
                 s"""  $memberName.map { value => res += "${key.name}" -> value }"""
@@ -1481,7 +1481,7 @@ class CodeGen(schema: Schema) {
           val memberName = key.localName
           key.cardinality match {
             case Cardinality.One(default) =>
-              val isDefaultValueImpl = default.isDefaultValueImpl(memberName)
+              val isDefaultValueImpl = default.isDefaultValueImpl(memberName, defaultValueImpl(default))
               s"""  if (!$isDefaultValueImpl) { res += "$memberName" -> $memberName }"""
             case Cardinality.ZeroOrOne =>
               s"""  $memberName.map { value => res += "${memberName}" -> value }"""

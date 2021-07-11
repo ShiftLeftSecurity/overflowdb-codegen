@@ -96,7 +96,7 @@ object Helpers {
     }
   }
 
-  def getCompleteType(property: Property): String = {
+  def getCompleteType[A](property: Property[A]): String = {
     import Property.Cardinality
     val valueType = typeFor(property.odbStorageType)
     property.cardinality match {
@@ -139,7 +139,7 @@ object Helpers {
       case other => s"$other"
     }
 
-  def propertyDefaultValueImpl(properties: Seq[Property]): String = {
+  def propertyDefaultValueImpl(properties: Seq[Property[_]]): String = {
     import Property.Cardinality
     val propertyDefaultValueCases = properties.map(p => (p, p.cardinality)).collect {
       case (property, Cardinality.One(default)) =>

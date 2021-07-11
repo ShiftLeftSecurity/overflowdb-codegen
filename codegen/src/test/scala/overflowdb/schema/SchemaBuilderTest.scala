@@ -1,6 +1,7 @@
 package overflowdb.schema
 
 import org.scalatest.wordspec.AnyWordSpec
+import overflowdb.schema.Property.Default
 import overflowdb.storage.ValueTypes
 
 class SchemaBuilderTest extends AnyWordSpec {
@@ -12,11 +13,11 @@ class SchemaBuilderTest extends AnyWordSpec {
       ("category1", _.addConstants("category1", Constant("constant1", "value1", ValueTypes.STRING).protoId(10))),
       ("category2", _.addConstants("category2", Constant("constant2", "value2", ValueTypes.STRING).protoId(10))),
       ("node property", { schemaBuilder =>
-        val property = schemaBuilder.addProperty(name = "prop", valueType = ValueTypes.STRING, cardinality = Property2.Cardinality.One).protoId(10)
+        val property = schemaBuilder.addProperty[String]("prop", Property.Cardinality.One(Default("[empty]"))).protoId(10)
         schemaBuilder.addNodeType("testNode").addProperty(property)
       }),
       ("edge property", { schemaBuilder =>
-        val property = schemaBuilder.addProperty(name = "prop", valueType = ValueTypes.STRING, cardinality = Property2.Cardinality.One).protoId(10)
+        val property = schemaBuilder.addProperty[String]("prop", Property.Cardinality.One(Default("[empty]"))).protoId(10)
         schemaBuilder.addEdgeType("testEdge").addProperty(property)
       }),
     )
