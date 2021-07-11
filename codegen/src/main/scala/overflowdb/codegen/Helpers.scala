@@ -140,9 +140,10 @@ object Helpers {
     }
 
   def propertyDefaultValueImpl(properties: Seq[Property]): String = {
-    val propertyDefaultValueCases = properties.collect {
-      case p if p.hasDefault =>
-        s"""case "${p.name}" => ${defaultValueImpl(p)}"""
+    import Property.Cardinality
+    val propertyDefaultValueCases = properties.map(p => (p, p.cardinality)).collect {
+      case (property, Cardinality.One(default)) =>
+        s"""case "${property.name}" => ${defaultValueImpl(default)}"""
     }.mkString("\n|    ")
 
     s"""

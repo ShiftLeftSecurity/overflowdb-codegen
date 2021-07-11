@@ -156,9 +156,9 @@ object EdgeType {
 // TODO rename, move to separate file
 import Property._
 abstract class Property(val name: String,
-               val cardinality: Cardinality = Cardinality.ZeroOrOne,
-               val comment: Option[String] = None,
-               val schemaInfo: SchemaInfo)
+                        val cardinality: Cardinality = Cardinality.ZeroOrOne,
+                        val comment: Option[String] = None,
+                        val schemaInfo: SchemaInfo)
   extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
 
   type ValueType
@@ -169,12 +169,15 @@ abstract class Property(val name: String,
 
 object Property {
   import overflowdb.storage.ValueTypes
+
+//  class Boolean extends Property
+
   trait ToOdbStorageType[A] {
     def apply(): ValueTypes
   }
   implicit lazy val booleanToOdb: ToOdbStorageType[Boolean] = () => ValueTypes.BOOLEAN
-  implicit lazy val stringToOdb: ToOdbStorageType[Boolean] = () => ValueTypes.STRING
-  implicit lazy val floatToOdb: ToOdbStorageType[Boolean] = () => ValueTypes.FLOAT
+  implicit lazy val stringToOdb: ToOdbStorageType[String] = () => ValueTypes.STRING
+  implicit lazy val floatToOdb: ToOdbStorageType[Float] = () => ValueTypes.FLOAT
   // TODO all others
 
   sealed abstract class Cardinality
@@ -185,7 +188,15 @@ object Property {
     case class One[A](default: Default[A]) extends Cardinality
   }
 
-  case class Default[A](value: A)
+  case class Default[A: IsDefaultValueImpl](value: A) {
+    def isDefaultValueImpl(valueName: String): String = {
+      implicitly[IsDefaultValueImpl[A]].apply(valueName)
+    }
+  }
+
+  trait IsDefaultValueImpl[A] {
+    def apply(valueName: String): String
+  }
 }
 
 class Constant(val name: String,

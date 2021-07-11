@@ -33,9 +33,9 @@ class SchemaBuilder(basePackage: String) {
       SchemaInfo.forClass(getClass)
     )
 
-  def addProperty(name: String, valueType: ValueTypes, cardinality: Property2.Cardinality, comment: String = "")(
+  def addProperty[A](name: String, cardinality: Property.Cardinality, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property =
-    addAndReturn(properties, new Property(name, stringToOption(comment), valueType, cardinality, schemaInfo))
+    addAndReturn(properties, new Property(name, cardinality, stringToOption(comment), schemaInfo))
 
   def addNodeBaseType(name: String, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): NodeBaseType =

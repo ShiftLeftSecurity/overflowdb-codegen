@@ -4,6 +4,7 @@ import better.files._
 import overflowdb.codegen.CodeGen.ConstantContext
 import overflowdb.schema._
 import overflowdb.storage.ValueTypes
+
 import scala.collection.mutable
 
 /** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
@@ -559,8 +560,9 @@ class CodeGen(schema: Schema) {
         val putKeysImpl = properties.map { key: Property =>
           val memberName = camelCase(key.name)
           key.cardinality match {
-            case Cardinality.One =>
-              s"""if ($memberName != null) { properties.put("${key.name}", $memberName) }"""
+            case Cardinality.One(default) =>
+              val isDefaultValueImpl = default.isDefaultValueImpl(memberName)
+              s"""if (!$isDefaultValueImpl) { properties.put("${key.name}", $memberName) }"""
             case Cardinality.ZeroOrOne =>
               s"""$memberName.map { value => properties.put("${key.name}", value) }"""
             case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
@@ -572,8 +574,9 @@ class CodeGen(schema: Schema) {
           nodeType.containedNodes.map { cnt =>
             val memberName = cnt.localName
             cnt.cardinality match {
-              case Cardinality.One =>
-                s"""   if (this._$memberName != null) { properties.put("${memberName}", this._$memberName) }"""
+              case Cardinality.One(default) =>
+                val isDefaultValueImpl = default.isDefaultValueImpl(s"this._$memberName")
+                s"""   if (!$isDefaultValueImpl) { properties.put("${memberName}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
                 s"""   $memberName.map { value => properties.put("${memberName}", value) }"""
               case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
@@ -598,7 +601,7 @@ class CodeGen(schema: Schema) {
             import Property.Cardinality
             val memberName = camelCase(key.name)
             key.cardinality match {
-              case Cardinality.One =>
+              case Cardinality.One(_) =>
                 s"""   this._$memberName = $newNodeCasted.$memberName""".stripMargin
               case Cardinality.ZeroOrOne =>
                 s"""   this._$memberName = $newNodeCasted.$memberName.orNull""".stripMargin
@@ -618,7 +621,7 @@ class CodeGen(schema: Schema) {
             val containedNodeType = containedNode.nodeType.className
 
             containedNode.cardinality match {
-              case Cardinality.One =>
+              case Cardinality.One(_) =>
                 s"""  this._$memberName = $newNodeCasted.$memberName match {
                    |    case null => null
                    |    case newNode: NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
@@ -673,9 +676,9 @@ class CodeGen(schema: Schema) {
             import Property.Cardinality
             val containedNodeType = containedNode.nodeType.className
             containedNode.cardinality match {
-              case Cardinality.One =>
+              case Cardinality.One(default) =>
                 s"""
-                   |private var _${containedNode.localName}: $containedNodeType = null
+                   |private var _${containedNode.localName}: $containedNodeType = ${defaultValueImpl(default)}
                    |def ${containedNode.localName}: $containedNodeType = this._${containedNode.localName}
                    |""".stripMargin
               case Cardinality.ZeroOrOne =>
@@ -731,7 +734,7 @@ class CodeGen(schema: Schema) {
       val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         import Property.Cardinality
         containedNode.cardinality match {
-          case Cardinality.One =>
+          case Cardinality.One(_) =>
             s"""  def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
           case Cardinality.ZeroOrOne =>
             s"""  def ${containedNode.localName}: Option[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
@@ -826,7 +829,7 @@ class CodeGen(schema: Schema) {
         import Property.Cardinality
         def caseEntry(name: String, accessorName: String, cardinality: Cardinality, baseType: String) = {
           val setter = cardinality match {
-            case Cardinality.One | Cardinality.ZeroOrOne =>
+            case Cardinality.One(_) | Cardinality.ZeroOrOne =>
               s"value.asInstanceOf[$baseType]"
             case Cardinality.List =>
               s"""value match {
@@ -1018,7 +1021,7 @@ class CodeGen(schema: Schema) {
         val cardinality = property.cardinality
 
         val mapOrFlatMap = cardinality match {
-          case Cardinality.One => "map"
+          case Cardinality.One(_) => "map"
           case Cardinality.ZeroOrOne | Cardinality.List | Cardinality.ISeq => "flatMap"
         }
 
@@ -1334,13 +1337,13 @@ class CodeGen(schema: Schema) {
 
         val filterSteps = (cardinality, property.odbStorageType) match {
           case (Cardinality.List | Cardinality.ISeq, _) => ""
-          case (Cardinality.One, ValueTypes.STRING) => filterStepsForSingleString
+          case (Cardinality.One(_), ValueTypes.STRING) => filterStepsForSingleString
           case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString
-          case (Cardinality.One, ValueTypes.BOOLEAN) => filterStepsForSingleBoolean
+          case (Cardinality.One(_), ValueTypes.BOOLEAN) => filterStepsForSingleBoolean
           case (Cardinality.ZeroOrOne, ValueTypes.BOOLEAN) => filterStepsForOptionalBoolean
-          case (Cardinality.One, ValueTypes.INTEGER) => filterStepsForSingleInt
+          case (Cardinality.One(_), ValueTypes.INTEGER) => filterStepsForSingleInt
           case (Cardinality.ZeroOrOne, ValueTypes.INTEGER) => filterStepsForOptionalInt
-          case (Cardinality.One, _) => filterStepsGenericSingle
+          case (Cardinality.One(_), _) => filterStepsGenericSingle
           case (Cardinality.ZeroOrOne, _) => filterStepsGenericOption
           case _ => ""
         }
@@ -1434,21 +1437,20 @@ class CodeGen(schema: Schema) {
           case Cardinality.ZeroOrOne => "None"
           case Cardinality.List => "Seq.empty"
           case Cardinality.ISeq => "IndexedSeq.empty"
-          case Cardinality.One(default) => defaultImpl(default)
+          case Cardinality.One(default) => defaultValueImpl(default)
         }
         val typ = getCompleteType(key)
-        fieldDescriptions += (camelCase(key.name), typ, defaultImpl)
+        fieldDescriptions += ((camelCase(key.name), typ, defaultImpl))
       }
       for (containedNode <- nodeType.containedNodes) {
-        val optionalDefault = containedNode.cardinality match {
+        val defaultImpl = containedNode.cardinality match {
           case Cardinality.ZeroOrOne => "None"
           case Cardinality.List      => "Seq.empty"
           case Cardinality.ISeq      => "IndexedSeq.empty"
-          case Cardinality.One(default) => ??? //defaultImpl(default)
-            // TODO do we still need `null` for contained node members?
+          case Cardinality.One(default) => defaultValueImpl(default)
         }
         val typ = getCompleteType(containedNode)
-        fieldDescriptions += (containedNode.localName, typ, optionalDefault)
+        fieldDescriptions += ((containedNode.localName, typ, defaultImpl))
       }
       val defaultsVal = fieldDescriptions.reverse
         .map {
@@ -1465,8 +1467,9 @@ class CodeGen(schema: Schema) {
             val memberName = camelCase(key.name)
             import Property.Cardinality
             key.cardinality match {
-              case Cardinality.One =>
-                s"""  if ($memberName != null) { res += "${key.name}" -> $memberName }"""
+              case Cardinality.One(default) =>
+                val isDefaultValueImpl = default.isDefaultValueImpl(memberName)
+                s"""  if (!$isDefaultValueImpl) { res += "${key.name}" -> $memberName }"""
               case Cardinality.ZeroOrOne =>
                 s"""  $memberName.map { value => res += "${key.name}" -> value }"""
               case Cardinality.List | Cardinality.ISeq=>
@@ -1477,8 +1480,9 @@ class CodeGen(schema: Schema) {
           import Property.Cardinality
           val memberName = key.localName
           key.cardinality match {
-            case Cardinality.One =>
-              s"""  if ($memberName != null) { res += "$memberName" -> $memberName }"""
+            case Cardinality.One(default) =>
+              val isDefaultValueImpl = default.isDefaultValueImpl(memberName)
+              s"""  if (!$isDefaultValueImpl) { res += "$memberName" -> $memberName }"""
             case Cardinality.ZeroOrOne =>
               s"""  $memberName.map { value => res += "${memberName}" -> value }"""
             case Cardinality.List | Cardinality.ISeq =>
