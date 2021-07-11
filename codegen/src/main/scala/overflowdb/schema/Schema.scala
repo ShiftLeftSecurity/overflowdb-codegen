@@ -135,18 +135,12 @@ case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinali
 
 case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Cardinality)
 
-sealed abstract class Cardinality(val name: String)
+sealed abstract class Cardinality
 object Cardinality {
-  case object ZeroOrOne extends Cardinality("zeroOrOne")
-  case object List extends Cardinality("list")
-  case object ISeq extends Cardinality("array")
-  case object One extends Cardinality("one")
-//  class One extends Cardinality("one")
-
-  def fromName(name: String): Cardinality =
-    Seq(ZeroOrOne, One, List, ISeq)
-      .find(_.name == name)
-      .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq`, but was $name"))
+  case object ZeroOrOne extends Cardinality
+  case object List extends Cardinality
+  case object ISeq extends Cardinality
+  case object One extends Cardinality
 }
 
 class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
@@ -156,6 +150,9 @@ class EdgeType(val name: String, val comment: Option[String], val schemaInfo: Sc
   /** properties (including potentially inherited properties) */
   def properties: Seq[Property] =
     _properties.toSeq.sortBy(_.name.toLowerCase)
+}
+
+object EdgeType {
 }
 
 class Property(val name: String,
