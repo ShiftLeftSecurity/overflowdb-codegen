@@ -174,37 +174,44 @@ class Property(val name: String,
 }
 
 // TODO rename, move to separate file
-abstract class Property2[ValueType](val name: String, val cardinality: Property2.Cardinality) {
-  protected var _defaultValue: Option[ValueType] = None
-  protected var _comment: Option[String] = None
-  protected var _cardinality: Property2.Cardinality = Property2.Cardinality.ZeroOrOne
-
-  def defaultValue: Option[ValueType] = _defaultValue
-  def hasDefault: Boolean = _defaultValue.isDefined
-  protected def withDefault(value: ValueType): Property2[ValueType] = {
-    _defaultValue = Option(value)
-    this
-  }
-
-  def comment: Option[String] = _comment
-  def withComment(text: String): Property2[ValueType] = {
-    _comment = Option(text)
-    this
-  }
-
-  def odbValueType: overflowdb.storage.ValueTypes
-
-  override def toString = s"Property($name)"
-}
-
-object Property2 {
-//  def boolean(name: String): Property2[Boolean] = new Property2(name) {
-//    override def odbValueType = ValueTypes.BOOLEAN
+//abstract class Property2[ValueType](val name: String, val cardinality: Property2.Cardinality) {
+//  protected var _comment: Option[String] = None
+//  protected var _cardinality: Property2.Cardinality = Property2.Cardinality.ZeroOrOne
+//
+//  protected var _defaultValue: Option[ValueType] = None
+//  def defaultValue: Option[ValueType] = _defaultValue
+//  def hasDefault: Boolean = _defaultValue.isDefined
+//  protected def withDefault(value: ValueType): Property2[ValueType] = {
+//    _defaultValue = Option(value)
+//    this
 //  }
 //
-//  class Bool(name: String) extends Property2[Boolean](name) {
-//    override def odbValueType = ValueTypes.BOOLEAN
+//  def comment: Option[String] = _comment
+//  def withComment(text: String): Property2[ValueType] = {
+//    _comment = Option(text)
+//    this
 //  }
+//
+//  def odbValueType: overflowdb.storage.ValueTypes
+//
+//  override def toString = s"Property($name)"
+//}
+
+// TODO rename, move to separate file
+import Property2._
+case class Property2[ValueType : ToOdbStorageType](name: String, cardinality: Property2.Cardinality, comment: Option[String] = None) {
+  lazy val odbValueType: overflowdb.storage.ValueTypes = {
+    implicitly[ToOdbStorageType[ValueType]].apply()
+  }
+}
+
+
+object Property2 {
+  trait ToOdbStorageType[ValueType] {
+    def apply(): overflowdb.storage.ValueTypes
+  }
+  implicit lazy val booleanOdbTypeProvider: ToOdbStorageType[Boolean] = () => overflowdb.storage.ValueTypes.BOOLEAN
+  // TODO others
 
   sealed abstract class Cardinality
   object Cardinality {
@@ -212,6 +219,9 @@ object Property2 {
     case object List extends Cardinality
     case object ISeq extends Cardinality
     case object One extends Cardinality
+
+    // TODO rename to One (replace)
+    case class One2[A](defaultValue: A) extends Cardinality
   }
 }
 
