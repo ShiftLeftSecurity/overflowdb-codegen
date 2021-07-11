@@ -562,7 +562,7 @@ class CodeGen(schema: Schema) {
           key.cardinality match {
             case Cardinality.One(default) =>
               val isDefaultValueImpl = default.defaultValueCheckImpl(memberName, defaultValueImpl(default))
-              s"""if (!$isDefaultValueImpl) { properties.put("${key.name}", $memberName) }"""
+              s"""if (!($isDefaultValueImpl)) { properties.put("${key.name}", $memberName) }"""
             case Cardinality.ZeroOrOne =>
               s"""$memberName.map { value => properties.put("${key.name}", value) }"""
             case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
@@ -576,7 +576,7 @@ class CodeGen(schema: Schema) {
             cnt.cardinality match {
               case Cardinality.One(default) =>
                 val isDefaultValueImpl = default.defaultValueCheckImpl(s"this._$memberName", defaultValueImpl(default))
-                s"""   if (!$isDefaultValueImpl) { properties.put("${memberName}", this._$memberName) }"""
+                s"""   if (!($isDefaultValueImpl)) { properties.put("${memberName}", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
                 s"""   $memberName.map { value => properties.put("${memberName}", value) }"""
               case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
@@ -1469,7 +1469,7 @@ class CodeGen(schema: Schema) {
             key.cardinality match {
               case Cardinality.One(default) =>
                 val isDefaultValueImpl = default.defaultValueCheckImpl(memberName, defaultValueImpl(default))
-                s"""  if (!$isDefaultValueImpl) { res += "${key.name}" -> $memberName }"""
+                s"""  if (!($isDefaultValueImpl)) { res += "${key.name}" -> $memberName }"""
               case Cardinality.ZeroOrOne =>
                 s"""  $memberName.map { value => res += "${key.name}" -> value }"""
               case Cardinality.List | Cardinality.ISeq=>
@@ -1482,7 +1482,7 @@ class CodeGen(schema: Schema) {
           key.cardinality match {
             case Cardinality.One(default) =>
               val isDefaultValueImpl = default.defaultValueCheckImpl(memberName, defaultValueImpl(default))
-              s"""  if (!$isDefaultValueImpl) { res += "$memberName" -> $memberName }"""
+              s"""  if (!($isDefaultValueImpl)) { res += "$memberName" -> $memberName }"""
             case Cardinality.ZeroOrOne =>
               s"""  $memberName.map { value => res += "${memberName}" -> value }"""
             case Cardinality.List | Cardinality.ISeq =>
