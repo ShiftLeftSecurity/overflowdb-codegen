@@ -38,18 +38,18 @@ object Helpers {
   }
 
   def typeFor(odbStorageType: ValueTypes): String = odbStorageType match {
-    case ValueTypes.BOOLEAN => "java.lang.Boolean"
+    case ValueTypes.BOOLEAN => "Boolean"
     case ValueTypes.STRING => "String"
-    case ValueTypes.BYTE => "java.lang.Byte"
-    case ValueTypes.SHORT => "java.lang.Short"
-    case ValueTypes.INTEGER => "java.lang.Integer"
-    case ValueTypes.LONG => "java.lang.Long"
-    case ValueTypes.FLOAT => "java.lang.Float"
-    case ValueTypes.DOUBLE => "java.lang.Double"
-    case ValueTypes.LIST => "java.lang.List[_]"
+    case ValueTypes.BYTE => "Byte"
+    case ValueTypes.SHORT => "Short"
+    case ValueTypes.INTEGER => "Integer"
+    case ValueTypes.LONG => "Long"
+    case ValueTypes.FLOAT => "Float"
+    case ValueTypes.DOUBLE => "Double"
+    case ValueTypes.LIST => "Seq[_]"
     case ValueTypes.NODE_REF => "overflowdb.NodeRef[_]"
     case ValueTypes.UNKNOWN => "java.lang.Object"
-    case ValueTypes.CHARACTER => "java.lang.Character"
+    case ValueTypes.CHARACTER => "Character"
   }
 
   def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
