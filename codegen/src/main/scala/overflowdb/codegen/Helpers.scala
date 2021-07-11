@@ -96,12 +96,12 @@ object Helpers {
     }
   }
 
-  def getHigherType(cardinality: Cardinality): HigherValueType.Value =
+  def getHigherType(cardinality: Property2.Cardinality): HigherValueType.Value =
     cardinality match {
-      case Cardinality.One       => HigherValueType.None
-      case Cardinality.ZeroOrOne => HigherValueType.Option
-      case Cardinality.List      => HigherValueType.List
-      case Cardinality.ISeq      => HigherValueType.ISeq
+      case Property2.Cardinality.One       => HigherValueType.None
+      case Property2.Cardinality.ZeroOrOne => HigherValueType.Option
+      case Property2.Cardinality.List      => HigherValueType.List
+      case Property2.Cardinality.ISeq      => HigherValueType.ISeq
     }
 
   def getCompleteType(property: Property): String = {
@@ -123,19 +123,19 @@ object Helpers {
     }
 
     containedNode.cardinality match {
-      case Cardinality.ZeroOrOne => s"Option[$tpe]"
-      case Cardinality.One       => tpe
-      case Cardinality.List      => s"Seq[$tpe]"
-      case Cardinality.ISeq => s"IndexedSeq[$tpe]"
+      case Property2.Cardinality.ZeroOrOne => s"Option[$tpe]"
+      case Property2.Cardinality.One       => tpe
+      case Property2.Cardinality.List      => s"Seq[$tpe]"
+      case Property2.Cardinality.ISeq => s"IndexedSeq[$tpe]"
     }
   }
 
-  def propertyKeyDef(name: String, baseType: String, cardinality: Cardinality) = {
+  def propertyKeyDef(name: String, baseType: String, cardinality: Property2.Cardinality) = {
     val completeType = cardinality match {
-      case Cardinality.One       => baseType
-      case Cardinality.ZeroOrOne => baseType
-      case Cardinality.List      => s"Seq[$baseType]"
-      case Cardinality.ISeq=> s"IndexedSeq[$baseType]"
+      case Property2.Cardinality.One       => baseType
+      case Property2.Cardinality.ZeroOrOne => baseType
+      case Property2.Cardinality.List      => s"Seq[$baseType]"
+      case Property2.Cardinality.ISeq=> s"IndexedSeq[$baseType]"
     }
     s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }
@@ -195,13 +195,12 @@ object Helpers {
     if (scalaReservedKeywords.contains(value)) s"`$value`"
     else value
 
-  def fullScalaType(neighborNode: AbstractNodeType, cardinality: Cardinality): String = {
+  def fullScalaType(neighborNode: AbstractNodeType, cardinality: EdgeType.Cardinality): String = {
     val neighborNodeClass = neighborNode.className
     cardinality match {
-      case Cardinality.List => s"overflowdb.traversal.Traversal[$neighborNodeClass]"
-      case Cardinality.ZeroOrOne => s"Option[$neighborNodeClass]"
-      case Cardinality.One => s"$neighborNodeClass"
-      case Cardinality.ISeq => ???
+      case EdgeType.Cardinality.List => s"overflowdb.traversal.Traversal[$neighborNodeClass]"
+      case EdgeType.Cardinality.ZeroOrOne => s"Option[$neighborNodeClass]"
+      case EdgeType.Cardinality.One => s"$neighborNodeClass"
     }
   }
 

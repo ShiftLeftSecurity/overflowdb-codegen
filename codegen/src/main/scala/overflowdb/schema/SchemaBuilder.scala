@@ -33,7 +33,7 @@ class SchemaBuilder(basePackage: String) {
       SchemaInfo.forClass(getClass)
     )
 
-  def addProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = "")(
+  def addProperty(name: String, valueType: ValueTypes, cardinality: Property2.Cardinality, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property =
     addAndReturn(properties, new Property(name, stringToOption(comment), valueType, cardinality, schemaInfo))
 

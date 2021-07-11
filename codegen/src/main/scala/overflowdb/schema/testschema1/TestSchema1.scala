@@ -2,7 +2,7 @@ package overflowdb.schema.testschema1
 
 import java.io.File
 import overflowdb.codegen.CodeGen
-import overflowdb.schema.{Cardinality, Constant, SchemaBuilder, SchemaInfo}
+import overflowdb.schema.{Constant, EdgeType, Property2, SchemaBuilder, SchemaInfo}
 import overflowdb.storage.ValueTypes
 
 // TODO create integration test from this
@@ -16,7 +16,7 @@ object TestSchema1 extends App {
     .addProperty(
       name = "NAME",
       valueType = ValueTypes.STRING,
-      cardinality = Cardinality.One,
+      cardinality = Property2.Cardinality.One,
       comment = "Name of represented object, e.g., method name (e.g. \"run\")"
     )
     .protoId(5)
@@ -25,7 +25,7 @@ object TestSchema1 extends App {
     .addProperty(
       name = "ORDER",
       valueType = ValueTypes.INTEGER,
-      cardinality = Cardinality.One,
+      cardinality = Property2.Cardinality.One,
       comment =
         "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code"
     )
@@ -35,7 +35,7 @@ object TestSchema1 extends App {
     .addProperty(
       name = "HASH",
       valueType = ValueTypes.STRING,
-      cardinality = Cardinality.ZeroOrOne,
+      cardinality = Property2.Cardinality.ZeroOrOne,
       comment = "Hash value of the artifact that this CPG is built from."
     )
     .protoId(120)
@@ -44,7 +44,7 @@ object TestSchema1 extends App {
     .addProperty(
       name = "INHERITS_FROM_TYPE_FULL_NAME",
       valueType = ValueTypes.STRING,
-      cardinality = Cardinality.List,
+      cardinality = Property2.Cardinality.List,
       comment =
         "The static types a TYPE_DECL inherits from. This property is matched against the FULL_NAME of TYPE nodes and thus it is required to have at least one TYPE node for each TYPE_FULL_NAME"
     )
@@ -54,7 +54,7 @@ object TestSchema1 extends App {
     .addProperty(
       name = "ALIAS",
       valueType = ValueTypes.BOOLEAN,
-      cardinality = Cardinality.One,
+      cardinality = Property2.Cardinality.One,
       comment = "Defines whether a PROPAGATE edge creates an alias"
     )
     .protoId(1)
@@ -63,7 +63,7 @@ object TestSchema1 extends App {
     .addProperty(
       name = "LOCAL_NAME",
       valueType = ValueTypes.STRING,
-      cardinality = Cardinality.ZeroOrOne,
+      cardinality = Property2.Cardinality.ZeroOrOne,
       comment = "Local name of referenced CONTAINED node. This key is deprecated."
     )
     .protoId(6)
@@ -72,7 +72,7 @@ object TestSchema1 extends App {
     .addProperty(
       name = "EDGEKEY_1_LST",
       valueType = ValueTypes.INTEGER,
-      cardinality = Cardinality.List,
+      cardinality = Property2.Cardinality.List,
       comment = "test list edge key"
     )
     .protoId(6999)
@@ -114,10 +114,10 @@ object TestSchema1 extends App {
     .addOutEdge(
       edge = ast,
       inNode = namespaceBlock,
-      cardinalityOut = Cardinality.List,
-      cardinalityIn = Cardinality.ZeroOrOne
+      cardinalityOut = EdgeType.Cardinality.List,
+      cardinalityIn = EdgeType.Cardinality.ZeroOrOne
     )
-    .addContainedNode(namespaceBlock, "tags", Cardinality.List)
+    .addContainedNode(namespaceBlock, "tags", Property2.Cardinality.List)
 
   // constants
   val dispatchTypes = builder.addConstants(

@@ -70,8 +70,8 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
    */
   def addOutEdge(edge: EdgeType,
                  inNode: AbstractNodeType,
-                 cardinalityOut: Cardinality = Cardinality.List,
-                 cardinalityIn: Cardinality = Cardinality.List): this.type = {
+                 cardinalityOut: EdgeType.Cardinality = EdgeType.Cardinality.List,
+                 cardinalityIn: EdgeType.Cardinality = EdgeType.Cardinality.List): this.type = {
     _outEdges.add(AdjacentNode(edge, inNode, cardinalityOut))
     inNode._inEdges.add(AdjacentNode(edge, this, cardinalityIn))
     this
@@ -79,8 +79,8 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
   def addInEdge(edge: EdgeType,
                 outNode: AbstractNodeType,
-                cardinalityIn: Cardinality = Cardinality.List,
-                cardinalityOut: Cardinality = Cardinality.List): this.type = {
+                cardinalityIn: EdgeType.Cardinality = EdgeType.Cardinality.List,
+                cardinalityOut: EdgeType.Cardinality = EdgeType.Cardinality.List): this.type = {
     _inEdges.add(AdjacentNode(edge, outNode, cardinalityIn))
     outNode._outEdges.add(AdjacentNode(edge, this, cardinalityOut))
     this
@@ -111,7 +111,7 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   def containedNodes: Seq[ContainedNode] =
     _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
 
-  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Cardinality): NodeType = {
+  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Property2.Cardinality): NodeType = {
     _containedNodes.add(ContainedNode(node, localName, cardinality))
     this
   }
@@ -131,17 +131,9 @@ class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo
   override def toString = s"NodeBaseType($name)"
 }
 
-case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: Cardinality)
+case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: EdgeType.Cardinality)
 
-case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Cardinality)
-
-sealed abstract class Cardinality
-object Cardinality {
-  case object ZeroOrOne extends Cardinality
-  case object List extends Cardinality
-  case object ISeq extends Cardinality
-  case object One extends Cardinality
-}
+case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Property2.Cardinality)
 
 class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
   extends HasClassName with HasProperties with HasOptionalProtoId with HasSchemaInfo {
@@ -153,12 +145,18 @@ class EdgeType(val name: String, val comment: Option[String], val schemaInfo: Sc
 }
 
 object EdgeType {
+  sealed abstract class Cardinality
+  object Cardinality {
+    case object One extends Cardinality
+    case object ZeroOrOne extends Cardinality
+    case object List extends Cardinality
+  }
 }
 
 class Property(val name: String,
                val comment: Option[String],
                val valueType: ValueTypes,
-               val cardinality: Cardinality,
+               val cardinality: Property2.Cardinality,
                val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
   private var _defaultValue: Option[_] = None
   def defaultValue: Option[_] = _defaultValue
@@ -166,7 +164,7 @@ class Property(val name: String,
 
   /** define a default value for this property */
   def withDefault(value: Any): Property = {
-    assert(cardinality == Cardinality.One,
+    assert(cardinality == Property2.Cardinality.One,
       s"setting a default value only supported for cardinality=One, but this property has cardinality=$cardinality")
     this._defaultValue = Option(value)
     this
@@ -176,10 +174,10 @@ class Property(val name: String,
 }
 
 // TODO rename, move to separate file
-abstract class Property2[ValueType](val name: String, val cardinality: Cardinality) {
+abstract class Property2[ValueType](val name: String, val cardinality: Property2.Cardinality) {
   protected var _defaultValue: Option[ValueType] = None
   protected var _comment: Option[String] = None
-  protected var _cardinality: Cardinality = Cardinality.ZeroOrOne
+  protected var _cardinality: Property2.Cardinality = Property2.Cardinality.ZeroOrOne
 
   def defaultValue: Option[ValueType] = _defaultValue
   def hasDefault: Boolean = _defaultValue.isDefined
@@ -207,6 +205,14 @@ object Property2 {
 //  class Bool(name: String) extends Property2[Boolean](name) {
 //    override def odbValueType = ValueTypes.BOOLEAN
 //  }
+
+  sealed abstract class Cardinality
+  object Cardinality {
+    case object ZeroOrOne extends Cardinality
+    case object List extends Cardinality
+    case object ISeq extends Cardinality
+    case object One extends Cardinality
+  }
 }
 
 class Constant(val name: String,
@@ -232,24 +238,23 @@ case class NeighborInfoForNode(
   neighborNode: AbstractNodeType,
   edge: EdgeType,
   direction: Direction.Value,
-  cardinality: Cardinality,
+  cardinality: EdgeType.Cardinality,
   isInherited: Boolean) {
 
   lazy val accessorName = s"_${camelCase(neighborNode.name)}Via${edge.className}${camelCaseCaps(direction.toString)}"
 
   /** handling some accidental complexity within the schema: if a relationship is defined on a base node and
    * separately on a concrete node, with different cardinalities, we need to use the highest cardinality  */
-  lazy val consolidatedCardinality: Cardinality = {
+  lazy val consolidatedCardinality: EdgeType.Cardinality = {
     val inheritedCardinalities = neighborNode.extendzRecursively.flatMap(_.inEdges).collect {
       case AdjacentNode(viaEdge, neighbor, cardinality)
         if viaEdge == edge && neighbor == neighborNode => cardinality
     }
     val allCardinalities = cardinality +: inheritedCardinalities
     allCardinalities.distinct.sortBy {
-      case Cardinality.List => 0
-      case Cardinality.ISeq => 1
-      case Cardinality.ZeroOrOne => 2
-      case Cardinality.One => 3
+      case EdgeType.Cardinality.List => 0
+      case EdgeType.Cardinality.ZeroOrOne => 1
+      case EdgeType.Cardinality.One => 2
     }.head
   }
 

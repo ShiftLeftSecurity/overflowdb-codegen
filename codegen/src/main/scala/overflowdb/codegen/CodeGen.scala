@@ -101,6 +101,7 @@ class CodeGen(schema: Schema) {
       val src = {
         val valueType = typeFor(property.valueType)
         val cardinality = property.cardinality
+        import Property2.Cardinality
         val completeType = cardinality match {
           case Cardinality.One => valueType
           case Cardinality.ZeroOrOne => valueType
@@ -363,8 +364,8 @@ class CodeGen(schema: Schema) {
               val accessorName = s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
               val cardinality = adjacentNode.cardinality
               val appendix = cardinality match {
-                case Cardinality.One => ".next()"
-                case Cardinality.ZeroOrOne => s".nextOption()"
+                case EdgeType.Cardinality.One => ".next()"
+                case EdgeType.Cardinality.ZeroOrOne => s".nextOption()"
                 case _ => ""
               }
               s"def $accessorName: ${fullScalaType(neighbor, cardinality)} = $edgeAccessorName.collectAll[${neighbor.className}]$appendix"
@@ -555,6 +556,7 @@ class CodeGen(schema: Schema) {
       val propertyBasedTraits = properties.map(p => s"with Has${p.className}").mkString(" ")
 
       val propertiesMapImpl = {
+        import Property2.Cardinality
         val putKeysImpl = properties.map { key: Property =>
           val memberName = camelCase(key.name)
           key.cardinality match {
@@ -594,6 +596,7 @@ class CodeGen(schema: Schema) {
 
         val initKeysImpl = {
           val lines = properties.map { key: Property =>
+            import Property2.Cardinality
             val memberName = camelCase(key.name)
             key.cardinality match {
               case Cardinality.One =>
@@ -611,6 +614,7 @@ class CodeGen(schema: Schema) {
 
         val initRefsImpl = {
           nodeType.containedNodes.map { containedNode =>
+            import Property2.Cardinality
             val memberName = containedNode.localName
             val containedNodeType = containedNode.nodeType.className
 
@@ -667,6 +671,7 @@ class CodeGen(schema: Schema) {
       val containedNodesAsMembers =
         nodeType.containedNodes
           .map { containedNode =>
+            import Property2.Cardinality
             val containedNodeType = containedNode.nodeType.className
             containedNode.cardinality match {
               case Cardinality.One =>
@@ -725,6 +730,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
 
       val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
+        import Property2.Cardinality
         containedNode.cardinality match {
           case Cardinality.One =>
             s"""  def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
@@ -804,8 +810,8 @@ class CodeGen(schema: Schema) {
         val nodeAccessors = neighborInfo.nodeInfos.collect {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
             val appendix = neighborNodeInfo.consolidatedCardinality match {
-              case Cardinality.One => ".next()"
-              case Cardinality.ZeroOrOne => s".nextOption()"
+              case EdgeType.Cardinality.One => ".next()"
+              case EdgeType.Cardinality.ZeroOrOne => s".nextOption()"
               case _ => ""
             }
             s"def ${neighborNodeInfo.accessorName}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
@@ -818,6 +824,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
+        import Property2.Cardinality
         def caseEntry(name: String, accessorName: String, cardinality: Cardinality, baseType: String) = {
           val setter = cardinality match {
             case Cardinality.One | Cardinality.ZeroOrOne =>
@@ -1005,6 +1012,7 @@ class CodeGen(schema: Schema) {
     }
 
     def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
+      import Property2.Cardinality
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
         val baseType = typeFor(property.valueType)
@@ -1436,6 +1444,7 @@ class CodeGen(schema: Schema) {
         fieldDescriptions += ((camelCase(key.name), typ, optionalDefault))
       }
       for (containedNode <- nodeType.containedNodes) {
+        import Property2.Cardinality
         val optionalDefault = containedNode.cardinality match {
           case Cardinality.List      => Some("Seq.empty")
           case Cardinality.ZeroOrOne => Some("None")
@@ -1455,6 +1464,7 @@ class CodeGen(schema: Schema) {
         val putKeysImpl = keys
           .map { key: Property =>
             val memberName = camelCase(key.name)
+            import Property2.Cardinality
             key.cardinality match {
               case Cardinality.One =>
                 s"""  if ($memberName != null) { res += "${key.name}" -> $memberName }"""
@@ -1465,6 +1475,7 @@ class CodeGen(schema: Schema) {
             }
           }
       val putRefsImpl = nodeType.containedNodes.map { key =>
+          import Property2.Cardinality
           val memberName = key.localName
           key.cardinality match {
             case Cardinality.One =>

@@ -8,13 +8,13 @@ class TestSchema02 extends TestSchema {
   val name = builder.addProperty(
     name = "NAME",
     valueType = ValueTypes.STRING,
-    cardinality = Cardinality.One,
+    cardinality = Property2.Cardinality.One,
     comment = "Name of represented object")
 
   val order = builder.addProperty(
     name = "ORDER",
     valueType = ValueTypes.INTEGER,
-    cardinality = Cardinality.ZeroOrOne,
+    cardinality = Property2.Cardinality.ZeroOrOne,
     comment = "General ordering property.")
 
   val node1Base = builder.addNodeBaseType(
@@ -44,12 +44,12 @@ class TestSchema02 extends TestSchema {
   node1Base.addOutEdge(
     edge = edge1,
     inNode = node2,
-    cardinalityOut = Cardinality.List,
-    cardinalityIn = Cardinality.ZeroOrOne)
+    cardinalityOut = EdgeType.Cardinality.List,
+    cardinalityIn = EdgeType.Cardinality.ZeroOrOne)
 
   node2.addOutEdge(
     edge = edge2,
     inNode = node1Base,
-    cardinalityOut = Cardinality.One,
-    cardinalityIn = Cardinality.One)
+    cardinalityOut = EdgeType.Cardinality.One,
+    cardinalityIn = EdgeType.Cardinality.One)
 }

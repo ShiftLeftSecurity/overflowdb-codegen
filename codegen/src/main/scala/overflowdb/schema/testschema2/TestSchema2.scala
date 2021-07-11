@@ -2,7 +2,7 @@ package overflowdb.schema.testschema2
 
 import java.io.File
 import overflowdb.codegen.CodeGen
-import overflowdb.schema.{Cardinality, Constant, SchemaBuilder}
+import overflowdb.schema.{Constant, Property2, SchemaBuilder}
 import overflowdb.storage.ValueTypes
 
 // TODO create integration test from this
@@ -21,7 +21,7 @@ object Base {
       .addProperty(
         name = "NAME",
         valueType = ValueTypes.STRING,
-        cardinality = Cardinality.One,
+        cardinality = Property2.Cardinality.One,
         comment = "Name of represented object, e.g., method name (e.g. \"run\")"
       )
       .protoId(5)
@@ -30,7 +30,7 @@ object Base {
       .addProperty(
         name = "ORDER",
         valueType = ValueTypes.INTEGER,
-        cardinality = Cardinality.One,
+        cardinality = Property2.Cardinality.One,
         comment =
           "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code"
       )
@@ -40,7 +40,7 @@ object Base {
       .addProperty(
         name = "LOCAL_NAME",
         valueType = ValueTypes.STRING,
-        cardinality = Cardinality.ZeroOrOne,
+        cardinality = Property2.Cardinality.ZeroOrOne,
         comment = "Local name of referenced CONTAINED node. This key is deprecated."
       )
       .protoId(6)
