@@ -182,8 +182,10 @@ object Property {
     case object ZeroOrOne extends Cardinality
     case object List extends Cardinality
     case object ISeq extends Cardinality
-    case class One[A](defaultValue: A) extends Cardinality
+    case class One[A](default: Default[A]) extends Cardinality
   }
+
+  case class Default[A](value: A)
 }
 
 class Constant(val name: String,
@@ -232,11 +234,6 @@ case class NeighborInfoForNode(
   lazy val returnType: String =
     fullScalaType(neighborNode, consolidatedCardinality)
 
-}
-
-object HigherValueType extends Enumeration {
-  type HigherValueType = Value
-  val None, Option, List, ISeq = Value
 }
 
 object Direction extends Enumeration {

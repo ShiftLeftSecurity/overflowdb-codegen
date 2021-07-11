@@ -96,21 +96,14 @@ object Helpers {
     }
   }
 
-  def getHigherType(cardinality: Property.Cardinality): HigherValueType.Value =
-    cardinality match {
-      case Property.Cardinality.One       => HigherValueType.None
-      case Property.Cardinality.ZeroOrOne => HigherValueType.Option
-      case Property.Cardinality.List      => HigherValueType.List
-      case Property.Cardinality.ISeq      => HigherValueType.ISeq
-    }
-
   def getCompleteType(property: Property): String = {
+    import Property.Cardinality
     val valueType = typeFor(property.odbStorageType)
-    getHigherType(property.cardinality) match {
-      case HigherValueType.None   => valueType
-      case HigherValueType.Option => s"Option[$valueType]"
-      case HigherValueType.List   => s"Seq[$valueType]"
-      case HigherValueType.ISeq   => s"IndexedSeq[$valueType]"
+    property.cardinality match {
+      case Cardinality.One(_)   => valueType
+      case Cardinality.ZeroOrOne => s"Option[$valueType]"
+      case Cardinality.List   => s"Seq[$valueType]"
+      case Cardinality.ISeq   => s"IndexedSeq[$valueType]"
     }
   }
 
@@ -140,15 +133,11 @@ object Helpers {
     s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }
 
-  def defaultValueImpl(property: Property): String = {
-    val defaultValue = property.defaultValue.getOrElse(
-      throw new AssertionError(s"property ${property.name} does not have a default value!")
-    )
-    defaultValue match {
+  def defaultValueImpl[A](default: Property.Default[A]): String =
+    default.value match {
       case str: String => s"\"$str\""
       case other => s"$other"
     }
-  }
 
   def propertyDefaultValueImpl(properties: Seq[Property]): String = {
     val propertyDefaultValueCases = properties.collect {

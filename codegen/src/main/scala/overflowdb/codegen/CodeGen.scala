@@ -179,25 +179,24 @@ class CodeGen(schema: Schema) {
            |""".stripMargin
 
       def propertyBasedFieldAccessors(properties: Seq[Property]): String = {
+        import Property.Cardinality
         properties.map { property =>
           val name = property.name
           val nameCamelCase = camelCase(name)
           val tpe = getCompleteType(property)
 
-          getHigherType(property.cardinality) match {
-            case HigherValueType.None if property.hasDefault =>
-              s"""def $nameCamelCase: $tpe = property("$name", ${defaultValueImpl(property)}).asInstanceOf[$tpe]"""
-            case HigherValueType.None =>
-              s"""def $nameCamelCase: $tpe = property("$name").asInstanceOf[$tpe]"""
-            case HigherValueType.Option =>
+          property.cardinality match {
+            case Cardinality.One(defaultValue) =>
+              s"""def $nameCamelCase: $tpe = property("$name", ${defaultValueImpl(defaultValue)}).asInstanceOf[$tpe]"""
+            case Cardinality.ZeroOrOne =>
               s"""def $nameCamelCase: $tpe = Option(property("$name")).asInstanceOf[$tpe]""".stripMargin
-            case HigherValueType.List =>
+            case Cardinality.List =>
               s"""def $nameCamelCase: $tpe = {
                  |  val p = property("$name")
                  |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.odbStorageType)}]].asScala.toSeq
                  |  else Nil
                  |}""".stripMargin
-            case HigherValueType.ISeq =>
+            case Cardinality.ISeq =>
               s"""def $nameCamelCase: $tpe = {
                  |  val p = property("$name")
                  |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.odbStorageType)}]].asScala.to(IndexedSeq)
@@ -883,18 +882,18 @@ class CodeGen(schema: Schema) {
       }
 
       def propertyBasedFields(properties: Seq[Property]): String = {
+        import Property.Cardinality
         properties.map { property =>
           val publicName = camelCase(property.name)
           val fieldName = s"_$publicName"
           val (publicType, tpeForField, fieldAccessor, defaultValue) = {
             val valueType = typeFor(property.odbStorageType)
-            getHigherType(property.cardinality) match {
-              case HigherValueType.None if property.hasDefault =>
-                (valueType, valueType, fieldName, s"${defaultValueImpl(property)}")
-              case HigherValueType.None   => (valueType, valueType, fieldName, "null")
-              case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
-              case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
-              case HigherValueType.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
+            property.cardinality match {
+              case Cardinality.One(default)  =>
+                (valueType, valueType, fieldName, s"${defaultValueImpl(default)}")
+              case Cardinality.ZeroOrOne => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
+              case Cardinality.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
+              case Cardinality.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
             }
           }
 
@@ -1428,36 +1427,36 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
 
     def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
-      val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, Option[String])] // fieldName, type, default
+      import Property.Cardinality
+      val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, String)] // fieldName, type, default
       for (key <- keys) {
-        val optionalDefault = getHigherType(key.cardinality) match {
-          case HigherValueType.None if key.odbStorageType == ValueTypes.STRING => Some("\"\"")
-          case HigherValueType.None if key.odbStorageType == ValueTypes.BOOLEAN => Some("false")
-          case HigherValueType.None if key.odbStorageType == ValueTypes.INTEGER => Some("-1")
-          case HigherValueType.None => Some("null")
-          case HigherValueType.Option => Some("None")
-          case HigherValueType.List => Some("Seq.empty")
-          case HigherValueType.ISeq => Some("IndexedSeq.empty")
-          case _ => None
+        val defaultImpl = key.cardinality match {
+          case Cardinality.ZeroOrOne => "None"
+          case Cardinality.List => "Seq.empty"
+          case Cardinality.ISeq => "IndexedSeq.empty"
+          case Cardinality.One(default) => defaultImpl(default)
         }
         val typ = getCompleteType(key)
-        fieldDescriptions += ((camelCase(key.name), typ, optionalDefault))
+        fieldDescriptions += (camelCase(key.name), typ, defaultImpl)
       }
       for (containedNode <- nodeType.containedNodes) {
-        import Property.Cardinality
         val optionalDefault = containedNode.cardinality match {
-          case Cardinality.List      => Some("Seq.empty")
-          case Cardinality.ZeroOrOne => Some("None")
-          case Cardinality.ISeq      => Some("IndexedSeq.empty")
-          case Cardinality.One       => Some("null")
-          case _                     => None
+          case Cardinality.ZeroOrOne => "None"
+          case Cardinality.List      => "Seq.empty"
+          case Cardinality.ISeq      => "IndexedSeq.empty"
+          case Cardinality.One(default) => ??? //defaultImpl(default)
+            // TODO do we still need `null` for contained node members?
         }
         val typ = getCompleteType(containedNode)
-        fieldDescriptions += ((containedNode.localName, typ, optionalDefault))
+        fieldDescriptions += (containedNode.localName, typ, optionalDefault)
       }
       val defaultsVal = fieldDescriptions.reverse
-        .map {case (name, typ, Some(default)) => s"var $name: $typ = $default"
-              case (name, typ, None)          => s"var $name: $typ"}
+        .map {
+          case (name, typ, default) => s"var $name: $typ = $default"
+        }
+          // TODO still needed?
+//          case (name, typ, Some(default)) => s"var $name: $typ = $default"
+//          case (name, typ, None)          => s"var $name: $typ"}
         .mkString(", ")
 
       val propertiesMapImpl = {
