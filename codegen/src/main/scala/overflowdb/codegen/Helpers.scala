@@ -37,7 +37,7 @@ object Helpers {
     case nonEmptyString => Some(nonEmptyString)
   }
 
-  def typeFor(valueType: ValueTypes): String = valueType match {
+  def typeFor(odbStorageType: ValueTypes): String = odbStorageType match {
     case ValueTypes.BOOLEAN => "java.lang.Boolean"
     case ValueTypes.STRING => "String"
     case ValueTypes.BYTE => "java.lang.Byte"
@@ -96,16 +96,16 @@ object Helpers {
     }
   }
 
-  def getHigherType(cardinality: Property2.Cardinality): HigherValueType.Value =
+  def getHigherType(cardinality: Property.Cardinality): HigherValueType.Value =
     cardinality match {
-      case Property2.Cardinality.One       => HigherValueType.None
-      case Property2.Cardinality.ZeroOrOne => HigherValueType.Option
-      case Property2.Cardinality.List      => HigherValueType.List
-      case Property2.Cardinality.ISeq      => HigherValueType.ISeq
+      case Property.Cardinality.One       => HigherValueType.None
+      case Property.Cardinality.ZeroOrOne => HigherValueType.Option
+      case Property.Cardinality.List      => HigherValueType.List
+      case Property.Cardinality.ISeq      => HigherValueType.ISeq
     }
 
   def getCompleteType(property: Property): String = {
-    val valueType = typeFor(property.valueType)
+    val valueType = typeFor(property.odbStorageType)
     getHigherType(property.cardinality) match {
       case HigherValueType.None   => valueType
       case HigherValueType.Option => s"Option[$valueType]"
@@ -123,19 +123,19 @@ object Helpers {
     }
 
     containedNode.cardinality match {
-      case Property2.Cardinality.ZeroOrOne => s"Option[$tpe]"
-      case Property2.Cardinality.One       => tpe
-      case Property2.Cardinality.List      => s"Seq[$tpe]"
-      case Property2.Cardinality.ISeq => s"IndexedSeq[$tpe]"
+      case Property.Cardinality.ZeroOrOne => s"Option[$tpe]"
+      case Property.Cardinality.One(_)    => tpe
+      case Property.Cardinality.List      => s"Seq[$tpe]"
+      case Property.Cardinality.ISeq => s"IndexedSeq[$tpe]"
     }
   }
 
-  def propertyKeyDef(name: String, baseType: String, cardinality: Property2.Cardinality) = {
+  def propertyKeyDef(name: String, baseType: String, cardinality: Property.Cardinality) = {
     val completeType = cardinality match {
-      case Property2.Cardinality.One       => baseType
-      case Property2.Cardinality.ZeroOrOne => baseType
-      case Property2.Cardinality.List      => s"Seq[$baseType]"
-      case Property2.Cardinality.ISeq=> s"IndexedSeq[$baseType]"
+      case Property.Cardinality.One(_)    => baseType
+      case Property.Cardinality.ZeroOrOne => baseType
+      case Property.Cardinality.List      => s"Seq[$baseType]"
+      case Property.Cardinality.ISeq=> s"IndexedSeq[$baseType]"
     }
     s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }

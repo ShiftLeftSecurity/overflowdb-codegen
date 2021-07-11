@@ -99,11 +99,11 @@ class CodeGen(schema: Schema) {
 
     writeConstantsFile("Properties", schema.properties.map { property =>
       val src = {
-        val valueType = typeFor(property.valueType)
+        val valueType = typeFor(property.odbStorageType)
         val cardinality = property.cardinality
-        import Property2.Cardinality
+        import Property.Cardinality
         val completeType = cardinality match {
-          case Cardinality.One => valueType
+          case Cardinality.One(_) => valueType
           case Cardinality.ZeroOrOne => valueType
           case Cardinality.List => s"scala.collection.Seq<$valueType>"
           case Cardinality.ISeq => s"scala.collection.immutable.IndexedSeq<$valueType>"
@@ -150,7 +150,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefinitions = properties.map { p =>
-        propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
+        propertyKeyDef(p.name, typeFor(p.odbStorageType), p.cardinality)
       }.mkString("\n|    ")
 
       val companionObject =
@@ -194,13 +194,13 @@ class CodeGen(schema: Schema) {
             case HigherValueType.List =>
               s"""def $nameCamelCase: $tpe = {
                  |  val p = property("$name")
-                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.toSeq
+                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.odbStorageType)}]].asScala.toSeq
                  |  else Nil
                  |}""".stripMargin
             case HigherValueType.ISeq =>
               s"""def $nameCamelCase: $tpe = {
                  |  val p = property("$name")
-                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.to(IndexedSeq)
+                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.odbStorageType)}]].asScala.to(IndexedSeq)
                  |  else IndexedSeq.empty
                  |}""".stripMargin
           }
@@ -386,7 +386,7 @@ class CodeGen(schema: Schema) {
         }.mkString("\n|    ")
 
         val propertyDefinitions = properties.map { p =>
-          propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
+          propertyKeyDef(p.name, typeFor(p.odbStorageType), p.cardinality)
         }.mkString("\n|    ")
 
         val Seq(outEdgeNames, inEdgeNames) =
@@ -436,7 +436,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefs = properties.map { p =>
-        propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
+        propertyKeyDef(p.name, typeFor(p.odbStorageType), p.cardinality)
       }.mkString("\n|    ")
 
       val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
@@ -556,7 +556,7 @@ class CodeGen(schema: Schema) {
       val propertyBasedTraits = properties.map(p => s"with Has${p.className}").mkString(" ")
 
       val propertiesMapImpl = {
-        import Property2.Cardinality
+        import Property.Cardinality
         val putKeysImpl = properties.map { key: Property =>
           val memberName = camelCase(key.name)
           key.cardinality match {
@@ -596,7 +596,7 @@ class CodeGen(schema: Schema) {
 
         val initKeysImpl = {
           val lines = properties.map { key: Property =>
-            import Property2.Cardinality
+            import Property.Cardinality
             val memberName = camelCase(key.name)
             key.cardinality match {
               case Cardinality.One =>
@@ -614,7 +614,7 @@ class CodeGen(schema: Schema) {
 
         val initRefsImpl = {
           nodeType.containedNodes.map { containedNode =>
-            import Property2.Cardinality
+            import Property.Cardinality
             val memberName = containedNode.localName
             val containedNodeType = containedNode.nodeType.className
 
@@ -671,7 +671,7 @@ class CodeGen(schema: Schema) {
       val containedNodesAsMembers =
         nodeType.containedNodes
           .map { containedNode =>
-            import Property2.Cardinality
+            import Property.Cardinality
             val containedNodeType = containedNode.nodeType.className
             containedNode.cardinality match {
               case Cardinality.One =>
@@ -730,7 +730,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
 
       val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
-        import Property2.Cardinality
+        import Property.Cardinality
         containedNode.cardinality match {
           case Cardinality.One =>
             s"""  def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
@@ -824,7 +824,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
 
       val updateSpecificPropertyImpl: String = {
-        import Property2.Cardinality
+        import Property.Cardinality
         def caseEntry(name: String, accessorName: String, cardinality: Cardinality, baseType: String) = {
           val setter = cardinality match {
             case Cardinality.One | Cardinality.ZeroOrOne =>
@@ -848,7 +848,7 @@ class CodeGen(schema: Schema) {
           s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, typeFor(p.valueType))).mkString("\n")
+        val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, typeFor(p.odbStorageType))).mkString("\n")
 
         val forContainedNodes = nodeType.containedNodes.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeType.className)
@@ -887,7 +887,7 @@ class CodeGen(schema: Schema) {
           val publicName = camelCase(property.name)
           val fieldName = s"_$publicName"
           val (publicType, tpeForField, fieldAccessor, defaultValue) = {
-            val valueType = typeFor(property.valueType)
+            val valueType = typeFor(property.odbStorageType)
             getHigherType(property.cardinality) match {
               case HigherValueType.None if property.hasDefault =>
                 (valueType, valueType, fieldName, s"${defaultValueImpl(property)}")
@@ -1012,10 +1012,10 @@ class CodeGen(schema: Schema) {
     }
 
     def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
-      import Property2.Cardinality
+      import Property.Cardinality
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
-        val baseType = typeFor(property.valueType)
+        val baseType = typeFor(property.odbStorageType)
         val cardinality = property.cardinality
 
         val mapOrFlatMap = cardinality match {
@@ -1333,7 +1333,7 @@ class CodeGen(schema: Schema) {
              |  }
              |""".stripMargin
 
-        val filterSteps = (cardinality, property.valueType) match {
+        val filterSteps = (cardinality, property.odbStorageType) match {
           case (Cardinality.List | Cardinality.ISeq, _) => ""
           case (Cardinality.One, ValueTypes.STRING) => filterStepsForSingleString
           case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString
@@ -1431,9 +1431,9 @@ class CodeGen(schema: Schema) {
       val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, Option[String])] // fieldName, type, default
       for (key <- keys) {
         val optionalDefault = getHigherType(key.cardinality) match {
-          case HigherValueType.None if key.valueType == ValueTypes.STRING => Some("\"\"")
-          case HigherValueType.None if key.valueType == ValueTypes.BOOLEAN => Some("false")
-          case HigherValueType.None if key.valueType == ValueTypes.INTEGER => Some("-1")
+          case HigherValueType.None if key.odbStorageType == ValueTypes.STRING => Some("\"\"")
+          case HigherValueType.None if key.odbStorageType == ValueTypes.BOOLEAN => Some("false")
+          case HigherValueType.None if key.odbStorageType == ValueTypes.INTEGER => Some("-1")
           case HigherValueType.None => Some("null")
           case HigherValueType.Option => Some("None")
           case HigherValueType.List => Some("Seq.empty")
@@ -1444,7 +1444,7 @@ class CodeGen(schema: Schema) {
         fieldDescriptions += ((camelCase(key.name), typ, optionalDefault))
       }
       for (containedNode <- nodeType.containedNodes) {
-        import Property2.Cardinality
+        import Property.Cardinality
         val optionalDefault = containedNode.cardinality match {
           case Cardinality.List      => Some("Seq.empty")
           case Cardinality.ZeroOrOne => Some("None")
@@ -1464,7 +1464,7 @@ class CodeGen(schema: Schema) {
         val putKeysImpl = keys
           .map { key: Property =>
             val memberName = camelCase(key.name)
-            import Property2.Cardinality
+            import Property.Cardinality
             key.cardinality match {
               case Cardinality.One =>
                 s"""  if ($memberName != null) { res += "${key.name}" -> $memberName }"""
@@ -1475,7 +1475,7 @@ class CodeGen(schema: Schema) {
             }
           }
       val putRefsImpl = nodeType.containedNodes.map { key =>
-          import Property2.Cardinality
+          import Property.Cardinality
           val memberName = key.localName
           key.cardinality match {
             case Cardinality.One =>

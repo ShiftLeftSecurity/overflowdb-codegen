@@ -111,7 +111,7 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   def containedNodes: Seq[ContainedNode] =
     _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
 
-  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Property2.Cardinality): NodeType = {
+  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Property.Cardinality): NodeType = {
     _containedNodes.add(ContainedNode(node, localName, cardinality))
     this
   }
@@ -133,7 +133,7 @@ class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo
 
 case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: EdgeType.Cardinality)
 
-case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Property2.Cardinality)
+case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Property.Cardinality)
 
 class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
   extends HasClassName with HasProperties with HasOptionalProtoId with HasSchemaInfo {
@@ -155,14 +155,15 @@ object EdgeType {
 
 // TODO rename, move to separate file
 import Property._
-class Property[A : ToOdbStorageType](val name: String,
-                                      val cardinality: Cardinality = Cardinality.ZeroOrOne,
-                                      val comment: Option[String] = None,
-                                      val schemaInfo: SchemaInfo)
+abstract class Property(val name: String,
+               val cardinality: Cardinality = Cardinality.ZeroOrOne,
+               val comment: Option[String] = None,
+               val schemaInfo: SchemaInfo)
   extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
-  lazy val odbValueType: overflowdb.storage.ValueTypes = {
-    implicitly[ToOdbStorageType[A]].apply()
-  }
+
+  type ValueType
+  def toOdbStorageType: ToOdbStorageType[ValueType]
+  lazy val odbStorageType: overflowdb.storage.ValueTypes = toOdbStorageType.apply()
 }
 
 
