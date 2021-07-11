@@ -138,9 +138,10 @@ case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinal
 sealed abstract class Cardinality(val name: String)
 object Cardinality {
   case object ZeroOrOne extends Cardinality("zeroOrOne")
-  case object One extends Cardinality("one")
   case object List extends Cardinality("list")
   case object ISeq extends Cardinality("array")
+  case object One extends Cardinality("one")
+//  class One extends Cardinality("one")
 
   def fromName(name: String): Cardinality =
     Seq(ZeroOrOne, One, List, ISeq)
@@ -175,6 +176,40 @@ class Property(val name: String,
   }
 
   override def toString = s"Property($name)"
+}
+
+// TODO rename, move to separate file
+abstract class Property2[ValueType](val name: String, val cardinality: Cardinality) {
+  protected var _defaultValue: Option[ValueType] = None
+  protected var _comment: Option[String] = None
+  protected var _cardinality: Cardinality = Cardinality.ZeroOrOne
+
+  def defaultValue: Option[ValueType] = _defaultValue
+  def hasDefault: Boolean = _defaultValue.isDefined
+  protected def withDefault(value: ValueType): Property2[ValueType] = {
+    _defaultValue = Option(value)
+    this
+  }
+
+  def comment: Option[String] = _comment
+  def withComment(text: String): Property2[ValueType] = {
+    _comment = Option(text)
+    this
+  }
+
+  def odbValueType: overflowdb.storage.ValueTypes
+
+  override def toString = s"Property($name)"
+}
+
+object Property2 {
+//  def boolean(name: String): Property2[Boolean] = new Property2(name) {
+//    override def odbValueType = ValueTypes.BOOLEAN
+//  }
+//
+//  class Bool(name: String) extends Property2[Boolean](name) {
+//    override def odbValueType = ValueTypes.BOOLEAN
+//  }
 }
 
 class Constant(val name: String,
