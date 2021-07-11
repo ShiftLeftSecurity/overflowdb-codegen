@@ -173,6 +173,7 @@ object Property {
   object ToOdbStorageType {
     implicit lazy val boolean: ToOdbStorageType[Boolean] = () => ValueTypes.BOOLEAN
     implicit lazy val string: ToOdbStorageType[String] = () => ValueTypes.STRING
+    implicit lazy val byte: ToOdbStorageType[Byte] = () => ValueTypes.BYTE
     implicit lazy val float: ToOdbStorageType[Float] = () => ValueTypes.FLOAT
     // TODO all others
   }
@@ -185,20 +186,19 @@ object Property {
     case class One[A](default: Default[A]) extends Cardinality
   }
 
-  case class Default[A: IsDefaultValueImpl](value: A) {
-    def isDefaultValueImpl(valueName: String, defaultValue: String): String = {
-      implicitly[IsDefaultValueImpl[A]].apply(valueName, defaultValue)
+  case class Default[A: DefaultValueCheckImpl](value: A) {
+    def defaultValueCheckImpl(valueName: String, defaultValue: String): String = {
+      implicitly[DefaultValueCheckImpl[A]].apply(valueName, defaultValue)
     }
   }
 
-  trait IsDefaultValueImpl[A] {
+  trait DefaultValueCheckImpl[A] {
     def apply(valueName: String, defaultValue: String): String
   }
-  object IsDefaultValueImpl {
-//    implicit lazy val boolean: IsDefaultValueImpl[Boolean] = () => ValueTypes.BOOLEAN
-    implicit lazy val string: IsDefaultValueImpl[String] = (valueName, defaultValue) => s"$defaultValue.equals($valueName)"
-//    implicit lazy val float: IsDefaultValueImpl[Float] = () => ValueTypes.FLOAT
-    // TODO all others
+  object DefaultValueCheckImpl {
+    implicit lazy val boolean: DefaultValueCheckImpl[Boolean] = (valueName, defaultValue) => s"$defaultValue == $valueName"
+    implicit lazy val string: DefaultValueCheckImpl[String] = (valueName, defaultValue) => s"$defaultValue.equals($valueName)"
+    implicit lazy val byte: DefaultValueCheckImpl[Byte] = (valueName, defaultValue) => s"$defaultValue == $valueName"
 
   }
 }
