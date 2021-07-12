@@ -1,8 +1,6 @@
 package overflowdb.schema
 
 import overflowdb.codegen.Helpers._
-import overflowdb.storage.ValueTypes
-
 import scala.collection.mutable
 
 /**
@@ -165,23 +163,29 @@ class Property[A : ToOdbStorageType](val name: String,
 }
 
 object Property {
-  import overflowdb.storage.ValueTypes
-  import scala.annotation.implicitAmbiguous
+  sealed trait ValueType {
+    def odbStorageType: overflowdb.storage.ValueTypes
+  }
+  object ValueType {
+    object Boolean extends ValueType {
+      override def odbStorageType = overflowdb.storage.ValueTypes
+    }
+  }
+
 
   trait ToOdbStorageType[A] {
-    def apply(): ValueTypes
+    def apply(): overflowdb.storage.ValueTypes
   }
   object ToOdbStorageType {
-    @implicitAmbiguous("bar ${A}")
-    implicit lazy val boolean: ToOdbStorageType[Boolean] = () => ValueTypes.BOOLEAN
-    implicit lazy val string: ToOdbStorageType[String] = () => ValueTypes.STRING
-    implicit lazy val byte: ToOdbStorageType[Byte] = () => ValueTypes.BYTE
-    implicit lazy val short: ToOdbStorageType[Short] = () => ValueTypes.SHORT
-    implicit lazy val int: ToOdbStorageType[Int] = () => ValueTypes.INTEGER
-    implicit lazy val long: ToOdbStorageType[Long] = () => ValueTypes.LONG
-    implicit lazy val float: ToOdbStorageType[Float] = () => ValueTypes.FLOAT
-    implicit lazy val double: ToOdbStorageType[Double] = () => ValueTypes.DOUBLE
-    implicit lazy val char: ToOdbStorageType[Char] = () => ValueTypes.CHARACTER
+    implicit lazy val boolean: ToOdbStorageType[Boolean] = () => overflowdb.storage.ValueTypes.BOOLEAN
+    implicit lazy val string: ToOdbStorageType[String] = () => overflowdb.storage.ValueTypes.STRING
+    implicit lazy val byte: ToOdbStorageType[Byte] = () => overflowdb.storage.ValueTypes.BYTE
+    implicit lazy val short: ToOdbStorageType[Short] = () => overflowdb.storage.ValueTypes.SHORT
+    implicit lazy val int: ToOdbStorageType[Int] = () => overflowdb.storage.ValueTypes.INTEGER
+    implicit lazy val long: ToOdbStorageType[Long] = () => overflowdb.storage.ValueTypes.LONG
+    implicit lazy val float: ToOdbStorageType[Float] = () => overflowdb.storage.ValueTypes.FLOAT
+    implicit lazy val double: ToOdbStorageType[Double] = () => overflowdb.storage.ValueTypes.DOUBLE
+    implicit lazy val char: ToOdbStorageType[Char] = () => overflowdb.storage.ValueTypes.CHARACTER
   }
 
   sealed abstract class Cardinality
@@ -217,14 +221,14 @@ object Property {
 
 class Constant(val name: String,
                val value: String,
-               val valueType: ValueTypes,
+               val valueType: overflowdb.storage.ValueTypes,
                val comment: Option[String],
                val schemaInfo: SchemaInfo) extends HasOptionalProtoId with HasSchemaInfo {
   override def toString = s"Constant($name)"
 }
 
 object Constant {
-  def apply(name: String, value: String, valueType: ValueTypes, comment: String = "")(
+  def apply(name: String, value: String, valueType: overflowdb.storage.ValueTypes, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Constant =
     new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
 }
