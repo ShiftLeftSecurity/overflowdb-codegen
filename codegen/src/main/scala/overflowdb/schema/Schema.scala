@@ -206,6 +206,40 @@ class Property2(val name: String, val valueType: Property.ValueType2) {
 
 }
 
+trait Property3 {
+  def name: String
+  val valueType: Property.ValueType2
+
+//  def mandatory3(vt: Property.ValueType2)(default: vt.ScalaTpe): Property3 = {
+  def mandatory3(default: valueType.ScalaTpe): Property3 = {
+    println(default)
+    this
+  }
+}
+
+object Property4 {
+  // idea:
+  def create[T <: Property.ValueType2, R](t: T)(implicit f: Property.Foo1.Aux[T, R]): R = {
+    println(t)
+    println(f)
+    f.value
+  }
+}
+
+class Property5[A](val valueType: Property5.ValueType[A]) {
+  def mandatory(default: A): Property5[A] = ???
+}
+object Property5 {
+
+  abstract class ValueType[A](val odbStorageType: overflowdb.storage.ValueTypes)
+  object ValueType {
+    import overflowdb.storage.ValueTypes._
+    object Boolean extends ValueType(BOOLEAN)
+    object String extends ValueType(STRING)
+  }
+
+}
+
 object Property2 {
   sealed abstract class Cardinality
   object Cardinality {

@@ -7,10 +7,20 @@ class TestSchema04 extends TestSchema {
 
 //  new Property2("BOOL", ValueType2.Boolean).mandatory(default = true)
 //  new Property2("BOOL", ValueType2.Boolean).foo2
-    new Property2("BOOL", ValueType2.Boolean).mandatory2(ValueType2.Boolean)(true)
+//    new Property2("BOOL", ValueType2.Boolean).mandatory2(ValueType2.Boolean)(true)
+    new Property5(Property5.ValueType.Boolean).mandatory(true)
 //    new Property2("BOOL", ValueType2.Boolean).mandatory3(ValueType2.Boolean)(true)
 //    new Property2("BOOL", ValueType2.Boolean).mandatory(ValueType2.Boolean)(true)
-    new Property2("BOOL", ValueType2.Boolean).foo2
+//    new Property2("BOOL", ValueType2.Boolean).foo2
+
+//  val p3 = new Property3 {
+//      override def name: String = ???
+//      override val valueType: ValueType2 = ValueType2.Boolean
+//  }
+//  p3.mandatory3(true)
+
+//    Property4.create(ValueType2.Boolean)
+
 //    val a = new Property2("BOOL", ValueType2.Boolean).foo1(1)
 //  val bool = builder.addProperty2("BOOL", ValueType.Boolean, Cardinality.One(Default(true)))
 
