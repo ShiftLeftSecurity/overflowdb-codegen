@@ -172,7 +172,6 @@ class Property2(val name: String, val valueType: Property.ValueType2) {
   /** make this a mandatory property, which allows us to use primitives (better memory footprint, no GC, ...) */
   // TODO use aux type here via params?
   def mandatory(default: valueType.ScalaTpe): Property2 = {
-//  def mandatory(default: Foo): Property2 = {
     println(default)
     //    _cardinality = Cardinality.One
     this
@@ -180,9 +179,21 @@ class Property2(val name: String, val valueType: Property.ValueType2) {
 
   // this works...
   def mandatory2(vt: Property.ValueType2)(default: vt.ScalaTpe): Property2 = {
-    ???
+    println(default)
+    this
   }
 
+  def mandatory3[A,B](default: B)(implicit f: Property.ValueType2.Aux[valueType.ScalaTpe,B]): Property2 = {
+    println(f)
+    println(default)
+    this
+  }
+
+//  def this(vt: Property.ValueType2)(default: vt.ScalaTpe) = {
+//    this(name, vt)
+//    println(default)
+//  }
+//
   def foo1[T, R](t: T)(implicit f: Property.Foo1.Aux[T, R]): R = {
     println(t)
     println(f)
@@ -209,6 +220,8 @@ object Property {
     type ScalaTpe
   }
   object ValueType2 {
+    type Aux[A0, B0] = Foo1[A0] { type B = B0  }
+
     import overflowdb.storage.ValueTypes._
     object Boolean extends ValueType2(BOOLEAN) {
       override type ScalaTpe = Boolean
