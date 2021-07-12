@@ -6,7 +6,7 @@ import overflowdb.schema.Property.ValueType
 import scala.collection.mutable
 
 class SchemaBuilder(basePackage: String) {
-  val properties = mutable.ListBuffer.empty[Property]
+  val properties = mutable.ListBuffer.empty[Property[_]]
   val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseType]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
@@ -32,13 +32,12 @@ class SchemaBuilder(basePackage: String) {
       SchemaInfo.forClass(getClass)
     )
 
-  // TODO return `PropertyBuilder`?
-//  def addProperty2(name: String, valueType: Property.ValueType2)(default: valueType.ScalaTpe)
-//  def addProperty2(name: String, valueType: Property.ValueType2): PropertyBuilder[valueType.ScalaTpe] = ???
-
-  def addProperty(name: String, valueType: ValueType, cardinality: Property.Cardinality, comment: String = "")(
-    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property =
-    addAndReturn(properties, new Property(name, valueType, cardinality, stringToOption(comment), schemaInfo))
+  def addProperty[A](name: String, valueType: ValueType[A], comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property[A] = {
+    val property = new Property[A](name, valueType, stringToOption(comment), schemaInfo)
+    properties.append(property)
+    property
+  }
 
   def addNodeBaseType(name: String, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): NodeBaseType =

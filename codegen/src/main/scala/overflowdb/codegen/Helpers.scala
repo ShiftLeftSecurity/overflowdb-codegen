@@ -37,7 +37,7 @@ object Helpers {
     case nonEmptyString => Some(nonEmptyString)
   }
 
-  def typeFor(valueType: ValueType): String = valueType match {
+  def typeFor[A](valueType: ValueType[A]): String = valueType match {
     case ValueType.Boolean => "Boolean"
     case ValueType.String => "String"
     case ValueType.Byte => "Byte"
@@ -96,7 +96,7 @@ object Helpers {
     }
   }
 
-  def getCompleteType[A](property: Property): String = {
+  def getCompleteType[A](property: Property[_]): String = {
     import Property.Cardinality
     val valueType = typeFor(property.valueType)
     property.cardinality match {
@@ -144,7 +144,21 @@ object Helpers {
       case other => s"$other"
     }
 
-  def propertyDefaultValueImpl(properties: Seq[Property]): String = {
+  def defaultValueCheckImpl[A](memberName: String, default: Property.Default[A]): String = {
+    val defaultValueSrc = defaultValueImpl(default)
+    default.value match {
+        // TODO cleanup
+//      case _: String => s""" "$defaultValueSrc" == $memberName   """.trim
+//      case _: Char => s""" '$defaultValueSrc' == $memberName   """.trim
+      case float: Float if float.isNaN => s"$memberName.isNaN"
+//      case _: Float => s"$defaultValueSrc == $memberName"
+      case double: Double if double.isNaN => s"$memberName.isNaN"
+//      case _: Double => s"$defaultValueSrc == $memberName"
+      case _ => s"$defaultValueSrc == $memberName"
+    }
+  }
+
+  def propertyDefaultValueImpl(properties: Seq[Property[_]]): String = {
     import Property.Cardinality
     val propertyDefaultValueCases = properties.map(p => (p, p.cardinality)).collect {
       case (property, Cardinality.One(default)) =>

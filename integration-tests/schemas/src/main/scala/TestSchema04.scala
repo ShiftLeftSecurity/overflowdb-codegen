@@ -8,7 +8,7 @@ class TestSchema04 extends TestSchema {
 //  new Property2("BOOL", ValueType2.Boolean).mandatory(default = true)
 //  new Property2("BOOL", ValueType2.Boolean).foo2
 //    new Property2("BOOL", ValueType2.Boolean).mandatory2(ValueType2.Boolean)(true)
-    new Property5(Property5.ValueType.Boolean).mandatory(true)
+//    new Property5(Property5.ValueType.Boolean).mandatory(true)
 //    new Property2("BOOL", ValueType2.Boolean).mandatory3(ValueType2.Boolean)(true)
 //    new Property2("BOOL", ValueType2.Boolean).mandatory(ValueType2.Boolean)(true)
 //    new Property2("BOOL", ValueType2.Boolean).foo2
@@ -21,8 +21,8 @@ class TestSchema04 extends TestSchema {
 
 //    Property4.create(ValueType2.Boolean)
 
-//    val a = new Property2("BOOL", ValueType2.Boolean).foo1(1)
-//  val bool = builder.addProperty2("BOOL", ValueType.Boolean, Cardinality.One(Default(true)))
+//    val a = new Property("BOOL", ValueType.Boolean)
+  val bool = builder.addProperty("BOOL", ValueType.Boolean).mandatory(default = true)
 
 //  val bool = builder.addProperty[Boolean]("BOOL", Cardinality.One(Default(true)))
 //  val string = builder.addProperty[String]("STR", Cardinality.One(Default("<[empty]>")))

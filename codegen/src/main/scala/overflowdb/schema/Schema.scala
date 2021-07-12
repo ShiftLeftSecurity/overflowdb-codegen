@@ -183,6 +183,7 @@ object Property {
     object Long extends ValueType[Long](LONG)
     object Float extends ValueType[Float](FLOAT)
     object Double extends ValueType[Double](DOUBLE)
+    object List extends ValueType[Seq[_]](LIST)
     object Char extends ValueType[Char](CHARACTER)
     object NodeRef extends ValueType[NodeRef[_]](NODE_REF)
     object Unknown extends ValueType[Any](UNKNOWN)
@@ -196,28 +197,7 @@ object Property {
     case class One[A](default: Default[A]) extends Cardinality
   }
 
-  case class Default[A : DefaultValueCheckImpl](value: A) {
-    def defaultValueCheckImpl(valueName: String, defaultValue: String): String = {
-      implicitly[DefaultValueCheckImpl[A]].apply(valueName, defaultValue)
-    }
-  }
-
-  // move to codegen?
-  trait DefaultValueCheckImpl[A] {
-    def apply(valueName: String, defaultValue: String): String
-  }
-  object DefaultValueCheckImpl {
-    implicit lazy val boolean: DefaultValueCheckImpl[Boolean] = (valueName, defaultValue) => s"$defaultValue == $valueName"
-    implicit lazy val string: DefaultValueCheckImpl[String] = (valueName, defaultValue) => s"$defaultValue.equals($valueName)"
-    implicit lazy val byte: DefaultValueCheckImpl[Byte] = (valueName, defaultValue) => s"$defaultValue == $valueName"
-    implicit lazy val short: DefaultValueCheckImpl[Short] = (valueName, defaultValue) => s"$defaultValue == $valueName"
-    implicit lazy val int: DefaultValueCheckImpl[Int] = (valueName, defaultValue) => s"$defaultValue == $valueName"
-    implicit lazy val long: DefaultValueCheckImpl[Long] = (valueName, defaultValue) => s"$defaultValue == $valueName"
-    implicit lazy val float: DefaultValueCheckImpl[Float] = (valueName, defaultValue) => s"$defaultValue == $valueName"
-    implicit lazy val double: DefaultValueCheckImpl[Double] = (valueName, defaultValue) => s"$defaultValue == $valueName"
-    implicit lazy val char: DefaultValueCheckImpl[Char] = (valueName, defaultValue) => s"$defaultValue == $valueName"
-
-  }
+  case class Default[A](value: A)
 }
 
 class Constant(val name: String,
