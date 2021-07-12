@@ -586,7 +586,7 @@ class CodeGen(schema: Schema) {
         }.mkString("\n")
 
         s""" {
-           |  val properties = new java.util.HashMap[String, AnyRef]
+           |  val properties = new java.util.HashMap[String, Any]
            |$putKeysImpl
            |$putRefsImpl
            |  properties
@@ -875,7 +875,7 @@ class CodeGen(schema: Schema) {
           s"""|      case "$name" => this._$name"""
         }.mkString("\n")
 
-        s"""override def property(key:String): AnyRef = {
+        s"""override def property(key:String): Any = {
            |    key match {
            |      $forKeys
            |      $forContainedKeys
@@ -916,7 +916,7 @@ class CodeGen(schema: Schema) {
            |$containedNodesAsMembers
            |
            |  /** faster than the default implementation */
-           |  override def propertiesMap: java.util.Map[String, AnyRef] =
+           |  override def propertiesMap: java.util.Map[String, Any] =
            |    $propertiesMapImpl
            |
            |  $neighborAccessors
