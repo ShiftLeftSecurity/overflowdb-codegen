@@ -136,6 +136,7 @@ object Helpers {
   def defaultValueImpl[A](default: Property.Default[A]): String =
     default.value match {
       case str: String => s"\"$str\""
+      case char: Char => s"'$char'"
       case float: Float if float.isNaN => "Float.NaN"
       case float: Float => s"${float}f"
       case double: Double if double.isNaN => "Double.NaN"
