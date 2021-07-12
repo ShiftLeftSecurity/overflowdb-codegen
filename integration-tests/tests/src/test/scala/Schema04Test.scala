@@ -22,8 +22,10 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.short shouldBe 2
     node1.int shouldBe 3
     node1.long shouldBe 4
-//    node1.float.isNaN shouldBe true
-//    node1.double.isNaN shouldBe true
+    node1.float1 shouldBe 5.5f
+    node1.float2.isNaN shouldBe true
+    node1.double1 shouldBe 6.6
+    node1.double2.isNaN shouldBe true
 //    node1.char shouldBe '?'
 //    node1.property(Node1.Properties.Str) shouldBe "<[empty]>"
 //    node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
