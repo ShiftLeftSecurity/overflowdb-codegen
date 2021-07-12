@@ -1,6 +1,8 @@
 package overflowdb.schema
 
+import overflowdb.NodeRef
 import overflowdb.codegen.Helpers._
+
 import scala.collection.mutable
 
 /**
@@ -158,7 +160,66 @@ class Property(val name: String,
                val comment: Option[String] = None,
                val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo
 
+
+class Property2(val name: String, val valueType: Property.ValueType2) {
+  import Property.Cardinality
+  protected var _cardinality: Cardinality = Cardinality.ZeroOrOne
+
+  type Foo //TODO compute based on ValueType! or do that on valueType type param?
+  // idea: use type member rather than type param?
+
+  /** make this a mandatory property, which allows us to use primitives (better memory footprint, no GC, ...) */
+  def mandatory(default: Property.ValueType2#ScalaTpe): Property2 = {
+    println(default)
+    //    _cardinality = Cardinality.One
+    this
+  }
+}
+
 object Property {
+  abstract class ValueType2(val odbStorageType: overflowdb.storage.ValueTypes) {
+    type ScalaTpe
+  }
+  object ValueType2 {
+    import overflowdb.storage.ValueTypes._
+    object Boolean extends ValueType2(BOOLEAN) {
+      override type ScalaTpe = Boolean
+    }
+    object String extends ValueType2(STRING) {
+      override type ScalaTpe = String
+    }
+    object Byte extends ValueType2(BYTE) {
+      override type ScalaTpe = Byte
+    }
+    object Short extends ValueType2(SHORT) {
+      override type ScalaTpe = Short
+    }
+    object Int extends ValueType2(INTEGER) {
+      override type ScalaTpe = Int
+    }
+    object Long extends ValueType2(LONG) {
+      override type ScalaTpe = Long
+    }
+    object Float extends ValueType2(FLOAT) {
+      override type ScalaTpe = Float
+    }
+    object Double extends ValueType2(DOUBLE) {
+      override type ScalaTpe = Double
+    }
+    object Char extends ValueType2(CHARACTER) {
+      override type ScalaTpe = Char
+    }
+    object List extends ValueType2(LIST) {
+      override type ScalaTpe = Seq[_]
+    }
+    object NodeRef extends ValueType2(NODE_REF) {
+      override type ScalaTpe = NodeRef[_]
+    }
+    object Unknown extends ValueType2(UNKNOWN) {
+      override type ScalaTpe = Any
+    }
+  }
+
   abstract class ValueType(val odbStorageType: overflowdb.storage.ValueTypes)
   object ValueType {
     import overflowdb.storage.ValueTypes._

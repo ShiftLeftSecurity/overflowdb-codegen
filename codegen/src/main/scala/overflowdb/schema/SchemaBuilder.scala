@@ -2,7 +2,7 @@ package overflowdb.schema
 
 import overflowdb.codegen.DefaultNodeTypes
 import overflowdb.codegen.Helpers._
-
+import overflowdb.schema.Property.ValueType
 import scala.collection.mutable
 
 class SchemaBuilder(basePackage: String) {
@@ -32,12 +32,9 @@ class SchemaBuilder(basePackage: String) {
       SchemaInfo.forClass(getClass)
     )
 
-  def addProperty[A : ToOdbStorageType](name: String, cardinality: Property.Cardinality, comment: String = "")(
-    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property[A] = {
-     val property = new Property[A](name, cardinality, stringToOption(comment), schemaInfo)
-    properties.append(property)
-    property
-  }
+  def addProperty(name: String, valueType: ValueType, cardinality: Property.Cardinality, comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property =
+    addAndReturn(properties, new Property(name, valueType, cardinality, stringToOption(comment), schemaInfo))
 
   def addNodeBaseType(name: String, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): NodeBaseType =
