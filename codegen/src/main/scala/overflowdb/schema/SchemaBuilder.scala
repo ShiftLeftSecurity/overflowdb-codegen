@@ -32,6 +32,10 @@ class SchemaBuilder(basePackage: String) {
       SchemaInfo.forClass(getClass)
     )
 
+  // TODO return `PropertyBuilder`?
+//  def addProperty2(name: String, valueType: Property.ValueType2)(default: valueType.ScalaTpe)
+//  def addProperty2(name: String, valueType: Property.ValueType2): PropertyBuilder[valueType.ScalaTpe] = ???
+
   def addProperty(name: String, valueType: ValueType, cardinality: Property.Cardinality, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property =
     addAndReturn(properties, new Property(name, valueType, cardinality, stringToOption(comment), schemaInfo))

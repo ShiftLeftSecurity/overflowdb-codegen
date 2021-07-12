@@ -189,15 +189,30 @@ class Property2(val name: String, val valueType: Property.ValueType2) {
     this
   }
 
-//  def this(vt: Property.ValueType2)(default: vt.ScalaTpe) = {
-//    this(name, vt)
-//    println(default)
-//  }
-//
+  // doesn't work either...
+  def mandatory4(): valueType.ScalaTpe => Property2 = ???
+//  def mandatory4: Foo => Property2 = ???
+
   def foo1[T, R](t: T)(implicit f: Property.Foo1.Aux[T, R]): R = {
     println(t)
     println(f)
     f.value
+  }
+
+  def foo2[R](implicit f: Property.Foo1.Aux[valueType.ScalaTpe, R]): R = {
+    println(f)
+    f.value
+  }
+
+}
+
+object Property2 {
+  sealed abstract class Cardinality
+  object Cardinality {
+    trait ZeroOrOne extends Cardinality
+//    trait List extends Cardinality
+//    trait ISeq extends Cardinality
+    trait One extends Cardinality
   }
 }
 
@@ -210,10 +225,30 @@ object Property {
   object Foo1 {
     type Aux[A0, B0] = Foo1[A0] { type B = B0  }
 
-    implicit def fi = new Foo1[Int] {
-      type B = String
-      val value = "Foo"
+    implicit def fOne = new Foo1[Property2.Cardinality.One] {
+      type B = Int
+      val value = 1
     }
+
+    implicit def fZeroOrOne = new Foo1[Property2.Cardinality.ZeroOrOne] {
+      type B = String
+      val value = "one"
+    }
+//    implicit def fb = new Foo1[Boolean] {
+//      type B = Int
+//      val value = 1
+//    }
+//    implicit def fi = new Foo1[Int] {
+//      type B = String
+//      val value = "Foo"
+//    }
+  }
+
+  trait MandatoryBuilder1[A <: ValueType2] {
+    def apply(vt: ValueType2): vt.ScalaTpe
+  }
+  trait MandatoryBuilder2[A] {
+    def apply(vt: ValueType2): vt.ScalaTpe
   }
 
   abstract class ValueType2(val odbStorageType: overflowdb.storage.ValueTypes) {

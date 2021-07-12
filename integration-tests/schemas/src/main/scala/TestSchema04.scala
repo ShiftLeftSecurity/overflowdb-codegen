@@ -6,10 +6,11 @@ import overflowdb.schema._
 class TestSchema04 extends TestSchema {
 
 //  new Property2("BOOL", ValueType2.Boolean).mandatory(default = true)
-//  new Property2("BOOL", ValueType2.Boolean).mandatory(true)
+//  new Property2("BOOL", ValueType2.Boolean).foo2
     new Property2("BOOL", ValueType2.Boolean).mandatory2(ValueType2.Boolean)(true)
-    new Property2("BOOL", ValueType2.Boolean).mandatory3(ValueType2.Boolean)(true)
+//    new Property2("BOOL", ValueType2.Boolean).mandatory3(ValueType2.Boolean)(true)
 //    new Property2("BOOL", ValueType2.Boolean).mandatory(ValueType2.Boolean)(true)
+    new Property2("BOOL", ValueType2.Boolean).foo2
 //    val a = new Property2("BOOL", ValueType2.Boolean).foo1(1)
 //  val bool = builder.addProperty2("BOOL", ValueType.Boolean, Cardinality.One(Default(true)))
 
