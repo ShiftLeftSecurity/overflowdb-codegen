@@ -9,7 +9,7 @@ import scala.collection.mutable
  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
 class Schema(val basePackage: String,
-             val properties: Seq[Property],
+             val properties: Seq[Property[_]],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
@@ -21,13 +21,13 @@ class Schema(val basePackage: String,
     nodeTypes ++ nodeBaseTypes
 
   /** properties that are used in node types */
-  def nodeProperties: Seq[Property] =
+  def nodeProperties: Seq[Property[_]] =
     properties.filter(property =>
       (nodeTypes ++ nodeBaseTypes).exists(_.properties.contains(property))
     )
 
   /** properties that are used in edge types */
-  def edgeProperties: Seq[Property] =
+  def edgeProperties: Seq[Property[_]] =
     properties.filter(property =>
       edgeTypes.exists(_.properties.contains(property))
     )
@@ -44,12 +44,12 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
 
   /** properties (including potentially inherited properties) */
-  override def properties: Seq[Property] = {
+  override def properties: Seq[Property[_]] = {
     val entireClassHierarchy = this +: extendzRecursively
     entireClassHierarchy.flatMap(_.propertiesWithoutInheritance).distinct.sortBy(_.name.toLowerCase)
   }
 
-  def propertiesWithoutInheritance: Seq[Property] =
+  def propertiesWithoutInheritance: Seq[Property[_]] =
     _properties.toSeq.sortBy(_.name.toLowerCase)
 
   def extendz(additional: NodeBaseType*): this.type = {
@@ -140,7 +140,7 @@ class EdgeType(val name: String, val comment: Option[String], val schemaInfo: Sc
   override def toString = s"EdgeType($name)"
 
   /** properties (including potentially inherited properties) */
-  def properties: Seq[Property] =
+  def properties: Seq[Property[_]] =
     _properties.toSeq.sortBy(_.name.toLowerCase)
 }
 
@@ -154,197 +154,38 @@ object EdgeType {
 }
 
 // TODO rename, move to separate file
-class Property(val name: String,
-               val valueType: Property.ValueType,
-               val cardinality: Property.Cardinality,
-               val comment: Option[String] = None,
-               val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo
-
-
-class Property2(val name: String, val valueType: Property.ValueType2) {
+class Property[A](val name: String,
+                  val valueType: Property.ValueType[A],
+                  val comment: Option[String] = None,
+                  val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
   import Property.Cardinality
   protected var _cardinality: Cardinality = Cardinality.ZeroOrOne
-
-//  type Foo = Property.ValueType2#ScalaTpe //TODO compute based on ValueType! or do that on valueType type param?
-  type Foo = valueType.ScalaTpe
-  // idea: use type member rather than type param?
+  def cardinality: Cardinality = _cardinality
 
   /** make this a mandatory property, which allows us to use primitives (better memory footprint, no GC, ...) */
-  // TODO use aux type here via params?
-  def mandatory(default: valueType.ScalaTpe): Property2 = {
-    println(default)
-    //    _cardinality = Cardinality.One
-    this
-  }
-
-  // this works...
-  def mandatory2(vt: Property.ValueType2)(default: vt.ScalaTpe): Property2 = {
-    println(default)
-    this
-  }
-
-  def mandatory3[A,B](default: B)(implicit f: Property.ValueType2.Aux[valueType.ScalaTpe,B]): Property2 = {
-    println(f)
-    println(default)
-    this
-  }
-
-  // doesn't work either...
-  def mandatory4(): valueType.ScalaTpe => Property2 = ???
-//  def mandatory4: Foo => Property2 = ???
-
-  def foo1[T, R](t: T)(implicit f: Property.Foo1.Aux[T, R]): R = {
-    println(t)
-    println(f)
-    f.value
-  }
-
-  def foo2[R](implicit f: Property.Foo1.Aux[valueType.ScalaTpe, R]): R = {
-    println(f)
-    f.value
-  }
-
-}
-
-trait Property3 {
-  def name: String
-  val valueType: Property.ValueType2
-
-//  def mandatory3(vt: Property.ValueType2)(default: vt.ScalaTpe): Property3 = {
-  def mandatory3(default: valueType.ScalaTpe): Property3 = {
-    println(default)
+  def mandatory(default: A): Property[A] = {
+    _cardinality = Cardinality.One(Property.Default(default))
     this
   }
 }
 
-object Property4 {
-  // idea:
-  def create[T <: Property.ValueType2, R](t: T)(implicit f: Property.Foo1.Aux[T, R]): R = {
-    println(t)
-    println(f)
-    f.value
-  }
-}
 
-class Property5[A](val valueType: Property5.ValueType[A]) {
-  def mandatory(default: A): Property5[A] = ???
-}
-object Property5 {
+object Property {
 
   abstract class ValueType[A](val odbStorageType: overflowdb.storage.ValueTypes)
   object ValueType {
     import overflowdb.storage.ValueTypes._
-    object Boolean extends ValueType(BOOLEAN)
-    object String extends ValueType(STRING)
-  }
-
-}
-
-object Property2 {
-  sealed abstract class Cardinality
-  object Cardinality {
-    trait ZeroOrOne extends Cardinality
-//    trait List extends Cardinality
-//    trait ISeq extends Cardinality
-    trait One extends Cardinality
-  }
-}
-
-object Property {
-
-  trait Foo1[A] {
-    type B
-    def value: B
-  }
-  object Foo1 {
-    type Aux[A0, B0] = Foo1[A0] { type B = B0  }
-
-    implicit def fOne = new Foo1[Property2.Cardinality.One] {
-      type B = Int
-      val value = 1
-    }
-
-    implicit def fZeroOrOne = new Foo1[Property2.Cardinality.ZeroOrOne] {
-      type B = String
-      val value = "one"
-    }
-//    implicit def fb = new Foo1[Boolean] {
-//      type B = Int
-//      val value = 1
-//    }
-//    implicit def fi = new Foo1[Int] {
-//      type B = String
-//      val value = "Foo"
-//    }
-  }
-
-  trait MandatoryBuilder1[A <: ValueType2] {
-    def apply(vt: ValueType2): vt.ScalaTpe
-  }
-  trait MandatoryBuilder2[A] {
-    def apply(vt: ValueType2): vt.ScalaTpe
-  }
-
-  abstract class ValueType2(val odbStorageType: overflowdb.storage.ValueTypes) {
-    type ScalaTpe
-  }
-  object ValueType2 {
-    type Aux[A0, B0] = Foo1[A0] { type B = B0  }
-
-    import overflowdb.storage.ValueTypes._
-    object Boolean extends ValueType2(BOOLEAN) {
-      override type ScalaTpe = Boolean
-    }
-    object String extends ValueType2(STRING) {
-      override type ScalaTpe = String
-    }
-    object Byte extends ValueType2(BYTE) {
-      override type ScalaTpe = Byte
-    }
-    object Short extends ValueType2(SHORT) {
-      override type ScalaTpe = Short
-    }
-    object Int extends ValueType2(INTEGER) {
-      override type ScalaTpe = Int
-    }
-    object Long extends ValueType2(LONG) {
-      override type ScalaTpe = Long
-    }
-    object Float extends ValueType2(FLOAT) {
-      override type ScalaTpe = Float
-    }
-    object Double extends ValueType2(DOUBLE) {
-      override type ScalaTpe = Double
-    }
-    object Char extends ValueType2(CHARACTER) {
-      override type ScalaTpe = Char
-    }
-    object List extends ValueType2(LIST) {
-      override type ScalaTpe = Seq[_]
-    }
-    object NodeRef extends ValueType2(NODE_REF) {
-      override type ScalaTpe = NodeRef[_]
-    }
-    object Unknown extends ValueType2(UNKNOWN) {
-      override type ScalaTpe = Any
-    }
-  }
-
-  abstract class ValueType(val odbStorageType: overflowdb.storage.ValueTypes)
-  object ValueType {
-    import overflowdb.storage.ValueTypes._
-    object Boolean extends ValueType(BOOLEAN)
-    object String extends ValueType(STRING)
-    object Byte extends ValueType(BYTE)
-    object Short extends ValueType(SHORT)
-    object Int extends ValueType(INTEGER)
-    object Long extends ValueType(LONG)
-    object Float extends ValueType(FLOAT)
-    object Double extends ValueType(DOUBLE)
-    object Char extends ValueType(CHARACTER)
-    object List extends ValueType(LIST)
-    object NodeRef extends ValueType(NODE_REF)
-    object Unknown extends ValueType(UNKNOWN)
+    object Boolean extends ValueType[Boolean](BOOLEAN)
+    object String extends ValueType[String](STRING)
+    object Byte extends ValueType[Byte](BYTE)
+    object Short extends ValueType[Short](SHORT)
+    object Int extends ValueType[Int](INTEGER)
+    object Long extends ValueType[Long](LONG)
+    object Float extends ValueType[Float](FLOAT)
+    object Double extends ValueType[Double](DOUBLE)
+    object Char extends ValueType[Char](CHARACTER)
+    object NodeRef extends ValueType[NodeRef[_]](NODE_REF)
+    object Unknown extends ValueType[Any](UNKNOWN)
   }
 
   sealed abstract class Cardinality
@@ -352,7 +193,7 @@ object Property {
     case object ZeroOrOne extends Cardinality
     case object List extends Cardinality
     case object ISeq extends Cardinality
-    case class One[A <: ValueType](default: Default[A]) extends Cardinality
+    case class One[A](default: Default[A]) extends Cardinality
   }
 
   case class Default[A : DefaultValueCheckImpl](value: A) {
@@ -452,20 +293,20 @@ trait HasClassName {
 }
 
 trait HasProperties {
-  protected val _properties: mutable.Set[Property] = mutable.Set.empty
+  protected val _properties: mutable.Set[Property[_]] = mutable.Set.empty
 
-  def addProperty(additional: Property): this.type = {
+  def addProperty(additional: Property[_]): this.type = {
     _properties.add(additional)
     this
   }
 
-  def addProperties(additional: Property*): this.type = {
+  def addProperties(additional: Property[_]*): this.type = {
     additional.foreach(addProperty)
     this
   }
 
   /** properties (including potentially inherited properties) */
-  def properties: Seq[Property]
+  def properties: Seq[Property[_]]
 }
 
 trait HasOptionalProtoId {
