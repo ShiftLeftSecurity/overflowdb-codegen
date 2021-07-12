@@ -2,7 +2,7 @@ package overflowdb.codegen
 
 import overflowdb.algorithm.LowestCommonAncestors
 import overflowdb.schema._
-import overflowdb.storage.ValueTypes
+import overflowdb.schema.Property.ValueType
 
 import scala.annotation.tailrec
 
@@ -37,19 +37,19 @@ object Helpers {
     case nonEmptyString => Some(nonEmptyString)
   }
 
-  def typeFor(odbStorageType: ValueTypes): String = odbStorageType match {
-    case ValueTypes.BOOLEAN => "Boolean"
-    case ValueTypes.STRING => "String"
-    case ValueTypes.BYTE => "Byte"
-    case ValueTypes.SHORT => "Short"
-    case ValueTypes.INTEGER => "Integer"
-    case ValueTypes.LONG => "Long"
-    case ValueTypes.FLOAT => "Float"
-    case ValueTypes.DOUBLE => "Double"
-    case ValueTypes.LIST => "Seq[_]"
-    case ValueTypes.NODE_REF => "overflowdb.NodeRef[_]"
-    case ValueTypes.UNKNOWN => "java.lang.Object"
-    case ValueTypes.CHARACTER => "Character"
+  def typeFor(valueType: ValueType): String = valueType match {
+    case ValueType.Boolean => "Boolean"
+    case ValueType.String => "String"
+    case ValueType.Byte => "Byte"
+    case ValueType.Short => "Short"
+    case ValueType.Int => "Integer"
+    case ValueType.Long => "Long"
+    case ValueType.Float => "Float"
+    case ValueType.Double => "Double"
+    case ValueType.List => "Seq[_]"
+    case ValueType.NodeRef => "overflowdb.NodeRef[_]"
+    case ValueType.Unknown => "java.lang.Object"
+    case ValueType.Char => "Character"
   }
 
   def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
@@ -96,9 +96,9 @@ object Helpers {
     }
   }
 
-  def getCompleteType[A](property: Property[A]): String = {
+  def getCompleteType[A](property: Property): String = {
     import Property.Cardinality
-    val valueType = typeFor(property.odbStorageType)
+    val valueType = typeFor(property.valueType)
     property.cardinality match {
       case Cardinality.One(_)   => valueType
       case Cardinality.ZeroOrOne => s"Option[$valueType]"
@@ -144,7 +144,7 @@ object Helpers {
       case other => s"$other"
     }
 
-  def propertyDefaultValueImpl(properties: Seq[Property[_]]): String = {
+  def propertyDefaultValueImpl(properties: Seq[Property]): String = {
     import Property.Cardinality
     val propertyDefaultValueCases = properties.map(p => (p, p.cardinality)).collect {
       case (property, Cardinality.One(default)) =>

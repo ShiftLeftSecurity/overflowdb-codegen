@@ -2,12 +2,11 @@ package overflowdb.schema
 
 import overflowdb.codegen.DefaultNodeTypes
 import overflowdb.codegen.Helpers._
-import overflowdb.schema.Property.ToOdbStorageType
 
 import scala.collection.mutable
 
 class SchemaBuilder(basePackage: String) {
-  val properties = mutable.ListBuffer.empty[Property[_]]
+  val properties = mutable.ListBuffer.empty[Property]
   val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseType]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]

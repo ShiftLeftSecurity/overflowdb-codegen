@@ -2,8 +2,8 @@ package overflowdb.codegen
 
 import better.files._
 import overflowdb.codegen.CodeGen.ConstantContext
+import overflowdb.schema.Property.ValueType
 import overflowdb.schema._
-import overflowdb.storage.ValueTypes
 
 import scala.collection.mutable
 
@@ -14,9 +14,9 @@ class CodeGen(schema: Schema) {
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
   val traversalsPackage = s"$basePackage.traversal"
-  private val noWarnList: mutable.Set[(AbstractNodeType, Property[_])] = mutable.Set.empty
+  private val noWarnList: mutable.Set[(AbstractNodeType, Property)] = mutable.Set.empty
 
-  def dontWarnForDuplicateProperty(nodeType: AbstractNodeType, property: Property[_]): CodeGen = {
+  def dontWarnForDuplicateProperty(nodeType: AbstractNodeType, property: Property): CodeGen = {
     noWarnList.addOne((nodeType, property))
     this
   }
@@ -100,7 +100,7 @@ class CodeGen(schema: Schema) {
 
     writeConstantsFile("Properties", schema.properties.map { property =>
       val src = {
-        val valueType = typeFor(property.odbStorageType)
+        val valueType = typeFor(property.valueType)
         val cardinality = property.cardinality
         import Property.Cardinality
         val completeType = cardinality match {
@@ -141,7 +141,7 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property[_]]) = {
+    def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property]) = {
       val edgeClassName = edgeType.className
 
       val propertyNames = properties.map(_.className)
@@ -151,7 +151,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefinitions = properties.map { p =>
-        propertyKeyDef(p.name, typeFor(p.odbStorageType), p.cardinality)
+        propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
 
       val companionObject =
@@ -179,7 +179,7 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      def propertyBasedFieldAccessors(properties: Seq[Property[_]]): String = {
+      def propertyBasedFieldAccessors(properties: Seq[Property]): String = {
         import Property.Cardinality
         properties.map { property =>
           val name = property.name
@@ -194,13 +194,13 @@ class CodeGen(schema: Schema) {
             case Cardinality.List =>
               s"""def $nameCamelCase: $tpe = {
                  |  val p = property("$name")
-                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.odbStorageType)}]].asScala.toSeq
+                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.toSeq
                  |  else Nil
                  |}""".stripMargin
             case Cardinality.ISeq =>
               s"""def $nameCamelCase: $tpe = {
                  |  val p = property("$name")
-                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.odbStorageType)}]].asScala.to(IndexedSeq)
+                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property.valueType)}]].asScala.to(IndexedSeq)
                  |  else IndexedSeq.empty
                  |}""".stripMargin
           }
@@ -386,7 +386,7 @@ class CodeGen(schema: Schema) {
         }.mkString("\n|    ")
 
         val propertyDefinitions = properties.map { p =>
-          propertyKeyDef(p.name, typeFor(p.odbStorageType), p.cardinality)
+          propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
         }.mkString("\n|    ")
 
         val Seq(outEdgeNames, inEdgeNames) =
@@ -436,7 +436,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n|    ")
 
       val propertyDefs = properties.map { p =>
-        propertyKeyDef(p.name, typeFor(p.odbStorageType), p.cardinality)
+        propertyKeyDef(p.name, typeFor(p.valueType), p.cardinality)
       }.mkString("\n|    ")
 
       val propertyDefsForContainedNodes = nodeType.containedNodes.map { containedNode =>
@@ -557,7 +557,7 @@ class CodeGen(schema: Schema) {
 
       val propertiesMapImpl = {
         import Property.Cardinality
-        val putKeysImpl = properties.map { key: Property[_] =>
+        val putKeysImpl = properties.map { key: Property =>
           val memberName = camelCase(key.name)
           key.cardinality match {
             case Cardinality.One(default) =>
@@ -597,7 +597,7 @@ class CodeGen(schema: Schema) {
         val newNodeCasted = s"newNode.asInstanceOf[New${nodeType.className}]"
 
         val initKeysImpl = {
-          val lines = properties.map { key: Property[_] =>
+          val lines = properties.map { key: Property =>
             import Property.Cardinality
             val memberName = camelCase(key.name)
             key.cardinality match {
@@ -850,7 +850,7 @@ class CodeGen(schema: Schema) {
           s"""|      case "$name" => this._$accessorName = $setter"""
         }
 
-        val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, typeFor(p.odbStorageType))).mkString("\n")
+        val forKeys = properties.map(p => caseEntry(p.name, camelCase(p.name), p.cardinality, typeFor(p.valueType))).mkString("\n")
 
         val forContainedNodes = nodeType.containedNodes.map(containedNode =>
           caseEntry(containedNode.localName, containedNode.localName, containedNode.cardinality, containedNode.nodeType.className)
@@ -884,13 +884,13 @@ class CodeGen(schema: Schema) {
            |  }""".stripMargin
       }
 
-      def propertyBasedFields(properties: Seq[Property[_]]): String = {
+      def propertyBasedFields(properties: Seq[Property]): String = {
         import Property.Cardinality
         properties.map { property =>
           val publicName = camelCase(property.name)
           val fieldName = s"_$publicName"
           val (publicType, tpeForField, fieldAccessor, defaultValue) = {
-            val valueType = typeFor(property.odbStorageType)
+            val valueType = typeFor(property.valueType)
             property.cardinality match {
               case Cardinality.One(default)  =>
                 (valueType, valueType, fieldName, s"${defaultValueImpl(default)}")
@@ -1013,11 +1013,11 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generatePropertyTraversals(className: String, properties: Seq[Property[_]]): String = {
+    def generatePropertyTraversals(className: String, properties: Seq[Property]): String = {
       import Property.Cardinality
       val propertyTraversals = properties.map { property =>
         val nameCamelCase = camelCase(property.name)
-        val baseType = typeFor(property.odbStorageType)
+        val baseType = typeFor(property.valueType)
         val cardinality = property.cardinality
 
         val mapOrFlatMap = cardinality match {
@@ -1335,14 +1335,14 @@ class CodeGen(schema: Schema) {
              |  }
              |""".stripMargin
 
-        val filterSteps = (cardinality, property.odbStorageType) match {
+        val filterSteps = (cardinality, property.valueType) match {
           case (Cardinality.List | Cardinality.ISeq, _) => ""
-          case (Cardinality.One(_), ValueTypes.STRING) => filterStepsForSingleString
-          case (Cardinality.ZeroOrOne, ValueTypes.STRING) => filterStepsForOptionalString
-          case (Cardinality.One(_), ValueTypes.BOOLEAN) => filterStepsForSingleBoolean
-          case (Cardinality.ZeroOrOne, ValueTypes.BOOLEAN) => filterStepsForOptionalBoolean
-          case (Cardinality.One(_), ValueTypes.INTEGER) => filterStepsForSingleInt
-          case (Cardinality.ZeroOrOne, ValueTypes.INTEGER) => filterStepsForOptionalInt
+          case (Cardinality.One(_), ValueType.String) => filterStepsForSingleString
+          case (Cardinality.ZeroOrOne, ValueType.String) => filterStepsForOptionalString
+          case (Cardinality.One(_), ValueType.Boolean) => filterStepsForSingleBoolean
+          case (Cardinality.ZeroOrOne, ValueType.Boolean) => filterStepsForOptionalBoolean
+          case (Cardinality.One(_), ValueType.Int) => filterStepsForSingleInt
+          case (Cardinality.ZeroOrOne, ValueType.Int) => filterStepsForOptionalInt
           case (Cardinality.One(_), _) => filterStepsGenericSingle
           case (Cardinality.ZeroOrOne, _) => filterStepsGenericOption
           case _ => ""
@@ -1429,7 +1429,7 @@ class CodeGen(schema: Schema) {
          |}
          |""".stripMargin
 
-    def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property[_]]) = {
+    def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property]) = {
       import Property.Cardinality
       val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, String)] // fieldName, type, default
       for (key <- keys) {
@@ -1463,7 +1463,7 @@ class CodeGen(schema: Schema) {
 
       val propertiesMapImpl = {
         val putKeysImpl = keys
-          .map { key: Property[_] =>
+          .map { key: Property =>
             val memberName = camelCase(key.name)
             import Property.Cardinality
             key.cardinality match {
