@@ -166,11 +166,13 @@ class Property[A : ToOdbStorageType](val name: String,
 
 object Property {
   import overflowdb.storage.ValueTypes
+  import scala.annotation.implicitAmbiguous
 
   trait ToOdbStorageType[A] {
     def apply(): ValueTypes
   }
   object ToOdbStorageType {
+    @implicitAmbiguous("bar ${A}")
     implicit lazy val boolean: ToOdbStorageType[Boolean] = () => ValueTypes.BOOLEAN
     implicit lazy val string: ToOdbStorageType[String] = () => ValueTypes.STRING
     implicit lazy val byte: ToOdbStorageType[Byte] = () => ValueTypes.BYTE

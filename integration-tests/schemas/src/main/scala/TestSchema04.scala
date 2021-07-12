@@ -17,6 +17,9 @@ class TestSchema04 extends TestSchema {
   val double2 = builder.addProperty[Double]("DOUBLE2", Cardinality.One(Default(Double.NaN)))
   val char = builder.addProperty[Char]("CHAR", Cardinality.One(Default('?')))
 
+//  val foo1 = builder.addProperty[Nothing]("foo", Cardinality.ZeroOrOne)
+  val foo2 = builder.addProperty("foo", Cardinality.ZeroOrOne)
+
   val node1 = builder.addNodeType("NODE1")
     .addProperties(bool, string, byte, short, int, long, float1, float2, double1, double2, char)
 
