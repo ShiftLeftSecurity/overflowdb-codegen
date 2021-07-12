@@ -174,8 +174,12 @@ object Property {
     implicit lazy val boolean: ToOdbStorageType[Boolean] = () => ValueTypes.BOOLEAN
     implicit lazy val string: ToOdbStorageType[String] = () => ValueTypes.STRING
     implicit lazy val byte: ToOdbStorageType[Byte] = () => ValueTypes.BYTE
+    implicit lazy val short: ToOdbStorageType[Short] = () => ValueTypes.SHORT
+    implicit lazy val int: ToOdbStorageType[Int] = () => ValueTypes.INTEGER
+    implicit lazy val long: ToOdbStorageType[Long] = () => ValueTypes.LONG
     implicit lazy val float: ToOdbStorageType[Float] = () => ValueTypes.FLOAT
-    // TODO all others
+    implicit lazy val double: ToOdbStorageType[Double] = () => ValueTypes.DOUBLE
+    implicit lazy val char: ToOdbStorageType[Char] = () => ValueTypes.CHARACTER
   }
 
   sealed abstract class Cardinality
@@ -199,6 +203,12 @@ object Property {
     implicit lazy val boolean: DefaultValueCheckImpl[Boolean] = (valueName, defaultValue) => s"$defaultValue == $valueName"
     implicit lazy val string: DefaultValueCheckImpl[String] = (valueName, defaultValue) => s"$defaultValue.equals($valueName)"
     implicit lazy val byte: DefaultValueCheckImpl[Byte] = (valueName, defaultValue) => s"$defaultValue == $valueName"
+    implicit lazy val short: DefaultValueCheckImpl[Short] = (valueName, defaultValue) => s"$defaultValue == $valueName"
+    implicit lazy val int: DefaultValueCheckImpl[Int] = (valueName, defaultValue) => s"$defaultValue == $valueName"
+    implicit lazy val long: DefaultValueCheckImpl[Long] = (valueName, defaultValue) => s"$defaultValue == $valueName"
+    implicit lazy val float: DefaultValueCheckImpl[Float] = (valueName, defaultValue) => s"$defaultValue == $valueName"
+    implicit lazy val double: DefaultValueCheckImpl[Double] = (valueName, defaultValue) => s"$defaultValue == $valueName"
+    implicit lazy val char: DefaultValueCheckImpl[Char] = (valueName, defaultValue) => s"$defaultValue == $valueName"
 
   }
 }
