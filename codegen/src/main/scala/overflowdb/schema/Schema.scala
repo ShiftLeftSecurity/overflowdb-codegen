@@ -165,18 +165,46 @@ class Property2(val name: String, val valueType: Property.ValueType2) {
   import Property.Cardinality
   protected var _cardinality: Cardinality = Cardinality.ZeroOrOne
 
-  type Foo //TODO compute based on ValueType! or do that on valueType type param?
+//  type Foo = Property.ValueType2#ScalaTpe //TODO compute based on ValueType! or do that on valueType type param?
+  type Foo = valueType.ScalaTpe
   // idea: use type member rather than type param?
 
   /** make this a mandatory property, which allows us to use primitives (better memory footprint, no GC, ...) */
-  def mandatory(default: Property.ValueType2#ScalaTpe): Property2 = {
+  // TODO use aux type here via params?
+  def mandatory(default: valueType.ScalaTpe): Property2 = {
+//  def mandatory(default: Foo): Property2 = {
     println(default)
     //    _cardinality = Cardinality.One
     this
   }
+
+  // this works...
+  def mandatory2(vt: Property.ValueType2)(default: vt.ScalaTpe): Property2 = {
+    ???
+  }
+
+  def foo1[T, R](t: T)(implicit f: Property.Foo1.Aux[T, R]): R = {
+    println(t)
+    println(f)
+    f.value
+  }
 }
 
 object Property {
+
+  trait Foo1[A] {
+    type B
+    def value: B
+  }
+  object Foo1 {
+    type Aux[A0, B0] = Foo1[A0] { type B = B0  }
+
+    implicit def fi = new Foo1[Int] {
+      type B = String
+      val value = "Foo"
+    }
+  }
+
   abstract class ValueType2(val odbStorageType: overflowdb.storage.ValueTypes) {
     type ScalaTpe
   }
