@@ -167,6 +167,19 @@ class Property[A](val name: String,
     _cardinality = Cardinality.One(Property.Default(default))
     this
   }
+
+  /** make this a list property, using a regular Sequence, with linear (slow) random access */
+  def asList(): Property[A] = {
+    _cardinality = Cardinality.List
+    this
+  }
+
+  /** make this an list property, using an indexed list for fast random access */
+  def asIndexedList(): Property[A] = {
+    _cardinality = Cardinality.ISeq
+    this
+  }
+
 }
 
 

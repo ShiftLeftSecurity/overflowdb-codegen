@@ -1,5 +1,4 @@
 import overflowdb.schema.Property._
-//import overflowdb.schema._
 
 /** For testing default values on properties with Cardinality.One: we have type-dependent defaults,
   * and allow to override them in the schema. */
@@ -15,12 +14,14 @@ class TestSchema04 extends TestSchema {
   val double1 = builder.addProperty("DOUBLE1", ValueType.Double).mandatory(default = 6.6)
   val double2 = builder.addProperty("DOUBLE2", ValueType.Double).mandatory(default = Double.NaN)
   val char = builder.addProperty("CHAR", ValueType.Char).mandatory(default = '?')
+  val intList  = builder.addProperty("INT_LIST", ValueType.Int).asList()
+  val intIndexedList  = builder.addProperty("INT_LIST_INDEXED", ValueType.Int).asIndexedList()
 
   val node1 = builder.addNodeType("NODE1")
-    .addProperties(bool, string, byte, short, int, long, float1, float2, double1, double2, char)
+    .addProperties(bool, string, byte, short, int, long, float1, float2, double1, double2, char, intList, intIndexedList)
 
   val edge1 = builder.addEdgeType("EDGE1")
-    .addProperties(bool, string, byte, short, int, long, float1, float2, double1, double2, char)
+    .addProperties(bool, string, byte, short, int, long, float1, float2, double1, double2, char, intList, intIndexedList)
 
   node1.addOutEdge(edge1, node1)
 }

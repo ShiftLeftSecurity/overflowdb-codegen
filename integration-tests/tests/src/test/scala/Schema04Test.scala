@@ -27,6 +27,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.double1 shouldBe 6.6
     node1.double2.isNaN shouldBe true
     node1.char shouldBe '?'
+    node1.intList.size shouldBe 0
+    node1.intListIndexed.size shouldBe 0
     node1.propertyKeys().contains("STR") shouldBe true
     node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
     node1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
@@ -46,6 +48,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
     edge1.double1 shouldBe 6.6
     edge1.double2.isNaN shouldBe true
     edge1.char shouldBe '?'
+    edge1.intList.size shouldBe 0
+    edge1.intListIndexed.size shouldBe 0
     edge1.propertyKeys().contains("STR") shouldBe true
     edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
     edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
@@ -53,8 +57,11 @@ class Schema04Test extends AnyWordSpec with Matchers {
     edge1.property("DOESNT_EXIST") shouldBe null
     edge1.propertiesMap.get("STR") shouldBe "<[empty]>"
 
-    graph.nodes(Node1.Label).cast[Node1].str.head shouldBe "<[empty]>"
-    graph.nodes(Node1.Label).cast[Node1].property(Node1.Properties.Str).head shouldBe "<[empty]>"
-    graph.edges(Edge1.Label).cast[Edge1].property(Edge1.Properties.Str).head shouldBe "<[empty]>"
+    def node1Trav = graph.nodes(Node1.Label).cast[Node1]
+    def edge1Trav = graph.edges(Edge1.Label).cast[Edge1]
+    node1Trav.str.head shouldBe "<[empty]>"
+    node1Trav.intList.l shouldBe Seq.empty
+    node1Trav.property(Node1.Properties.Str).head shouldBe "<[empty]>"
+    edge1Trav.property(Edge1.Properties.Str).head shouldBe "<[empty]>"
   }
 }
