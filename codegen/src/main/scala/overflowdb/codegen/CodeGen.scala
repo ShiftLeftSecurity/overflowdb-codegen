@@ -560,9 +560,8 @@ class CodeGen(schema: Schema) {
         val putKeysImpl = properties.map { key =>
           val memberName = camelCase(key.name)
           key.cardinality match {
-            case Cardinality.One(default) =>
-              val isDefaultValueImpl = defaultValueCheckImpl(memberName, default)
-              s"""if (!($isDefaultValueImpl)) { properties.put("${key.name}", $memberName) }"""
+            case Cardinality.One(_) =>
+              s"""properties.put("${key.name}", $memberName)"""
             case Cardinality.ZeroOrOne =>
               s"""$memberName.map { value => properties.put("${key.name}", value) }"""
             case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
@@ -589,6 +588,28 @@ class CodeGen(schema: Schema) {
            |  val properties = new java.util.HashMap[String, Any]
            |$putKeysImpl
            |$putRefsImpl
+           |  properties
+           |}""".stripMargin
+      }
+
+      val propertiesMapWithoutDefaultsImpl = {
+        import Property.Cardinality
+        val putKeysImpl = properties.map { key =>
+          val memberName = camelCase(key.name)
+          key.cardinality match {
+            case Cardinality.One(default) =>
+              val isDefaultValueImpl = defaultValueCheckImpl(memberName, default)
+              s"""if (!($isDefaultValueImpl)) { properties.put("${key.name}", $memberName) }"""
+            case Cardinality.ZeroOrOne =>
+              s"""$memberName.map { value => properties.put("${key.name}", value) }"""
+            case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
+              s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName.asJava) }"""
+          }
+        }.mkString("\n")
+
+        s""" {
+           |  val properties = new java.util.HashMap[String, Any]
+           |$putKeysImpl
            |  properties
            |}""".stripMargin
       }
@@ -918,6 +939,11 @@ class CodeGen(schema: Schema) {
            |  /** faster than the default implementation */
            |  override def propertiesMap: java.util.Map[String, Any] =
            |    $propertiesMapImpl
+           |
+           |  /** faster than the default implementation */
+           |  override def propertiesMapWithoutDefaults: java.util.Map[String, Any] =
+           |    $propertiesMapWithoutDefaultsImpl
+           |
            |
            |  $neighborAccessors
            |
