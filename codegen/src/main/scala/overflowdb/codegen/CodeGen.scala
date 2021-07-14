@@ -188,7 +188,7 @@ class CodeGen(schema: Schema) {
 
           property.cardinality match {
             case Cardinality.One(defaultValue) =>
-              s"""def $nameCamelCase: $tpe = property("$name", ${defaultValueImpl(defaultValue)}).asInstanceOf[$tpe]"""
+              s"""def $nameCamelCase: $tpe = property("$name", ${defaultValueImpl(defaultValue)}: $tpe).asInstanceOf[$tpe]"""
             case Cardinality.ZeroOrOne =>
               s"""def $nameCamelCase: $tpe = Option(property("$name")).asInstanceOf[$tpe]""".stripMargin
             case Cardinality.List =>

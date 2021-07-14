@@ -147,13 +147,8 @@ object Helpers {
   def defaultValueCheckImpl[A](memberName: String, default: Property.Default[A]): String = {
     val defaultValueSrc = defaultValueImpl(default)
     default.value match {
-        // TODO cleanup
-//      case _: String => s""" "$defaultValueSrc" == $memberName   """.trim
-//      case _: Char => s""" '$defaultValueSrc' == $memberName   """.trim
       case float: Float if float.isNaN => s"$memberName.isNaN"
-//      case _: Float => s"$defaultValueSrc == $memberName"
       case double: Double if double.isNaN => s"$memberName.isNaN"
-//      case _: Double => s"$defaultValueSrc == $memberName"
       case _ => s"$defaultValueSrc == $memberName"
     }
   }

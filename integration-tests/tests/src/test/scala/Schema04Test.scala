@@ -112,7 +112,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
 
     edge1.bool shouldBe false
     edge1.str shouldBe "foo"
-    edge1.byte shouldBe (100: Byte)
+    edge1.byte shouldBe 100
     edge1.short shouldBe 101
     edge1.int shouldBe 102
     edge1.long shouldBe 103
