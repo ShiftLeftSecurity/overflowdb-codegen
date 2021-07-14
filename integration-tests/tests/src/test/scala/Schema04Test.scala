@@ -7,8 +7,6 @@ import testschema04.edges._
 import testschema04.nodes._
 import testschema04.traversal._
 
-import scala.jdk.CollectionConverters.IterableHasAsJava
-
 class Schema04Test extends AnyWordSpec with Matchers {
 
   "default property values" in {

@@ -187,8 +187,8 @@ class CodeGen(schema: Schema) {
           val tpe = getCompleteType(property)
 
           property.cardinality match {
-            case Cardinality.One(defaultValue) =>
-              s"""def $nameCamelCase: $tpe = property("$name", ${defaultValueImpl(defaultValue)}: $tpe).asInstanceOf[$tpe]"""
+            case Cardinality.One(_) =>
+              s"""def $nameCamelCase: $tpe = property("$name").asInstanceOf[$tpe]"""
             case Cardinality.ZeroOrOne =>
               s"""def $nameCamelCase: $tpe = Option(property("$name")).asInstanceOf[$tpe]""".stripMargin
             case Cardinality.List =>
