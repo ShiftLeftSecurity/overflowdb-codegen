@@ -137,6 +137,10 @@ object Helpers {
     default.value match {
       case str: String => s"\"$str\""
       case char: Char => s"'$char'"
+      case byte: Byte => s"$byte: Byte"
+      case short: Short => s"$short: Short"
+      case int: Int => s"$int: Int"
+      case long: Long => s"$long: Long"
       case float: Float if float.isNaN => "Float.NaN"
       case float: Float => s"${float}f"
       case double: Double if double.isNaN => "Double.NaN"
@@ -149,7 +153,7 @@ object Helpers {
     default.value match {
       case float: Float if float.isNaN => s"$memberName.isNaN"
       case double: Double if double.isNaN => s"$memberName.isNaN"
-      case _ => s"$defaultValueSrc == $memberName"
+      case _ => s"($defaultValueSrc) == $memberName"
     }
   }
 
