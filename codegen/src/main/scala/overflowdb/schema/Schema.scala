@@ -153,7 +153,6 @@ object EdgeType {
   }
 }
 
-// TODO rename, move to separate file
 class Property[A](val name: String,
                   val valueType: Property.ValueType[A],
                   val comment: Option[String] = None,

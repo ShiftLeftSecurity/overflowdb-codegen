@@ -1481,11 +1481,7 @@ class CodeGen(schema: Schema) {
       val defaultsVal = fieldDescriptions.reverse
         .map {
           case (name, typ, default) => s"var $name: $typ = $default"
-        }
-          // TODO still needed?
-//          case (name, typ, Some(default)) => s"var $name: $typ = $default"
-//          case (name, typ, None)          => s"var $name: $typ"}
-        .mkString(", ")
+        }.mkString(", ")
 
       val propertiesMapImpl = {
         val putKeysImpl = keys
