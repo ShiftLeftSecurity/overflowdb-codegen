@@ -168,6 +168,10 @@ class CodeGen(schema: Schema) {
            |    $propertyDefinitions
            |  }
            |
+           |  object PropertyDefaults {
+           |    ${propertyDefaultCases(properties)}
+           |  }
+           |
            |  val layoutInformation = new EdgeLayoutInformation(Label, PropertyNames.allAsJava)
            |
            |  val factory = new EdgeFactory[$edgeClassName] {
@@ -210,6 +214,7 @@ class CodeGen(schema: Schema) {
       val classImpl =
         s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
            |extends Edge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
+           |import $edgeClassName._
            |
            |  ${propertyBasedFieldAccessors(properties)}
            |
@@ -404,6 +409,10 @@ class CodeGen(schema: Schema) {
            |    $propertyDefinitions
            |  }
            |
+           |  object PropertyDefaults {
+           |    ${propertyDefaultCases(properties)}
+           |  }
+           |
            |  object Edges {
            |    val Out: Array[String] = Array($outEdgeNames)
            |    val In: Array[String] = Array($inEdgeNames)
@@ -514,6 +523,10 @@ class CodeGen(schema: Schema) {
            |  object Properties {
            |    $propertyDefs
            |    $propertyDefsForContainedNodes
+           |  }
+           |
+           |  object PropertyDefaults {
+           |    ${propertyDefaultCases(properties)}
            |  }
            |
            |  val layoutInformation = new NodeLayoutInformation(
@@ -798,6 +811,7 @@ class CodeGen(schema: Schema) {
            |  with ${className}Base
            |  with StoredNode
            |  $mixinTraits {
+           |  import $className._
            |  $propertyDelegators
            |  ${propertyDefaultValueImpl(properties)}
            |  $delegatingContainedNodeAccessors
@@ -913,8 +927,8 @@ class CodeGen(schema: Schema) {
           val (publicType, tpeForField, fieldAccessor, defaultValue) = {
             val valueType = typeFor(property.valueType)
             property.cardinality match {
-              case Cardinality.One(default)  =>
-                (valueType, valueType, fieldName, s"${defaultValueImpl(default)}")
+              case Cardinality.One(_)  =>
+                (valueType, valueType, fieldName, s"PropertyDefaults.${property.className}")
               case Cardinality.ZeroOrOne => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
               case Cardinality.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
               case Cardinality.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
@@ -929,6 +943,7 @@ class CodeGen(schema: Schema) {
       val classImpl =
         s"""class $classNameDb(ref: NodeRef[NodeDb]) extends NodeDb(ref) with StoredNode
            |  $mixinTraits with ${className}Base {
+           |  import $className._
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
@@ -1506,7 +1521,7 @@ class CodeGen(schema: Schema) {
               val isDefaultValueImpl = defaultValueCheckImpl(memberName, default)
               s"""  if (!($isDefaultValueImpl)) { res += "$memberName" -> $memberName }"""
             case Cardinality.ZeroOrOne =>
-              s"""  $memberName.map { value => res += "${memberName}" -> value }"""
+              s"""  $memberName.map { value => res += "$memberName" -> value }"""
             case Cardinality.List | Cardinality.ISeq =>
               s"""  if ($memberName != null && $memberName.nonEmpty) { res += "$memberName" -> $memberName }"""
           }

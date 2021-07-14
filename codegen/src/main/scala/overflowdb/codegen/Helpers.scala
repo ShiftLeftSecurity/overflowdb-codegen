@@ -158,11 +158,11 @@ object Helpers {
   }
 
   def propertyDefaultValueImpl(properties: Seq[Property[_]]): String = {
-    import Property.Cardinality
-    val propertyDefaultValueCases = properties.map(p => (p, p.cardinality)).collect {
-      case (property, Cardinality.One(default)) =>
-        s"""case "${property.name}" => ${defaultValueImpl(default)}"""
+    val propertyDefaultValueCases = properties.collect {
+      case property if property.hasDefault =>
+        s"""case "${property.name}" => PropertyDefaults.${property.className}"""
     }.mkString("\n|    ")
+
 
     s"""
        |  override def propertyDefaultValue(propertyKey: String) =
@@ -172,6 +172,12 @@ object Helpers {
        |  }
        |""".stripMargin
   }
+
+  def propertyDefaultCases(properties: Seq[Property[_]]): String =
+    properties.collect {
+      case p if p.hasDefault =>
+        s"""val ${p.className} = ${defaultValueImpl(p.default.get)}"""
+    }.mkString("\n|    ")
 
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {

@@ -2,6 +2,7 @@ package overflowdb.schema
 
 import overflowdb.NodeRef
 import overflowdb.codegen.Helpers._
+import overflowdb.schema.Property.Default
 
 import scala.collection.mutable
 
@@ -166,6 +167,15 @@ class Property[A](val name: String,
     _cardinality = Cardinality.One(Property.Default(default))
     this
   }
+
+  def hasDefault: Boolean =
+    default.isDefined
+
+  def default: Option[Default[A]] =
+    _cardinality match {
+      case c: Cardinality.One[A] => Option(c.default)
+      case _ => None
+    }
 
   /** make this a list property, using a regular Sequence, with linear (slow) random access */
   def asList(): Property[A] = {
