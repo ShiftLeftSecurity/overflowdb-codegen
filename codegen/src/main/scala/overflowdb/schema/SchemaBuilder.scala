@@ -2,12 +2,11 @@ package overflowdb.schema
 
 import overflowdb.codegen.DefaultNodeTypes
 import overflowdb.codegen.Helpers._
-import overflowdb.storage.ValueTypes
-
+import overflowdb.schema.Property.ValueType
 import scala.collection.mutable
 
 class SchemaBuilder(basePackage: String) {
-  val properties = mutable.ListBuffer.empty[Property]
+  val properties = mutable.ListBuffer.empty[Property[_]]
   val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseType]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
@@ -33,9 +32,12 @@ class SchemaBuilder(basePackage: String) {
       SchemaInfo.forClass(getClass)
     )
 
-  def addProperty(name: String, valueType: ValueTypes, cardinality: Cardinality, comment: String = "")(
-    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property =
-    addAndReturn(properties, new Property(name, stringToOption(comment), valueType, cardinality, schemaInfo))
+  def addProperty[A](name: String, valueType: ValueType[A], comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property[A] = {
+    val property = new Property[A](name, valueType, stringToOption(comment), schemaInfo)
+    properties.append(property)
+    property
+  }
 
   def addNodeBaseType(name: String, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): NodeBaseType =

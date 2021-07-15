@@ -1,7 +1,8 @@
 package overflowdb.schema
 
+import overflowdb.NodeRef
 import overflowdb.codegen.Helpers._
-import overflowdb.storage.ValueTypes
+import overflowdb.schema.Property.Default
 
 import scala.collection.mutable
 
@@ -9,7 +10,7 @@ import scala.collection.mutable
  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
 class Schema(val basePackage: String,
-             val properties: Seq[Property],
+             val properties: Seq[Property[_]],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
@@ -21,13 +22,13 @@ class Schema(val basePackage: String,
     nodeTypes ++ nodeBaseTypes
 
   /** properties that are used in node types */
-  def nodeProperties: Seq[Property] =
+  def nodeProperties: Seq[Property[_]] =
     properties.filter(property =>
       (nodeTypes ++ nodeBaseTypes).exists(_.properties.contains(property))
     )
 
   /** properties that are used in edge types */
-  def edgeProperties: Seq[Property] =
+  def edgeProperties: Seq[Property[_]] =
     properties.filter(property =>
       edgeTypes.exists(_.properties.contains(property))
     )
@@ -44,12 +45,12 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
 
   /** properties (including potentially inherited properties) */
-  override def properties: Seq[Property] = {
+  override def properties: Seq[Property[_]] = {
     val entireClassHierarchy = this +: extendzRecursively
     entireClassHierarchy.flatMap(_.propertiesWithoutInheritance).distinct.sortBy(_.name.toLowerCase)
   }
 
-  def propertiesWithoutInheritance: Seq[Property] =
+  def propertiesWithoutInheritance: Seq[Property[_]] =
     _properties.toSeq.sortBy(_.name.toLowerCase)
 
   def extendz(additional: NodeBaseType*): this.type = {
@@ -70,8 +71,8 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
    */
   def addOutEdge(edge: EdgeType,
                  inNode: AbstractNodeType,
-                 cardinalityOut: Cardinality = Cardinality.List,
-                 cardinalityIn: Cardinality = Cardinality.List): this.type = {
+                 cardinalityOut: EdgeType.Cardinality = EdgeType.Cardinality.List,
+                 cardinalityIn: EdgeType.Cardinality = EdgeType.Cardinality.List): this.type = {
     _outEdges.add(AdjacentNode(edge, inNode, cardinalityOut))
     inNode._inEdges.add(AdjacentNode(edge, this, cardinalityIn))
     this
@@ -79,8 +80,8 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
   def addInEdge(edge: EdgeType,
                 outNode: AbstractNodeType,
-                cardinalityIn: Cardinality = Cardinality.List,
-                cardinalityOut: Cardinality = Cardinality.List): this.type = {
+                cardinalityIn: EdgeType.Cardinality = EdgeType.Cardinality.List,
+                cardinalityOut: EdgeType.Cardinality = EdgeType.Cardinality.List): this.type = {
     _inEdges.add(AdjacentNode(edge, outNode, cardinalityIn))
     outNode._outEdges.add(AdjacentNode(edge, this, cardinalityOut))
     this
@@ -111,7 +112,7 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   def containedNodes: Seq[ContainedNode] =
     _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
 
-  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Cardinality): NodeType = {
+  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Property.Cardinality): NodeType = {
     _containedNodes.add(ContainedNode(node, localName, cardinality))
     this
   }
@@ -131,50 +132,106 @@ class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo
   override def toString = s"NodeBaseType($name)"
 }
 
-case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: Cardinality)
+case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: EdgeType.Cardinality)
 
-case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Cardinality)
-
-sealed abstract class Cardinality(val name: String)
-object Cardinality {
-  case object ZeroOrOne extends Cardinality("zeroOrOne")
-  case object One extends Cardinality("one")
-  case object List extends Cardinality("list")
-  case object ISeq extends Cardinality("array")
-
-  def fromName(name: String): Cardinality =
-    Seq(ZeroOrOne, One, List, ISeq)
-      .find(_.name == name)
-      .getOrElse(throw new AssertionError(s"cardinality must be one of `zeroOrOne`, `one`, `list`, `iseq`, but was $name"))
-}
+case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Property.Cardinality)
 
 class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
   extends HasClassName with HasProperties with HasOptionalProtoId with HasSchemaInfo {
   override def toString = s"EdgeType($name)"
 
   /** properties (including potentially inherited properties) */
-  def properties: Seq[Property] =
+  def properties: Seq[Property[_]] =
     _properties.toSeq.sortBy(_.name.toLowerCase)
 }
 
-class Property(val name: String,
-               val comment: Option[String],
-               val valueType: ValueTypes,
-               val cardinality: Cardinality,
-               val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
-  override def toString = s"Property($name)"
+object EdgeType {
+  sealed abstract class Cardinality
+  object Cardinality {
+    case object One extends Cardinality
+    case object ZeroOrOne extends Cardinality
+    case object List extends Cardinality
+  }
+}
+
+class Property[A](val name: String,
+                  val valueType: Property.ValueType[A],
+                  val comment: Option[String] = None,
+                  val schemaInfo: SchemaInfo) extends HasClassName with HasOptionalProtoId with HasSchemaInfo {
+  import Property.Cardinality
+  protected var _cardinality: Cardinality = Cardinality.ZeroOrOne
+  def cardinality: Cardinality = _cardinality
+
+  /** make this a mandatory property, which allows us to use primitives (better memory footprint, no GC, ...) */
+  def mandatory(default: A): Property[A] = {
+    _cardinality = Cardinality.One(Property.Default(default))
+    this
+  }
+
+  def hasDefault: Boolean =
+    default.isDefined
+
+  def default: Option[Default[A]] =
+    _cardinality match {
+      case c: Cardinality.One[A] => Option(c.default)
+      case _ => None
+    }
+
+  /** make this a list property, using a regular Sequence, with linear (slow) random access */
+  def asList(): Property[A] = {
+    _cardinality = Cardinality.List
+    this
+  }
+
+  /** make this an list property, using an indexed list for fast random access */
+  def asIndexedList(): Property[A] = {
+    _cardinality = Cardinality.ISeq
+    this
+  }
+
+}
+
+
+object Property {
+
+  abstract class ValueType[A](val odbStorageType: overflowdb.storage.ValueTypes)
+  object ValueType {
+    import overflowdb.storage.ValueTypes._
+    object Boolean extends ValueType[Boolean](BOOLEAN)
+    object String extends ValueType[String](STRING)
+    object Byte extends ValueType[Byte](BYTE)
+    object Short extends ValueType[Short](SHORT)
+    object Int extends ValueType[Int](INTEGER)
+    object Long extends ValueType[Long](LONG)
+    object Float extends ValueType[Float](FLOAT)
+    object Double extends ValueType[Double](DOUBLE)
+    object List extends ValueType[Seq[_]](LIST)
+    object Char extends ValueType[Char](CHARACTER)
+    object NodeRef extends ValueType[NodeRef[_]](NODE_REF)
+    object Unknown extends ValueType[Any](UNKNOWN)
+  }
+
+  sealed abstract class Cardinality
+  object Cardinality {
+    case object ZeroOrOne extends Cardinality
+    case object List extends Cardinality
+    case object ISeq extends Cardinality
+    case class One[A](default: Default[A]) extends Cardinality
+  }
+
+  case class Default[A](value: A)
 }
 
 class Constant(val name: String,
                val value: String,
-               val valueType: ValueTypes,
+               val valueType: overflowdb.storage.ValueTypes,
                val comment: Option[String],
                val schemaInfo: SchemaInfo) extends HasOptionalProtoId with HasSchemaInfo {
   override def toString = s"Constant($name)"
 }
 
 object Constant {
-  def apply(name: String, value: String, valueType: ValueTypes, comment: String = "")(
+  def apply(name: String, value: String, valueType: overflowdb.storage.ValueTypes, comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Constant =
     new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
 }
@@ -188,35 +245,29 @@ case class NeighborInfoForNode(
   neighborNode: AbstractNodeType,
   edge: EdgeType,
   direction: Direction.Value,
-  cardinality: Cardinality,
+  cardinality: EdgeType.Cardinality,
   isInherited: Boolean) {
 
   lazy val accessorName = s"_${camelCase(neighborNode.name)}Via${edge.className}${camelCaseCaps(direction.toString)}"
 
   /** handling some accidental complexity within the schema: if a relationship is defined on a base node and
    * separately on a concrete node, with different cardinalities, we need to use the highest cardinality  */
-  lazy val consolidatedCardinality: Cardinality = {
+  lazy val consolidatedCardinality: EdgeType.Cardinality = {
     val inheritedCardinalities = neighborNode.extendzRecursively.flatMap(_.inEdges).collect {
       case AdjacentNode(viaEdge, neighbor, cardinality)
         if viaEdge == edge && neighbor == neighborNode => cardinality
     }
     val allCardinalities = cardinality +: inheritedCardinalities
     allCardinalities.distinct.sortBy {
-      case Cardinality.List => 0
-      case Cardinality.ISeq => 1
-      case Cardinality.ZeroOrOne => 2
-      case Cardinality.One => 3
+      case EdgeType.Cardinality.List => 0
+      case EdgeType.Cardinality.ZeroOrOne => 1
+      case EdgeType.Cardinality.One => 2
     }.head
   }
 
   lazy val returnType: String =
     fullScalaType(neighborNode, consolidatedCardinality)
 
-}
-
-object HigherValueType extends Enumeration {
-  type HigherValueType = Value
-  val None, Option, List, ISeq = Value
 }
 
 object Direction extends Enumeration {
@@ -244,20 +295,20 @@ trait HasClassName {
 }
 
 trait HasProperties {
-  protected val _properties: mutable.Set[Property] = mutable.Set.empty
+  protected val _properties: mutable.Set[Property[_]] = mutable.Set.empty
 
-  def addProperty(additional: Property): this.type = {
+  def addProperty(additional: Property[_]): this.type = {
     _properties.add(additional)
     this
   }
 
-  def addProperties(additional: Property*): this.type = {
+  def addProperties(additional: Property[_]*): this.type = {
     additional.foreach(addProperty)
     this
   }
 
   /** properties (including potentially inherited properties) */
-  def properties: Seq[Property]
+  def properties: Seq[Property[_]]
 }
 
 trait HasOptionalProtoId {

@@ -81,5 +81,4 @@ class Schema01Test extends AnyWordSpec with Matchers {
     }
   }
 
-
 }

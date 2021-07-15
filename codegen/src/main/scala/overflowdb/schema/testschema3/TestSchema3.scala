@@ -1,7 +1,7 @@
 package overflowdb.schema.testschema3
 
 import overflowdb.codegen.CodeGen
-import overflowdb.schema.{Cardinality, SchemaBuilder}
+import overflowdb.schema.{Property, SchemaBuilder}
 
 import java.io.File
 
@@ -12,7 +12,7 @@ object TestSchema3 extends App {
   // node types
   val outer = builder.addNodeType("OUTER", "outer node")
   val inner = builder.addNodeType("INNER", "contained inner node")
-  outer.addContainedNode(inner, "innerFoo", Cardinality.ISeq)
+  outer.addContainedNode(inner, "innerFoo", Property.Cardinality.ISeq)
 
   new CodeGen(builder.build).run(new File("target"))
 }

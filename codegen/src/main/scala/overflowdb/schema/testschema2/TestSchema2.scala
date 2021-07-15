@@ -2,7 +2,8 @@ package overflowdb.schema.testschema2
 
 import java.io.File
 import overflowdb.codegen.CodeGen
-import overflowdb.schema.{Cardinality, Constant, SchemaBuilder}
+import overflowdb.schema.Property.ValueType
+import overflowdb.schema.{Constant, SchemaBuilder}
 import overflowdb.storage.ValueTypes
 
 // TODO create integration test from this
@@ -17,30 +18,21 @@ object Base {
   def apply(builder: SchemaBuilder) = new Schema(builder)
   class Schema(builder: SchemaBuilder) {
 
-    val name = builder
-      .addProperty(
-        name = "NAME",
-        valueType = ValueTypes.STRING,
-        cardinality = Cardinality.One,
+    val name = builder.addProperty("NAME", ValueType.String,
         comment = "Name of represented object, e.g., method name (e.g. \"run\")"
       )
+      .mandatory("<[empty]>")
       .protoId(5)
 
     val order = builder
-      .addProperty(
-        name = "ORDER",
-        valueType = ValueTypes.INTEGER,
-        cardinality = Cardinality.One,
-        comment =
-          "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code"
+      .addProperty("ORDER", ValueType.Int,
+       "General ordering property, such that the children of each AST-node are typically numbered from 1, ..., N (this is not enforced). The ordering has no technical meaning, but is used for pretty printing and OUGHT TO reflect order in the source code"
       )
+      .mandatory(default = 0)
       .protoId(4)
 
     val localName = builder
-      .addProperty(
-        name = "LOCAL_NAME",
-        valueType = ValueTypes.STRING,
-        cardinality = Cardinality.ZeroOrOne,
+      .addProperty("LOCAL_NAME", ValueType.String,
         comment = "Local name of referenced CONTAINED node. This key is deprecated."
       )
       .protoId(6)

@@ -1,21 +1,14 @@
+import overflowdb.schema.Property.ValueType
 import overflowdb.schema._
-import overflowdb.storage.ValueTypes
 
 /** For testing base node type functionality, e.g. defining properties and edges on
   * base node types.
   */
 class TestSchema02 extends TestSchema {
-  val name = builder.addProperty(
-    name = "NAME",
-    valueType = ValueTypes.STRING,
-    cardinality = Cardinality.One,
-    comment = "Name of represented object")
+  val name = builder.addProperty("NAME", ValueType.String, "Name of represented object")
+    .mandatory("<[empty]>")
 
-  val order = builder.addProperty(
-    name = "ORDER",
-    valueType = ValueTypes.INTEGER,
-    cardinality = Cardinality.ZeroOrOne,
-    comment = "General ordering property.")
+  val order = builder.addProperty("ORDER", ValueType.Int, "General ordering property.")
 
   val node1Base = builder.addNodeBaseType(
     name = "BASE_NODE",
@@ -44,12 +37,12 @@ class TestSchema02 extends TestSchema {
   node1Base.addOutEdge(
     edge = edge1,
     inNode = node2,
-    cardinalityOut = Cardinality.List,
-    cardinalityIn = Cardinality.ZeroOrOne)
+    cardinalityOut = EdgeType.Cardinality.List,
+    cardinalityIn = EdgeType.Cardinality.ZeroOrOne)
 
   node2.addOutEdge(
     edge = edge2,
     inNode = node1Base,
-    cardinalityOut = Cardinality.One,
-    cardinalityIn = Cardinality.One)
+    cardinalityOut = EdgeType.Cardinality.One,
+    cardinalityIn = EdgeType.Cardinality.One)
 }

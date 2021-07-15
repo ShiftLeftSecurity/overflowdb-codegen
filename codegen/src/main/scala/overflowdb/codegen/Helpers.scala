@@ -2,7 +2,7 @@ package overflowdb.codegen
 
 import overflowdb.algorithm.LowestCommonAncestors
 import overflowdb.schema._
-import overflowdb.storage.ValueTypes
+import overflowdb.schema.Property.ValueType
 
 import scala.annotation.tailrec
 
@@ -37,19 +37,19 @@ object Helpers {
     case nonEmptyString => Some(nonEmptyString)
   }
 
-  def typeFor(valueType: ValueTypes): String = valueType match {
-    case ValueTypes.BOOLEAN => "java.lang.Boolean"
-    case ValueTypes.STRING => "String"
-    case ValueTypes.BYTE => "java.lang.Byte"
-    case ValueTypes.SHORT => "java.lang.Short"
-    case ValueTypes.INTEGER => "java.lang.Integer"
-    case ValueTypes.LONG => "java.lang.Long"
-    case ValueTypes.FLOAT => "java.lang.Float"
-    case ValueTypes.DOUBLE => "java.lang.Double"
-    case ValueTypes.LIST => "java.lang.List[_]"
-    case ValueTypes.NODE_REF => "overflowdb.NodeRef[_]"
-    case ValueTypes.UNKNOWN => "java.lang.Object"
-    case ValueTypes.CHARACTER => "java.lang.Character"
+  def typeFor[A](valueType: ValueType[A]): String = valueType match {
+    case ValueType.Boolean => "Boolean"
+    case ValueType.String => "String"
+    case ValueType.Byte => "Byte"
+    case ValueType.Short => "Short"
+    case ValueType.Int => "Integer"
+    case ValueType.Long => "Long"
+    case ValueType.Float => "Float"
+    case ValueType.Double => "Double"
+    case ValueType.List => "Seq[_]"
+    case ValueType.NodeRef => "overflowdb.NodeRef[_]"
+    case ValueType.Unknown => "java.lang.Object"
+    case ValueType.Char => "Character"
   }
 
   def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
@@ -96,21 +96,14 @@ object Helpers {
     }
   }
 
-  def getHigherType(cardinality: Cardinality): HigherValueType.Value =
-    cardinality match {
-      case Cardinality.One       => HigherValueType.None
-      case Cardinality.ZeroOrOne => HigherValueType.Option
-      case Cardinality.List      => HigherValueType.List
-      case Cardinality.ISeq      => HigherValueType.ISeq
-    }
-
-  def getCompleteType(property: Property): String = {
+  def getCompleteType[A](property: Property[_]): String = {
+    import Property.Cardinality
     val valueType = typeFor(property.valueType)
-    getHigherType(property.cardinality) match {
-      case HigherValueType.None   => valueType
-      case HigherValueType.Option => s"Option[$valueType]"
-      case HigherValueType.List   => s"Seq[$valueType]"
-      case HigherValueType.ISeq   => s"IndexedSeq[$valueType]"
+    property.cardinality match {
+      case Cardinality.One(_)   => valueType
+      case Cardinality.ZeroOrOne => s"Option[$valueType]"
+      case Cardinality.List   => s"Seq[$valueType]"
+      case Cardinality.ISeq   => s"IndexedSeq[$valueType]"
     }
   }
 
@@ -123,41 +116,68 @@ object Helpers {
     }
 
     containedNode.cardinality match {
-      case Cardinality.ZeroOrOne => s"Option[$tpe]"
-      case Cardinality.One       => tpe
-      case Cardinality.List      => s"Seq[$tpe]"
-      case Cardinality.ISeq => s"IndexedSeq[$tpe]"
+      case Property.Cardinality.ZeroOrOne => s"Option[$tpe]"
+      case Property.Cardinality.One(_)    => tpe
+      case Property.Cardinality.List      => s"Seq[$tpe]"
+      case Property.Cardinality.ISeq => s"IndexedSeq[$tpe]"
     }
   }
 
-  def propertyBasedFields(properties: Seq[Property]): String = {
-    properties.map { property =>
-      val publicName = camelCase(property.name)
-      val fieldName = s"_$publicName"
-      val (publicType, tpeForField, fieldAccessor, defaultValue) = {
-        val valueType = typeFor(property.valueType)
-        getHigherType(property.cardinality) match {
-          case HigherValueType.None   => (valueType, valueType, fieldName, "null")
-          case HigherValueType.Option => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
-          case HigherValueType.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
-          case HigherValueType.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
-        }
-      }
-
-      s"""private var $fieldName: $tpeForField = $defaultValue
-         |def $publicName: $publicType = $fieldAccessor""".stripMargin
-    }.mkString("\n\n")
-  }
-
-  def propertyKeyDef(name: String, baseType: String, cardinality: Cardinality) = {
+  def propertyKeyDef(name: String, baseType: String, cardinality: Property.Cardinality) = {
     val completeType = cardinality match {
-      case Cardinality.One       => baseType
-      case Cardinality.ZeroOrOne => baseType
-      case Cardinality.List      => s"Seq[$baseType]"
-      case Cardinality.ISeq=> s"IndexedSeq[$baseType]"
+      case Property.Cardinality.One(_)    => baseType
+      case Property.Cardinality.ZeroOrOne => baseType
+      case Property.Cardinality.List      => s"Seq[$baseType]"
+      case Property.Cardinality.ISeq=> s"IndexedSeq[$baseType]"
     }
     s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }
+
+  def defaultValueImpl[A](default: Property.Default[A]): String =
+    default.value match {
+      case str: String => s"\"$str\""
+      case char: Char => s"'$char'"
+      case byte: Byte => s"$byte: Byte"
+      case short: Short => s"$short: Short"
+      case int: Int => s"$int: Int"
+      case long: Long => s"$long: Long"
+      case float: Float if float.isNaN => "Float.NaN"
+      case float: Float => s"${float}f"
+      case double: Double if double.isNaN => "Double.NaN"
+      case double: Double => s"${double}d"
+      case other => s"$other"
+    }
+
+  def defaultValueCheckImpl[A](memberName: String, default: Property.Default[A]): String = {
+    val defaultValueSrc = defaultValueImpl(default)
+    default.value match {
+      case float: Float if float.isNaN => s"$memberName.isNaN"
+      case double: Double if double.isNaN => s"$memberName.isNaN"
+      case _ => s"($defaultValueSrc) == $memberName"
+    }
+  }
+
+  def propertyDefaultValueImpl(properties: Seq[Property[_]]): String = {
+    val propertyDefaultValueCases = properties.collect {
+      case property if property.hasDefault =>
+        s"""case "${property.name}" => PropertyDefaults.${property.className}"""
+    }.mkString("\n|    ")
+
+
+    s"""
+       |  override def propertyDefaultValue(propertyKey: String) =
+       |    propertyKey match {
+       |      $propertyDefaultValueCases
+       |      case _ => super.propertyDefaultValue(propertyKey)
+       |  }
+       |""".stripMargin
+  }
+
+  def propertyDefaultCases(properties: Seq[Property[_]]): String =
+    properties.collect {
+      case p if p.hasDefault =>
+        s"""val ${p.className} = ${defaultValueImpl(p.default.get)}"""
+    }.mkString("\n|    ")
 
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {
@@ -189,13 +209,12 @@ object Helpers {
     if (scalaReservedKeywords.contains(value)) s"`$value`"
     else value
 
-  def fullScalaType(neighborNode: AbstractNodeType, cardinality: Cardinality): String = {
+  def fullScalaType(neighborNode: AbstractNodeType, cardinality: EdgeType.Cardinality): String = {
     val neighborNodeClass = neighborNode.className
     cardinality match {
-      case Cardinality.List => s"overflowdb.traversal.Traversal[$neighborNodeClass]"
-      case Cardinality.ZeroOrOne => s"Option[$neighborNodeClass]"
-      case Cardinality.One => s"$neighborNodeClass"
-      case Cardinality.ISeq => ???
+      case EdgeType.Cardinality.List => s"overflowdb.traversal.Traversal[$neighborNodeClass]"
+      case EdgeType.Cardinality.ZeroOrOne => s"Option[$neighborNodeClass]"
+      case EdgeType.Cardinality.One => s"$neighborNodeClass"
     }
   }
 

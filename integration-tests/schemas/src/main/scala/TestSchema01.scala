@@ -1,30 +1,17 @@
+import overflowdb.schema.Property.ValueType
 import overflowdb.schema._
-import overflowdb.storage.ValueTypes
 
 class TestSchema01 extends TestSchema {
-  val name = builder.addProperty(
-    name = "NAME",
-    valueType = ValueTypes.STRING,
-    cardinality = Cardinality.One,
-    comment = "Name of represented object")
+  val name = builder.addProperty("NAME", ValueType.String, "Name of represented object")
+    .mandatory("<[empty]>")
 
-  val order = builder.addProperty(
-    name = "ORDER",
-    valueType = ValueTypes.INTEGER,
-    cardinality = Cardinality.ZeroOrOne,
-    comment = "General ordering property.")
+  val order = builder.addProperty("ORDER", ValueType.Int, "General ordering property.")
 
-  val options = builder.addProperty(
-    name = "OPTIONS",
-    valueType = ValueTypes.STRING,
-    cardinality = Cardinality.List,
-    comment = "Options of a node")
+  val options = builder.addProperty("OPTIONS", ValueType.String, "Options of a node")
+    .asList()
 
-  val placements = builder.addProperty(
-    name = "PLACEMENTS",
-    valueType = ValueTypes.INTEGER,
-    cardinality = Cardinality.ISeq,
-    comment = "placements in some league")
+  val placements = builder.addProperty("PLACEMENTS", ValueType.Int, "placements in some league")
+    .asIndexedList()
 
   val node1 = builder.addNodeType(
     name = "NODE1",
@@ -41,7 +28,7 @@ class TestSchema01 extends TestSchema {
     comment = "sample node 3"
   )
 
-  node2.addContainedNode(node3, "node3", Cardinality.ZeroOrOne)
+  node2.addContainedNode(node3, "node3", Property.Cardinality.ZeroOrOne)
 
   val edge1 = builder.addEdgeType(
     name = "EDGE1",
@@ -55,12 +42,12 @@ class TestSchema01 extends TestSchema {
   node1.addOutEdge(
     edge = edge1,
     inNode = node2,
-    cardinalityOut = Cardinality.List,
-    cardinalityIn = Cardinality.ZeroOrOne)
+    cardinalityOut = EdgeType.Cardinality.List,
+    cardinalityIn = EdgeType.Cardinality.ZeroOrOne)
 
   node2.addOutEdge(
     edge = edge2,
     inNode = node1,
-    cardinalityOut = Cardinality.One,
-    cardinalityIn = Cardinality.One)
+    cardinalityOut = EdgeType.Cardinality.One,
+    cardinalityIn = EdgeType.Cardinality.One)
 }
