@@ -160,10 +160,10 @@ object Helpers {
     }
   }
 
-  def propertyDefaultValueImpl(properties: Seq[Property[_]]): String = {
+  def propertyDefaultValueImpl(propertyDefaultsPath: String, properties: Seq[Property[_]]): String = {
     val propertyDefaultValueCases = properties.collect {
       case property if property.hasDefault =>
-        s"""case "${property.name}" => PropertyDefaults.${property.className}"""
+        s"""case "${property.name}" => $propertyDefaultsPath.${property.className}"""
     }.mkString("\n|    ")
 
     s"""

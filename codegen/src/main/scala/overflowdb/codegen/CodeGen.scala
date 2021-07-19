@@ -211,14 +211,14 @@ class CodeGen(schema: Schema) {
         }.mkString("\n\n")
       }
 
+      val propertyDefaultValues = propertyDefaultValueImpl(s"$edgeClassName.PropertyDefaults", properties)
       val classImpl =
         s"""class $edgeClassName(_graph: Graph, _outNode: NodeRef[NodeDb], _inNode: NodeRef[NodeDb])
            |extends Edge(_graph, $edgeClassName.Label, _outNode, _inNode, $edgeClassName.PropertyNames.allAsJava) {
-           |import $edgeClassName._
            |
            |  ${propertyBasedFieldAccessors(properties)}
            |
-           |  ${propertyDefaultValueImpl(properties)}
+           |  $propertyDefaultValues
            |
            |}
            |""".stripMargin
@@ -807,13 +807,14 @@ class CodeGen(schema: Schema) {
           s"""  override def $name: ${getCompleteType(key)} = get().$name"""
         }.mkString("\n")
 
+        val propertyDefaultValues = propertyDefaultValueImpl(s"$className.PropertyDefaults", properties)
+
         s"""class $className(graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
            |  with ${className}Base
            |  with StoredNode
            |  $mixinTraits {
-           |  import $className._
            |  $propertyDelegators
-           |  ${propertyDefaultValueImpl(properties)}
+           |  $propertyDefaultValues
            |  $delegatingContainedNodeAccessors
            |  $neighborAccessorDelegators
            |
@@ -928,7 +929,7 @@ class CodeGen(schema: Schema) {
             val valueType = typeFor(property)
             property.cardinality match {
               case Cardinality.One(_)  =>
-                (valueType, valueType, fieldName, s"PropertyDefaults.${property.className}")
+                (valueType, valueType, fieldName, s"$className.PropertyDefaults.${property.className}")
               case Cardinality.ZeroOrOne => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
               case Cardinality.List   => (s"Seq[$valueType]", s"Seq[$valueType]", fieldName, "Nil")
               case Cardinality.ISeq   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
@@ -943,7 +944,6 @@ class CodeGen(schema: Schema) {
       val classImpl =
         s"""class $classNameDb(ref: NodeRef[NodeDb]) extends NodeDb(ref) with StoredNode
            |  $mixinTraits with ${className}Base {
-           |  import $className._
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
