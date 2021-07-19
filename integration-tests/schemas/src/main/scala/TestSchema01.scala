@@ -7,11 +7,8 @@ class TestSchema01 extends TestSchema {
 
   val order = builder.addProperty("ORDER", ValueType.Int, "General ordering property.")
 
-  val options = builder.addProperty("OPTIONS", ValueType.String, "Options of a node")
-    .asList()
-
-  val placements = builder.addProperty("PLACEMENTS", ValueType.Int, "placements in some league")
-    .asIndexedList()
+  val options = builder.addProperty("OPTIONS", ValueType.String, "Options of a node").asList()
+  val placements = builder.addProperty("PLACEMENTS", ValueType.Int, "placements in some league").asIndexedList()
 
   val node1 = builder.addNodeType(
     name = "NODE1",
