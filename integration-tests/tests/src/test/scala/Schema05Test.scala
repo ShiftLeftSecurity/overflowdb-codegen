@@ -23,7 +23,6 @@ class Schema05Test extends AnyWordSpec with Matchers {
     node1.int shouldBe None
     node1.long shouldBe None
     node1.float shouldBe None
-    node1.double shouldBe None
     node1.char shouldBe None
     node1.propertiesMap.isEmpty shouldBe true
 
@@ -34,7 +33,6 @@ class Schema05Test extends AnyWordSpec with Matchers {
     edge1.int shouldBe None
     edge1.long shouldBe None
     edge1.float shouldBe None
-    edge1.double shouldBe None
     edge1.char shouldBe None
     edge1.propertiesMap.isEmpty shouldBe true
 
@@ -56,7 +54,6 @@ class Schema05Test extends AnyWordSpec with Matchers {
       Properties.INT.of(102),
       Properties.LONG.of(103),
       Properties.FLOAT.of(104.4f),
-      Properties.DOUBLE.of(105.5),
       Properties.CHAR.of('Z'),
     )
     properties.foreach(node1.setProperty)
@@ -69,7 +66,6 @@ class Schema05Test extends AnyWordSpec with Matchers {
     node1.int shouldBe Some(102)
     node1.long shouldBe Some(103)
     node1.float shouldBe Some(104.4f)
-    node1.double shouldBe Some(105.5)
     node1.char shouldBe Some('Z')
     node1.propertyKeys().contains("STR") shouldBe true
     node1.property(Node1.Properties.Str) shouldBe "foo"
@@ -83,7 +79,6 @@ class Schema05Test extends AnyWordSpec with Matchers {
     edge1.int shouldBe Some(102)
     edge1.long shouldBe Some(103)
     edge1.float shouldBe Some(104.4f)
-    edge1.double shouldBe Some(105.5)
     edge1.char shouldBe Some('Z')
     edge1.propertyKeys().contains("STR") shouldBe true
     edge1.property(Node1.Properties.Str) shouldBe "foo"
