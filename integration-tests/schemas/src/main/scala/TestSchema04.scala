@@ -20,6 +20,9 @@ class TestSchema04 extends TestSchema {
   val node1 = builder.addNodeType("NODE1")
     .addProperties(bool, string, byte, short, int, long, float1, float2, double1, double2, char, intList, intIndexedList)
 
+  // TODO use same `mandatory` and not-null api as for regular properties. for now, staying with nullable contained nodes as before
+  node1.addContainedNode(node1, "node1Inner", Cardinality.One(Default(null)))
+
   val edge1 = builder.addEdgeType("EDGE1")
     .addProperties(bool, string, byte, short, int, long, float1, float2, double1, double2, char, intList, intIndexedList)
 

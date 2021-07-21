@@ -582,17 +582,16 @@ class CodeGen(schema: Schema) {
           }
         }.mkString("\n")
 
-        val putRefsImpl = {
+        val putContainedNodesImpl = {
           nodeType.containedNodes.map { cnt =>
             val memberName = cnt.localName
             cnt.cardinality match {
-              case Cardinality.One(default) =>
-                val isDefaultValueImpl = defaultValueCheckImpl(s"this._$memberName", default)
-                s"""   if (!($isDefaultValueImpl)) { properties.put("${memberName}", this._$memberName) }"""
+              case Cardinality.One(_) =>
+                s"""properties.put("$memberName", this._$memberName)"""
               case Cardinality.ZeroOrOne =>
-                s"""   $memberName.map { value => properties.put("${memberName}", value) }"""
+                s"""   $memberName.map { value => properties.put("$memberName", value) }"""
               case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
-                s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${memberName}", this.$memberName.asJava) }"""
+                s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("$memberName", this.$memberName.asJava) }"""
             }
           }
         }.mkString("\n")
@@ -600,7 +599,7 @@ class CodeGen(schema: Schema) {
         s""" {
            |  val properties = new java.util.HashMap[String, Any]
            |$putKeysImpl
-           |$putRefsImpl
+           |$putContainedNodesImpl
            |  properties
            |}""".stripMargin
       }
@@ -620,9 +619,26 @@ class CodeGen(schema: Schema) {
           }
         }.mkString("\n")
 
+        val putContainedNodesImpl = {
+          nodeType.containedNodes.map { cnt =>
+            val memberName = cnt.localName
+            cnt.cardinality match {
+              case Cardinality.One(default) =>
+                val isDefaultValueImpl = defaultValueCheckImpl(s"this._$memberName", default)
+                s"""   if (!($isDefaultValueImpl)) { properties.put("$memberName", this._$memberName) }"""
+              case Cardinality.ZeroOrOne =>
+                s"""   $memberName.map { value => properties.put("$memberName", value) }"""
+              case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
+                s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("$memberName", this.$memberName.asJava) }"""
+            }
+          }
+        }.mkString("\n")
+
+
         s""" {
            |  val properties = new java.util.HashMap[String, Any]
            |$putKeysImpl
+           |$putContainedNodesImpl
            |  properties
            |}""".stripMargin
       }
