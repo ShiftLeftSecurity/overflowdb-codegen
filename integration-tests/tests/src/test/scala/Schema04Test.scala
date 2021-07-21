@@ -25,6 +25,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.long shouldBe 4
     node1.float1 shouldBe 5.5f
     node1.float2.isNaN shouldBe true
+    node1.double1 shouldBe 6.6
+    node1.double2.isNaN shouldBe true
     node1.char shouldBe '?'
     node1.intList.size shouldBe 0
     node1.intListIndexed.size shouldBe 0
@@ -45,6 +47,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
     edge1.long shouldBe 4
     edge1.float1 shouldBe 5.5f
     edge1.float2.isNaN shouldBe true
+    edge1.double1 shouldBe 6.6
+    edge1.double2.isNaN shouldBe true
     edge1.char shouldBe '?'
     edge1.intList.size shouldBe 0
     edge1.intListIndexed.size shouldBe 0
@@ -80,6 +84,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
       Properties.LONG.of(103),
       Properties.FLOAT1.of(Float.NaN),
       Properties.FLOAT2.of(104.4f),
+      Properties.DOUBLE1.of(Double.NaN),
+      Properties.DOUBLE2.of(105.5),
       Properties.CHAR.of('Z'),
       // TODO bring back in, this doesn't currently work with persistence...
 //      Properties.INT_LIST.of(Seq(3,4,5)),
@@ -106,6 +112,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
       node1.long shouldBe 103
       node1.float1.isNaN shouldBe true
       node1.float2 shouldBe 104.4f
+      node1.double1.isNaN shouldBe true
+      node1.double2 shouldBe 105.5
       node1.char shouldBe 'Z'
       // TODO bring back in, this doesn't currently work with persistence...
 //      node1.intList shouldBe Seq(3, 4, 5)
@@ -127,6 +135,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
       edge1.long shouldBe 103
       edge1.float1.isNaN shouldBe true
       edge1.float2 shouldBe 104.4f
+      edge1.double1.isNaN shouldBe true
+      edge1.double2 shouldBe 105.5
       edge1.char shouldBe 'Z'
       // TODO handle later in separate PR
       //    edge1.intList shouldBe Seq(3, 4, 5)
