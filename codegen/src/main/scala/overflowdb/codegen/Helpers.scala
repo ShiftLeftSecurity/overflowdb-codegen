@@ -47,6 +47,7 @@ object Helpers {
       case ValueType.Int => if (isMandatory) "scala.Int" else "Integer"
       case ValueType.Long => if (isMandatory) "Long" else "java.lang.Long"
       case ValueType.Float => if (isMandatory) "Float" else "java.lang.Float"
+      case ValueType.Double => if (isMandatory) "Double" else "java.lang.Double"
       case ValueType.Char => if (isMandatory) "scala.Char" else "Character"
       case ValueType.List => "Seq[_]"
       case ValueType.NodeRef => "overflowdb.NodeRef[_]"
