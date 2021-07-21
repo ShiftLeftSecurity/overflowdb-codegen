@@ -9,14 +9,13 @@ class TestSchema05 extends TestSchema {
   val int  = builder.addProperty("INT", ValueType.Int)
   val long = builder.addProperty("LONG", ValueType.Long)
   val float = builder.addProperty("FLOAT", ValueType.Float)
-  val double = builder.addProperty("DOUBLE", ValueType.Double)
   val char = builder.addProperty("CHAR", ValueType.Char)
 
   val node1 = builder.addNodeType("NODE1")
-    .addProperties(bool, string, byte, short, int, long, float, double, char)
+    .addProperties(bool, string, byte, short, int, long, float, char)
 
   val edge1 = builder.addEdgeType("EDGE1")
-    .addProperties(bool, string, byte, short, int, long, float, double, char)
+    .addProperties(bool, string, byte, short, int, long, float, char)
 
   node1.addOutEdge(edge1, node1)
 }

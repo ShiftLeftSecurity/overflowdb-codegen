@@ -207,7 +207,6 @@ object Property {
     object Int extends ValueType[Int](INTEGER)
     object Long extends ValueType[Long](LONG)
     object Float extends ValueType[Float](FLOAT)
-    object Double extends ValueType[Double](DOUBLE)
     object List extends ValueType[Seq[_]](LIST)
     object Char extends ValueType[Char](CHARACTER)
     object NodeRef extends ValueType[NodeRef[_]](NODE_REF)
