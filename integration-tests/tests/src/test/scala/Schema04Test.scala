@@ -6,7 +6,6 @@ import testschema04._
 import testschema04.edges._
 import testschema04.nodes._
 import testschema04.traversal._
-import java.nio.file.Files
 
 class Schema04Test extends AnyWordSpec with Matchers {
 
@@ -30,7 +29,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.char shouldBe '?'
     node1.intList.size shouldBe 0
     node1.intListIndexed.size shouldBe 0
-    node1.node1Inner shouldBe null // TODO use same `mandatory` and not-null api as for regular properties. for now, staying with nullable contained nodes as before
     node1.propertyKeys().contains("STR") shouldBe true
     node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
     node1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
@@ -68,11 +66,9 @@ class Schema04Test extends AnyWordSpec with Matchers {
   }
 
   "defined property values" in {
-    val storageLocation = Files.createTempFile("overflowdb-codegen-tests", "odb.bin")
-    def openGraph() = Graph.open(Config.withDefaults.withStorageLocation(storageLocation.toString), nodes.Factories.allAsJava, edges.Factories.allAsJava)
-    val graph = openGraph()
+    val graph = Graph.open(Config.withDefaults, nodes.Factories.allAsJava, edges.Factories.allAsJava)
 
-    val node1 = graph.addNode(Node1.Label)
+    val node1 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val edge1 = node1.addEdge(Edge1.Label, node2).asInstanceOf[Edge1]
     val properties = Seq(
@@ -87,9 +83,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
       Properties.DOUBLE1.of(Double.NaN),
       Properties.DOUBLE2.of(105.5),
       Properties.CHAR.of('Z'),
-      // TODO bring back in, this doesn't currently work with persistence...
-//      Properties.INT_LIST.of(Seq(3,4,5)),
-//      Properties.INT_LIST_INDEXED.of(IndexedSeq(7,8,9)),
+      Properties.INT_LIST.of(Seq(3,4,5)),
+      Properties.INT_LIST_INDEXED.of(IndexedSeq(7,8,9))
     )
     properties.foreach(node1.setProperty)
     properties.foreach(edge1.setProperty)
@@ -150,14 +145,33 @@ class Schema04Test extends AnyWordSpec with Matchers {
 
       def node1Trav = graph.nodes(Node1.Label).cast[Node1]
 
-      def edge1Trav = graph.edges(Edge1.Label).cast[Edge1]
+    edge1.bool shouldBe false
+    edge1.str shouldBe "foo"
+    edge1.byte shouldBe 100
+    edge1.short shouldBe 101
+    edge1.int shouldBe 102
+    edge1.long shouldBe 103
+    edge1.float1.isNaN shouldBe true
+    edge1.float2 shouldBe 104.4f
+    edge1.double1.isNaN shouldBe true
+    edge1.double2 shouldBe 105.5
+    edge1.char shouldBe 'Z'
+    // TODO handle later in separate PR
+//    edge1.intList shouldBe Seq(3, 4, 5)
+//    edge1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
+    edge1.propertyKeys().contains("STR") shouldBe true
+    edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
+    edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
+    edge1.property(Node1.Properties.Str) shouldBe "foo"
+    edge1.property("DOESNT_EXIST") shouldBe null
+    edge1.propertiesMap.get("STR") shouldBe "foo"
 
-      node1Trav.str.head shouldBe "foo"
-      // TODO bring back in, this doesn't currently work with persistence...
-//      node1Trav.intList.l shouldBe Seq(3, 4, 5)
-//      node1Trav.intListIndexed.l shouldBe IndexedSeq(7, 8, 9)
-      node1Trav.property(Node1.Properties.Str).head shouldBe "foo"
-      edge1Trav.property(Edge1.Properties.Str).head shouldBe "foo"
-    }
+    def node1Trav = graph.nodes(Node1.Label).cast[Node1]
+    def edge1Trav = graph.edges(Edge1.Label).cast[Edge1]
+    node1Trav.str.head shouldBe "foo"
+    node1Trav.intList.l shouldBe Seq(3,4,5)
+    node1Trav.intListIndexed.l shouldBe IndexedSeq(7, 8, 9)
+    node1Trav.property(Node1.Properties.Str).head shouldBe "foo"
+    edge1Trav.property(Edge1.Properties.Str).head shouldBe "foo"
   }
 }
