@@ -577,8 +577,8 @@ class CodeGen(schema: Schema) {
               s"""properties.put("${key.name}", $memberName)"""
             case Cardinality.ZeroOrOne =>
               s"""$memberName.map { value => properties.put("${key.name}", value) }"""
-            case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
-              s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName.asJava) }"""
+            case Cardinality.List | Cardinality.ISeq =>
+              s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName) }"""
           }
         }.mkString("\n")
 
@@ -590,8 +590,8 @@ class CodeGen(schema: Schema) {
                 s"""properties.put("$memberName", this._$memberName)"""
               case Cardinality.ZeroOrOne =>
                 s"""   $memberName.map { value => properties.put("$memberName", value) }"""
-              case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
-                s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("$memberName", this.$memberName.asJava) }"""
+              case Cardinality.List | Cardinality.ISeq =>
+                s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("$memberName", this.$memberName) }"""
             }
           }
         }.mkString("\n")
@@ -614,8 +614,8 @@ class CodeGen(schema: Schema) {
               s"""if (!($isDefaultValueImpl)) { properties.put("${key.name}", $memberName) }"""
             case Cardinality.ZeroOrOne =>
               s"""$memberName.map { value => properties.put("${key.name}", value) }"""
-            case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
-              s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName.asJava) }"""
+            case Cardinality.List | Cardinality.ISeq =>
+              s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName) }"""
           }
         }.mkString("\n")
 
@@ -628,8 +628,8 @@ class CodeGen(schema: Schema) {
                 s"""   if (!($isDefaultValueImpl)) { properties.put("$memberName", this._$memberName) }"""
               case Cardinality.ZeroOrOne =>
                 s"""   $memberName.map { value => properties.put("$memberName", value) }"""
-              case Cardinality.List | Cardinality.ISeq => // need java list, e.g. for NodeSerializer
-                s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("$memberName", this.$memberName.asJava) }"""
+              case Cardinality.List | Cardinality.ISeq =>
+                s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("$memberName", this.$memberName) }"""
             }
           }
         }.mkString("\n")
@@ -998,6 +998,13 @@ class CodeGen(schema: Schema) {
            |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameDb]
            |
            |  $propertyImpl
+           |
+           |  override def convertPropertyForStorage(property: Any): Any = {
+           |    property match {
+           |      case coll: IterableOnce[_] => coll.iterator.toBuffer.asJava
+           |      case other => other
+           |    }
+           |  }
            |
            |$updateSpecificPropertyImpl
            |
