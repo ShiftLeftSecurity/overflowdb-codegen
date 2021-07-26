@@ -139,9 +139,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
       edge1.double1.isNaN shouldBe true
       edge1.double2 shouldBe 105.5
       edge1.char shouldBe 'Z'
-      // TODO handle later in separate PR
-      //    edge1.intList shouldBe Seq(3, 4, 5)
-      //    edge1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
+      edge1.intList shouldBe Seq(3, 4, 5)
+      edge1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
       edge1.propertyKeys().contains("STR") shouldBe true
       edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
       edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null

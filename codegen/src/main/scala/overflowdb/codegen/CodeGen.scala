@@ -196,16 +196,24 @@ class CodeGen(schema: Schema) {
             case Cardinality.ZeroOrOne =>
               s"""def $nameCamelCase: $tpe = Option(property("$name")).asInstanceOf[$tpe]""".stripMargin
             case Cardinality.List =>
+              val returnType = s"Seq[${typeFor(property)}]"
               s"""def $nameCamelCase: $tpe = {
-                 |  val p = property("$name")
-                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property)}]].asScala.toSeq
-                 |  else Nil
+                 |  property("$name") match {
+                 |    case null => Nil
+                 |    case seq: Seq[_] => seq.asInstanceOf[$returnType]
+                 |    case iterable: IterableOnce[_] => iterable.iterator.toSeq.asInstanceOf[$returnType]
+                 |    case jList: java.util.List[_] => jList.asScala.toSeq.asInstanceOf[$returnType]
+                 |  }
                  |}""".stripMargin
             case Cardinality.ISeq =>
+              val returnType = s"IndexedSeq[${typeFor(property)}]"
               s"""def $nameCamelCase: $tpe = {
-                 |  val p = property("$name")
-                 |  if (p != null) p.asInstanceOf[java.util.List[${typeFor(property)}]].asScala.to(IndexedSeq)
-                 |  else IndexedSeq.empty
+                 |  property("$name") match {
+                 |    case null => IndexedSeq.empty
+                 |    case seq: IndexedSeq[_] => seq.asInstanceOf[$returnType]
+                 |    case iterable: IterableOnce[_] => iterable.iterator.to(IndexedSeq).asInstanceOf[$returnType]
+                 |    case jList: java.util.List[_] => jList.asScala.to(IndexedSeq).asInstanceOf[$returnType]
+                 |  }
                  |}""".stripMargin
           }
         }.mkString("\n\n")
