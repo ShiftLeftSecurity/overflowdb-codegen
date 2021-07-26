@@ -149,27 +149,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
       edge1.property("DOESNT_EXIST") shouldBe null
       edge1.propertiesMap.get("STR") shouldBe "foo"
 
-      edge1.bool shouldBe false
-      edge1.str shouldBe "foo"
-      edge1.byte shouldBe 100
-      edge1.short shouldBe 101
-      edge1.int shouldBe 102
-      edge1.long shouldBe 103
-      edge1.float1.isNaN shouldBe true
-      edge1.float2 shouldBe 104.4f
-      edge1.double1.isNaN shouldBe true
-      edge1.double2 shouldBe 105.5
-      edge1.char shouldBe 'Z'
-      // TODO handle later in separate PR
-      //    edge1.intList shouldBe Seq(3, 4, 5)
-      //    edge1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
-      edge1.propertyKeys().contains("STR") shouldBe true
-      edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
-      edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
-      edge1.property(Node1.Properties.Str) shouldBe "foo"
-      edge1.property("DOESNT_EXIST") shouldBe null
-      edge1.propertiesMap.get("STR") shouldBe "foo"
-
       def node1Trav = graph.nodes(Node1.Label).cast[Node1]
       def edge1Trav = graph.edges(Edge1.Label).cast[Edge1]
 
