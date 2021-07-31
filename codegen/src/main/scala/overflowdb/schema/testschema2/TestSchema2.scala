@@ -8,7 +8,7 @@ import overflowdb.storage.ValueTypes
 
 // TODO create integration test from this
 object TestSchema2 extends App {
-  val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
+  val builder = new SchemaBuilder("Cpg", "io.shiftleft.codepropertygraph.generated")
   val base = Base(builder)
   val javaSpecific = JavaSpecific(builder, base)
   new CodeGen(builder.build).run(new File("target"))

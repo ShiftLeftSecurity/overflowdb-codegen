@@ -9,7 +9,8 @@ import scala.collection.mutable
 /**
  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
-class Schema(val basePackage: String,
+class Schema(val domainShortName: String,
+             val basePackage: String,
              val properties: Seq[Property[_]],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],

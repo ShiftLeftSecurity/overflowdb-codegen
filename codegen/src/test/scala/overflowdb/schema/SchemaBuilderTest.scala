@@ -28,7 +28,7 @@ class SchemaBuilderTest extends AnyWordSpec {
       (case1, modification1) <- schemaModifications
       (case2, modification2) <- schemaModifications
     } {
-      val builder = new SchemaBuilder("test")
+      val builder = new SchemaBuilder("test", "testpkg")
       modification1(builder)
       modification2(builder)
 

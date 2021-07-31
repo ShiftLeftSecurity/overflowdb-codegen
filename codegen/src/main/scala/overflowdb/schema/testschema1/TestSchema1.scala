@@ -8,7 +8,7 @@ import overflowdb.storage.ValueTypes
 
 // TODO create integration test from this
 object TestSchema1 extends App {
-  val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
+  val builder = new SchemaBuilder("Cpg", "io.shiftleft.codepropertygraph.generated")
 
   implicit val schemaInfo = SchemaInfo.forClass(getClass)
 

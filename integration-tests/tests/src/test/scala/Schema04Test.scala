@@ -37,7 +37,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.property(Node1.Properties.Str) shouldBe "<[empty]>"
     node1.property("DOESNT_EXIST") shouldBe null
     node1.propertiesMap.get("STR") shouldBe "<[empty]>"
-    node1.get.propertiesMapWithoutDefaults.isEmpty shouldBe true
+    node1.get.propertiesMapForStorage.isEmpty shouldBe true
 
     edge1.bool shouldBe true
     edge1.str shouldBe "<[empty]>"
@@ -125,8 +125,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
       node1.property("DOESNT_EXIST") shouldBe null
       node1.propertiesMap.get("STR") shouldBe "foo"
       node1.propertiesMap.get(Node1.PropertyNames.Node1inner) shouldBe node2
-      node1.get.propertiesMapWithoutDefaults.get(PropertyNames.STR) shouldBe "foo"
-      node1.get.propertiesMapWithoutDefaults.get(Node1.PropertyNames.Node1inner) shouldBe node2
+      node1.get.propertiesMapForStorage.get(PropertyNames.STR) shouldBe "foo"
+      node1.get.propertiesMapForStorage.get(Node1.PropertyNames.Node1inner) shouldBe node2
 
       edge1.bool shouldBe false
       edge1.str shouldBe "foo"

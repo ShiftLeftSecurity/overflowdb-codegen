@@ -7,7 +7,7 @@ import java.io.File
 
 // TODO create integration test from this
 object TestSchema3 extends App {
-  val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
+  val builder = new SchemaBuilder("Cpg","io.shiftleft.codepropertygraph.generated")
 
   // node types
   val outer = builder.addNodeType("OUTER", "outer node")

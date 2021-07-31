@@ -24,7 +24,11 @@ class CodeGen(schema: Schema) {
   def run(outputDir: java.io.File): Seq[java.io.File] = {
     warnForDuplicatePropertyDefinitions()
     val _outputDir = outputDir.toScala
-    val results = writeConstants(_outputDir) ++ writeEdgeFiles(_outputDir) ++ writeNodeFiles(_outputDir) ++ writeNodeTraversalFiles(_outputDir) :+ writeNewNodeFile(_outputDir)
+    val results = writeConstants(_outputDir) ++
+      writeEdgeFiles(_outputDir) ++
+      writeNodeFiles(_outputDir) ++
+      writeNodeTraversalFiles(_outputDir) :+
+      writeNewNodeFile(_outputDir)
     println(s"generated ${results.size} files in ${_outputDir}")
     results.map(_.toJava)
   }
@@ -612,7 +616,7 @@ class CodeGen(schema: Schema) {
            |}""".stripMargin
       }
 
-      val propertiesMapWithoutDefaultsImpl = {
+      val propertiesMapForStorageImpl = {
         import Property.Cardinality
         val putKeysImpl = properties.map { key =>
           val memberName = camelCase(key.name)
@@ -980,8 +984,8 @@ class CodeGen(schema: Schema) {
            |    $propertiesMapImpl
            |
            |  /** faster than the default implementation */
-           |  override def propertiesMapWithoutDefaults: java.util.Map[String, Any] =
-           |    $propertiesMapWithoutDefaultsImpl
+           |  override def propertiesMapForStorage: java.util.Map[String, Any] =
+           |    $propertiesMapForStorageImpl
            |
            |
            |  $neighborAccessors
@@ -1006,13 +1010,6 @@ class CodeGen(schema: Schema) {
            |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameDb]
            |
            |  $propertyImpl
-           |
-           |  override def convertPropertyForStorage(property: Any): Any = {
-           |    property match {
-           |      case coll: IterableOnce[_] => coll.iterator.toBuffer.asJava
-           |      case other => other
-           |    }
-           |  }
            |
            |$updateSpecificPropertyImpl
            |
