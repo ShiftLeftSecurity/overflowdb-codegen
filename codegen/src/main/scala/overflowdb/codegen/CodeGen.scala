@@ -24,7 +24,9 @@ class CodeGen(schema: Schema) {
   def run(outputDir: java.io.File): Seq[java.io.File] = {
     warnForDuplicatePropertyDefinitions()
     val _outputDir = outputDir.toScala
-    val results = writeConstants(_outputDir) ++
+    val results =
+      writeStarters(_outputDir) ++
+      writeConstants(_outputDir) ++
       writeEdgeFiles(_outputDir) ++
       writeNodeFiles(_outputDir) ++
       writeNodeTraversalFiles(_outputDir) :+
@@ -45,6 +47,69 @@ class CodeGen(schema: Schema) {
 
     if (warnings.size > 0) println(s"${warnings.size} warnings found:")
     warnings.sorted.foreach(println)
+  }
+
+  protected def writeStarters(outputDir: File): Seq[File] = {
+    val results = mutable.Buffer.empty[File]
+    val baseDir = outputDir / basePackage.replaceAll("\\.", "/")
+    baseDir.createDirectories()
+    val domainShortName = schema.domainShortName
+
+    val domainMain = baseDir.createChild(s"$domainShortName.scala").write(
+      s"""package $basePackage;
+         |
+         |import overflowdb.traversal.help.TraversalHelp
+         |import overflowdb.{Config, Graph}
+         |
+         |object $domainShortName {
+         |
+         |  /**
+         |    * Syntactic sugar for `new $domainShortName(graph)`.
+         |    * Usage:
+         |    *   `$domainShortName(graph)` or simply `$domainShortName` if you have an `implicit Graph` in scope
+         |    */
+         |  def apply(implicit graph: Graph) = new $domainShortName(graph)
+         |
+         |  def empty: $domainShortName =
+         |    new $domainShortName(emptyGraph)
+         |
+         |  /**
+         |    * Instantiate $domainShortName with storage.
+         |    * If the storage file already exists, it will load (a subset of) the data into memory. Otherwise it will create an empty $domainShortName.
+         |    * In either case, configuring storage means that OverflowDb will be stored to disk on shutdown (`close`).
+         |    * I.e. if you want to preserve state between sessions, just use this method to instantiate the $domainShortName and ensure to properly `close` it at the end.
+         |    * @param path to the storage file, e.g. /home/user1/overflowdb.bin
+         |    */
+         |  def withStorage(path: String): $domainShortName =
+         |    new $domainShortName(
+         |      Graph.open(Config.withoutOverflow.withStorageLocation(path),
+         |      nodes.Factories.allAsJava,
+         |      edges.Factories.allAsJava))
+         |
+         |  private def emptyGraph: Graph =
+         |    Graph.open(Config.withoutOverflow, nodes.Factories.allAsJava, edges.Factories.allAsJava)
+         |
+         |}
+         |
+         |
+         |/**
+         |  * Domain-specific wrapper for graph, starting point for traversals.
+         |  * @param graph the underlying graph. An empty graph is created if this parameter is omitted.
+         |  */
+         |class $domainShortName(val graph: Graph = $domainShortName.emptyGraph) extends AutoCloseable {
+         |
+         |  lazy val help: String =
+         |    new TraversalHelp("$basePackage").forTraversalSources
+         |
+         |  override def close(): Unit =
+         |    graph.close
+         |}
+         |
+         |""".stripMargin
+    )
+    results.append(domainMain)
+
+    results.toSeq
   }
 
   protected def writeConstants(outputDir: File): Seq[File] = {

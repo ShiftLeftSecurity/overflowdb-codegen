@@ -12,7 +12,7 @@ import java.nio.file.Files
 class Schema04Test extends AnyWordSpec with Matchers {
 
   "default property values" in {
-    val graph = Graph.open(Config.withDefaults, nodes.Factories.allAsJava, edges.Factories.allAsJava)
+    val graph = TestSchema.empty.graph
 
     val node1 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
@@ -69,7 +69,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
 
   "defined property values" in {
     val storageLocation = Files.createTempFile("overflowdb-codegen-tests", "odb.bin")
-    def openGraph() = Graph.open(Config.withDefaults.withStorageLocation(storageLocation.toString), nodes.Factories.allAsJava, edges.Factories.allAsJava)
+
+    def openGraph(): Graph = TestSchema.withStorage(storageLocation.toString).graph
     val graph = openGraph()
 
     val node1 = graph.addNode(Node1.Label)
