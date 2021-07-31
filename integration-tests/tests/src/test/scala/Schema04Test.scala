@@ -30,7 +30,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.double2.isNaN shouldBe true
     node1.char shouldBe '?'
     node1.intList.size shouldBe 0
-    node1.intListIndexed.size shouldBe 0
     node1.propertyKeys().contains("STR") shouldBe true
     node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
     node1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
@@ -51,7 +50,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
     edge1.double2.isNaN shouldBe true
     edge1.char shouldBe '?'
     edge1.intList.size shouldBe 0
-    edge1.intListIndexed.size shouldBe 0
     edge1.propertyKeys().contains("STR") shouldBe true
     edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
     edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
@@ -89,7 +87,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
       Properties.DOUBLE2.of(105.5),
       Properties.CHAR.of('Z'),
       Properties.INT_LIST.of(Seq(3, 4, 5)),
-      Properties.INT_LIST_INDEXED.of(IndexedSeq(7, 8, 9))
     )
     properties.foreach(node1.setProperty)
     properties.foreach(edge1.setProperty)
@@ -116,7 +113,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
       node1.double2 shouldBe 105.5
       node1.char shouldBe 'Z'
       node1.intList shouldBe Seq(3, 4, 5)
-      node1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
       node1.node1Inner shouldBe node2
       node1.propertyKeys().contains("STR") shouldBe true
       node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
@@ -141,7 +137,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
       edge1.double2 shouldBe 105.5
       edge1.char shouldBe 'Z'
       edge1.intList shouldBe Seq(3, 4, 5)
-      edge1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
       edge1.propertyKeys().contains("STR") shouldBe true
       edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
       edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
@@ -154,7 +149,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
 
       node1Trav.str.head shouldBe "foo"
       node1Trav.intList.l shouldBe Seq(3, 4, 5)
-      node1Trav.intListIndexed.l shouldBe IndexedSeq(7, 8, 9)
       node1Trav.property(Node1.Properties.Str).head shouldBe "foo"
       edge1Trav.property(Edge1.Properties.Str).head shouldBe "foo"
     }

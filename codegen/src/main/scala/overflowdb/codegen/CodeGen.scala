@@ -61,6 +61,7 @@ class CodeGen(schema: Schema) {
          |import java.nio.file.{Path, Paths}
          |import overflowdb.traversal.help.TraversalHelp
          |import overflowdb.{Config, Graph}
+         |import scala.jdk.javaapi.CollectionConverters.asJava
          |
          |object $domainShortName {
          |
@@ -83,9 +84,16 @@ class CodeGen(schema: Schema) {
          |    */
          |  def withStorage(path: Path): $domainShortName =
          |    new $domainShortName(
-         |      Graph.open(Config.withoutOverflow.withStorageLocation(path),
-         |      nodes.Factories.allAsJava,
-         |      edges.Factories.allAsJava))
+         |      Graph.open(
+         |        Config.withoutOverflow.withStorageLocation(path),
+         |        nodes.Factories.allAsJava,
+         |        edges.Factories.allAsJava,
+         |        property => property match {
+         |          case arraySeq: scala.collection.immutable.ArraySeq[_] => arraySeq.unsafeArray
+         |          case coll: IterableOnce[_] => asJava(coll.iterator.toBuffer)
+         |          case other => other
+         |        }
+         |      ))
          |
          |  def withStorage(path: String): $domainShortName =
          |    withStorage(Paths.get(path))
@@ -966,8 +974,10 @@ class CodeGen(schema: Schema) {
               s"value.asInstanceOf[$baseType]"
             case Cardinality.List =>
               s"""value match {
-                 |        case singleValue: $baseType => Seq(singleValue)
                  |        case null | None | Nil => Nil
+                 |        case singleValue: $baseType => Seq(singleValue)
+                 |        case arr: Array[_] if arr.nonEmpty => collection.immutable.ArraySeq.empty
+                 |        case arr: Array[Object] => collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[Seq[$baseType]]
                  |        case jCollection: java.lang.Iterable[_] => jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toList
                  |        case _: Seq[_] => value.asInstanceOf[Seq[$baseType]]
                  |      }""".stripMargin
