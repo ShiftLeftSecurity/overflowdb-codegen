@@ -103,10 +103,9 @@ object Helpers {
     import Property.Cardinality
     val valueType = typeFor(property)
     property.cardinality match {
-      case Cardinality.One(_)   => valueType
+      case Cardinality.One(_)    => valueType
       case Cardinality.ZeroOrOne => s"Option[$valueType]"
-      case Cardinality.List   => s"Seq[$valueType]"
-      case Cardinality.ISeq   => s"IndexedSeq[$valueType]"
+      case Cardinality.List      => s"IndexedSeq[$valueType]"
     }
   }
 
@@ -121,8 +120,7 @@ object Helpers {
     containedNode.cardinality match {
       case Property.Cardinality.ZeroOrOne => s"Option[$tpe]"
       case Property.Cardinality.One(_)    => tpe
-      case Property.Cardinality.List      => s"Seq[$tpe]"
-      case Property.Cardinality.ISeq => s"IndexedSeq[$tpe]"
+      case Property.Cardinality.List      => s"IndexedSeq[$tpe]"
     }
   }
 
@@ -130,8 +128,7 @@ object Helpers {
     val completeType = cardinality match {
       case Property.Cardinality.One(_)    => baseType
       case Property.Cardinality.ZeroOrOne => baseType
-      case Property.Cardinality.List      => s"Seq[$baseType]"
-      case Property.Cardinality.ISeq=> s"IndexedSeq[$baseType]"
+      case Property.Cardinality.List      => s"IndexedSeq[$baseType]"
     }
     s"""val ${camelCaseCaps(name)} = new overflowdb.PropertyKey[$completeType]("$name") """
   }

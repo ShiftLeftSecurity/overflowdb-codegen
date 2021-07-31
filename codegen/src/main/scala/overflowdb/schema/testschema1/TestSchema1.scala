@@ -48,7 +48,7 @@ object TestSchema1 extends App {
   val edgekey1Lst = builder
     .addProperty("EDGEKEY_1_LST", ValueType.Int,
       comment = "test list edge key"
-    ).asIndexedList()
+    ).asList()
     .protoId(6999)
 
   // edge types

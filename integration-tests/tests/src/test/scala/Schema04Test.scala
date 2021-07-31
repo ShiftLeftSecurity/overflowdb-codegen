@@ -8,6 +8,7 @@ import testschema04.nodes._
 import testschema04.traversal._
 
 import java.nio.file.Files
+import scala.collection.immutable.ArraySeq
 
 class Schema04Test extends AnyWordSpec with Matchers {
 
@@ -86,7 +87,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
       Properties.DOUBLE1.of(Double.NaN),
       Properties.DOUBLE2.of(105.5),
       Properties.CHAR.of('Z'),
-      Properties.INT_LIST.of(Seq(3, 4, 5)),
+      Properties.INT_LIST.of(ArraySeq(3, 4, 5)),
     )
     properties.foreach(node1.setProperty)
     properties.foreach(edge1.setProperty)
