@@ -70,7 +70,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
   "defined property values" in {
     val storageLocation = Files.createTempFile("overflowdb-codegen-tests", "odb.bin")
 
-    def openGraph(): Graph = TestSchema.withStorage(storageLocation.toString).graph
+    def openGraph(): Graph = TestSchema.withStorage(storageLocation).graph
     val graph = openGraph()
 
     val node1 = graph.addNode(Node1.Label)

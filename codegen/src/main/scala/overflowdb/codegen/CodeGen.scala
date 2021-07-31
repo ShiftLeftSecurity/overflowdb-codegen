@@ -58,6 +58,7 @@ class CodeGen(schema: Schema) {
     val domainMain = baseDir.createChild(s"$domainShortName.scala").write(
       s"""package $basePackage;
          |
+         |import java.nio.file.{Path, Paths}
          |import overflowdb.traversal.help.TraversalHelp
          |import overflowdb.{Config, Graph}
          |
@@ -80,11 +81,14 @@ class CodeGen(schema: Schema) {
          |    * I.e. if you want to preserve state between sessions, just use this method to instantiate the $domainShortName and ensure to properly `close` it at the end.
          |    * @param path to the storage file, e.g. /home/user1/overflowdb.bin
          |    */
-         |  def withStorage(path: String): $domainShortName =
+         |  def withStorage(path: Path): $domainShortName =
          |    new $domainShortName(
          |      Graph.open(Config.withoutOverflow.withStorageLocation(path),
          |      nodes.Factories.allAsJava,
          |      edges.Factories.allAsJava))
+         |
+         |  def withStorage(path: String): $domainShortName =
+         |    withStorage(Paths.get(path))
          |
          |  private def emptyGraph: Graph =
          |    Graph.open(Config.withoutOverflow, nodes.Factories.allAsJava, edges.Factories.allAsJava)
