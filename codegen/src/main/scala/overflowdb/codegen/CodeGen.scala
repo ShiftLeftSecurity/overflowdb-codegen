@@ -90,7 +90,7 @@ class CodeGen(schema: Schema) {
          |        edges.Factories.allAsJava,
          |        property => property match {
          |          case arraySeq: scala.collection.immutable.ArraySeq[_] => arraySeq.unsafeArray
-         |          case coll: IterableOnce[_] => asJava(coll.iterator.toBuffer)
+         |          case coll: IterableOnce[Any] => asJava(coll.iterator.toArray)
          |          case other => other
          |        }
          |      ))
@@ -187,7 +187,7 @@ class CodeGen(schema: Schema) {
         val completeType = cardinality match {
           case Cardinality.One(_) => valueType
           case Cardinality.ZeroOrOne => valueType
-          case Cardinality.List => s"scala.collection.immutable.ArraySeq<$valueType>"
+          case Cardinality.List => s"scala.collection.IndexedSeq<$valueType>"
         }
         s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
       }
@@ -772,7 +772,7 @@ class CodeGen(schema: Schema) {
                    |      case _ => throw new MatchError("unreachable")
                    |    }}.toArray
                    |
-                   |  this._$memberName = if(arr == null) collection.immutable.ArraySeq.empty
+                   |  this._$memberName = if(arr == null) IndexedSeq.empty
                    |    else collection.immutable.ArraySeq.unsafeWrapArray(arr)
                    |}""".stripMargin
             }
@@ -808,8 +808,8 @@ class CodeGen(schema: Schema) {
                    |""".stripMargin
               case Cardinality.List =>
                 s"""
-                   |private var _${containedNode.localName}: collection.immutable.ArraySeq[$containedNodeType] = collection.immutable.ArraySeq.empty
-                   |def ${containedNode.localName}: collection.immutable.IndexedSeq[$containedNodeType] = this._${containedNode.localName}
+                   |private var _${containedNode.localName}: IndexedSeq[$containedNodeType] = IndexedSeq.empty
+                   |def ${containedNode.localName}: IndexedSeq[$containedNodeType] = this._${containedNode.localName}
                    |""".stripMargin
             }
           }
@@ -947,15 +947,20 @@ class CodeGen(schema: Schema) {
             case Cardinality.One(_) | Cardinality.ZeroOrOne =>
               s"value.asInstanceOf[$baseType]"
             case Cardinality.List =>
-              val arraySeq = "collection.immutable.ArraySeq"
               s"""value match {
-                 |        case null | None | Nil => $arraySeq.empty
-                 |        case singleValue: $baseType => $arraySeq(singleValue)
-                 |        case arr: Array[_] if arr.isEmpty => $arraySeq.empty
-                 |        case arr: Array[Object] => $arraySeq.unsafeWrapArray(arr).asInstanceOf[$arraySeq[$baseType]]
-                 |        case jCollection: java.lang.Iterable[_] => if(jCollection.iterator.hasNext()) $arraySeq.unsafeWrapArray(jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toArray) else $arraySeq.empty
-                 |        case iter: Iterable[_] => if(iter.nonEmpty) $arraySeq.unsafeWrapArray(iter.asInstanceOf[Iterable[$baseType]].toArray) else $arraySeq.empty
-                 |        case _: IndexedSeq[_] => value.asInstanceOf[IndexedSeq[$baseType]]
+                 |        case null => IndexedSeq.empty
+                 |        case coll: IterableOnce[Any] if coll.isEmpty => IndexedSeq.empty
+                 |        case arr: Array[_] if arr.isEmpty => IndexedSeq.empty
+                 |        case arr: Array[Object] => collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[IndexedSeq[$baseType]]
+                 |        case jCollection: java.lang.Iterable[_]  =>
+                 |          if (jCollection.iterator.hasNext) {
+                 |            collection.immutable.ArraySeq.unsafeWrapArray(
+                 |              jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toArray)
+                 |          } else IndexedSeq.empty
+                 |        case iter: Iterable[_] =>
+                 |          if(iter.nonEmpty) {
+                 |            collection.immutable.ArraySeq.unsafeWrapArray(iter.asInstanceOf[Iterable[$baseType]].toArray)
+                 |          } else IndexedSeq.empty
                  |      }""".stripMargin
           }
           s"""|      case "$name" => this._$accessorName = $setter"""
