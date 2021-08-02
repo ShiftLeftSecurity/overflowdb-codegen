@@ -37,19 +37,22 @@ object Helpers {
     case nonEmptyString => Some(nonEmptyString)
   }
 
-  def typeFor[A](valueType: ValueType[A]): String = valueType match {
-    case ValueType.Boolean => "Boolean"
-    case ValueType.String => "String"
-    case ValueType.Byte => "Byte"
-    case ValueType.Short => "Short"
-    case ValueType.Int => "Integer"
-    case ValueType.Long => "Long"
-    case ValueType.Float => "Float"
-    case ValueType.Double => "Double"
-    case ValueType.List => "Seq[_]"
-    case ValueType.NodeRef => "overflowdb.NodeRef[_]"
-    case ValueType.Unknown => "java.lang.Object"
-    case ValueType.Char => "Character"
+  def typeFor[A](property: Property[A]): String = {
+    val isMandatory = property.isMandatory
+    property.valueType match {
+      case ValueType.Boolean => if (isMandatory) "Boolean" else "java.lang.Boolean"
+      case ValueType.String => "String"
+      case ValueType.Byte => if (isMandatory) "Byte" else "java.lang.Byte"
+      case ValueType.Short => if (isMandatory) "Short" else "java.lang.Short"
+      case ValueType.Int => if (isMandatory) "scala.Int" else "Integer"
+      case ValueType.Long => if (isMandatory) "Long" else "java.lang.Long"
+      case ValueType.Float => if (isMandatory) "Float" else "java.lang.Float"
+      case ValueType.Double => if (isMandatory) "Double" else "java.lang.Double"
+      case ValueType.Char => if (isMandatory) "scala.Char" else "Character"
+      case ValueType.List => "Seq[_]"
+      case ValueType.NodeRef => "overflowdb.NodeRef[_]"
+      case ValueType.Unknown => "java.lang.Object"
+    }
   }
 
   def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
@@ -98,7 +101,7 @@ object Helpers {
 
   def getCompleteType[A](property: Property[_]): String = {
     import Property.Cardinality
-    val valueType = typeFor(property.valueType)
+    val valueType = typeFor(property)
     property.cardinality match {
       case Cardinality.One(_)   => valueType
       case Cardinality.ZeroOrOne => s"Option[$valueType]"
@@ -157,12 +160,11 @@ object Helpers {
     }
   }
 
-  def propertyDefaultValueImpl(properties: Seq[Property[_]]): String = {
+  def propertyDefaultValueImpl(propertyDefaultsPath: String, properties: Seq[Property[_]]): String = {
     val propertyDefaultValueCases = properties.collect {
       case property if property.hasDefault =>
-        s"""case "${property.name}" => PropertyDefaults.${property.className}"""
+        s"""case "${property.name}" => $propertyDefaultsPath.${property.className}"""
     }.mkString("\n|    ")
-
 
     s"""
        |  override def propertyDefaultValue(propertyKey: String) =

@@ -168,6 +168,9 @@ class Property[A](val name: String,
     this
   }
 
+  def isMandatory: Boolean =
+    cardinality.isInstanceOf[Cardinality.One[_]]
+
   def hasDefault: Boolean =
     default.isDefined
 
