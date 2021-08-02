@@ -279,8 +279,8 @@ class CodeGen(schema: Schema) {
               val returnType = s"IndexedSeq[${typeFor(property)}]"
               s"""def $nameCamelCase: $tpe = {
                  |  property("$name") match {
-                 |    case null => IndexedSeq.empty
-                 |    case arr: Array[_] if arr.isEmpty => IndexedSeq.empty
+                 |    case null => collection.immutable.ArraySeq.empty
+                 |    case arr: Array[_] if arr.isEmpty => collection.immutable.ArraySeq.empty
                  |    case arr: Array[Object] => scala.collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[$returnType]
                  |    case iterable: IterableOnce[_] => iterable.iterator.to(IndexedSeq).asInstanceOf[$returnType]
                  |    case jList: java.util.List[_] => jList.asScala.to(IndexedSeq).asInstanceOf[$returnType]
@@ -735,7 +735,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.ZeroOrOne =>
                 s"""   this._$memberName = $newNodeCasted.$memberName.orNull""".stripMargin
               case Cardinality.List =>
-                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else IndexedSeq.empty""".stripMargin
+                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else collection.immutable.ArraySeq.empty""".stripMargin
             }
           }
           lines.mkString("\n")
@@ -772,7 +772,7 @@ class CodeGen(schema: Schema) {
                    |      case _ => throw new MatchError("unreachable")
                    |    }}.toArray
                    |
-                   |  this._$memberName = if(arr == null) IndexedSeq.empty
+                   |  this._$memberName = if(arr == null) collection.immutable.ArraySeq.empty
                    |    else collection.immutable.ArraySeq.unsafeWrapArray(arr)
                    |}""".stripMargin
             }
@@ -808,7 +808,7 @@ class CodeGen(schema: Schema) {
                    |""".stripMargin
               case Cardinality.List =>
                 s"""
-                   |private var _${containedNode.localName}: IndexedSeq[$containedNodeType] = IndexedSeq.empty
+                   |private var _${containedNode.localName}: IndexedSeq[$containedNodeType] = collection.immutable.ArraySeq.empty
                    |def ${containedNode.localName}: IndexedSeq[$containedNodeType] = this._${containedNode.localName}
                    |""".stripMargin
             }
@@ -948,19 +948,19 @@ class CodeGen(schema: Schema) {
               s"value.asInstanceOf[$baseType]"
             case Cardinality.List =>
               s"""value match {
-                 |        case null => IndexedSeq.empty
-                 |        case coll: IterableOnce[Any] if coll.isEmpty => IndexedSeq.empty
-                 |        case arr: Array[_] if arr.isEmpty => IndexedSeq.empty
+                 |        case null => collection.immutable.ArraySeq.empty
+                 |        case coll: IterableOnce[Any] if coll.isEmpty => collection.immutable.ArraySeq.empty
+                 |        case arr: Array[_] if arr.isEmpty => collection.immutable.ArraySeq.empty
                  |        case arr: Array[Object] => collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[IndexedSeq[$baseType]]
                  |        case jCollection: java.lang.Iterable[_]  =>
                  |          if (jCollection.iterator.hasNext) {
                  |            collection.immutable.ArraySeq.unsafeWrapArray(
                  |              jCollection.asInstanceOf[java.util.Collection[$baseType]].iterator.asScala.toArray)
-                 |          } else IndexedSeq.empty
+                 |          } else collection.immutable.ArraySeq.empty
                  |        case iter: Iterable[_] =>
                  |          if(iter.nonEmpty) {
                  |            collection.immutable.ArraySeq.unsafeWrapArray(iter.asInstanceOf[Iterable[$baseType]].toArray)
-                 |          } else IndexedSeq.empty
+                 |          } else collection.immutable.ArraySeq.empty
                  |      }""".stripMargin
           }
           s"""|      case "$name" => this._$accessorName = $setter"""
@@ -1011,7 +1011,7 @@ class CodeGen(schema: Schema) {
               case Cardinality.One(_)  =>
                 (valueType, valueType, fieldName, s"$className.PropertyDefaults.${property.className}")
               case Cardinality.ZeroOrOne => (s"Option[$valueType]", valueType, s"Option($fieldName)", "null")
-              case Cardinality.List   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "IndexedSeq.empty")
+              case Cardinality.List   => (s"IndexedSeq[$valueType]", s"IndexedSeq[$valueType]", fieldName, "collection.immutable.ArraySeq.empty")
             }
           }
 
@@ -1559,7 +1559,7 @@ class CodeGen(schema: Schema) {
       for (key <- keys) {
         val defaultImpl = key.cardinality match {
           case Cardinality.ZeroOrOne => "None"
-          case Cardinality.List => "IndexedSeq.empty"
+          case Cardinality.List => "collection.immutable.ArraySeq.empty"
           case Cardinality.One(default) => defaultValueImpl(default)
         }
         val typ = getCompleteType(key)
@@ -1568,7 +1568,7 @@ class CodeGen(schema: Schema) {
       for (containedNode <- nodeType.containedNodes) {
         val defaultImpl = containedNode.cardinality match {
           case Cardinality.ZeroOrOne => "None"
-          case Cardinality.List => "IndexedSeq.empty"
+          case Cardinality.List => "collection.immutable.ArraySeq.empty"
           case Cardinality.One(default) => defaultValueImpl(default)
         }
         val typ = getCompleteType(containedNode)
