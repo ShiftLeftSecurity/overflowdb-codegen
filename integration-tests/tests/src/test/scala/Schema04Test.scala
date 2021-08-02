@@ -154,4 +154,18 @@ class Schema04Test extends AnyWordSpec with Matchers {
       edge1Trav.property(Edge1.Properties.Str).head shouldBe "foo"
     }
   }
+
+  "handle primitive arrays for list properties" in {
+    def openGraph(): Graph = TestSchema.empty.graph
+    val graph = openGraph()
+
+    val node1 = graph.addNode(Node1.Label).asInstanceOf[Node1]
+    val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
+    val edge1 = node1.addEdge(Edge1.Label, node2).asInstanceOf[Edge1]
+    node1.setProperty(Properties.INT_LIST.name, Array(1,2,3))
+    edge1.setProperty(Properties.INT_LIST.name, Array(3,4,5))
+
+    node1.intList shouldBe IndexedSeq(1,2,3)
+    edge1.intList shouldBe IndexedSeq(3,4,5)
+  }
 }

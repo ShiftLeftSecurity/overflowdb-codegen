@@ -281,7 +281,7 @@ class CodeGen(schema: Schema) {
                  |  property("$name") match {
                  |    case null => collection.immutable.ArraySeq.empty
                  |    case arr: Array[_] if arr.isEmpty => collection.immutable.ArraySeq.empty
-                 |    case arr: Array[Object] => scala.collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[$returnType]
+                 |    case arr: Array[_] => scala.collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[$returnType]
                  |    case iterable: IterableOnce[_] => iterable.iterator.to(IndexedSeq).asInstanceOf[$returnType]
                  |    case jList: java.util.List[_] => jList.asScala.to(IndexedSeq).asInstanceOf[$returnType]
                  |  }
@@ -951,7 +951,7 @@ class CodeGen(schema: Schema) {
                  |        case null => collection.immutable.ArraySeq.empty
                  |        case coll: IterableOnce[Any] if coll.isEmpty => collection.immutable.ArraySeq.empty
                  |        case arr: Array[_] if arr.isEmpty => collection.immutable.ArraySeq.empty
-                 |        case arr: Array[Object] => collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[IndexedSeq[$baseType]]
+                 |        case arr: Array[_] => collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[IndexedSeq[$baseType]]
                  |        case jCollection: java.lang.Iterable[_]  =>
                  |          if (jCollection.iterator.hasNext) {
                  |            collection.immutable.ArraySeq.unsafeWrapArray(
