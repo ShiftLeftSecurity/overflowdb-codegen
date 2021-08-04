@@ -9,7 +9,8 @@ import scala.collection.mutable
 /**
  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
  */
-class Schema(val basePackage: String,
+class Schema(val domainShortName: String,
+             val basePackage: String,
              val properties: Seq[Property[_]],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
@@ -186,12 +187,6 @@ class Property[A](val name: String,
     this
   }
 
-  /** make this an list property, using an indexed list for fast random access */
-  def asIndexedList(): Property[A] = {
-    _cardinality = Cardinality.ISeq
-    this
-  }
-
 }
 
 
@@ -218,7 +213,6 @@ object Property {
   object Cardinality {
     case object ZeroOrOne extends Cardinality
     case object List extends Cardinality
-    case object ISeq extends Cardinality
     case class One[A](default: Default[A]) extends Cardinality
   }
 

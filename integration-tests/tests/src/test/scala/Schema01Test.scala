@@ -27,7 +27,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
   }
 
   "working with a concrete sample graph" can {
-    val graph = Graph.open(Config.withDefaults, nodes.Factories.allAsJava, edges.Factories.allAsJava)
+    val graph = TestSchema.empty.graph
 
     val node1a = graph.addNode(Node1.Label, Node1.PropertyNames.Name, "node 1a", PropertyNames.ORDER, 2)
     val node1b = graph.addNode(Node1.Label, Node1.PropertyNames.Name, "node 1b")

@@ -8,11 +8,12 @@ import testschema04.nodes._
 import testschema04.traversal._
 
 import java.nio.file.Files
+import scala.collection.immutable.ArraySeq
 
 class Schema04Test extends AnyWordSpec with Matchers {
 
   "default property values" in {
-    val graph = Graph.open(Config.withDefaults, nodes.Factories.allAsJava, edges.Factories.allAsJava)
+    val graph = TestSchema.empty.graph
 
     val node1 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
@@ -30,14 +31,13 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.double2.isNaN shouldBe true
     node1.char shouldBe '?'
     node1.intList.size shouldBe 0
-    node1.intListIndexed.size shouldBe 0
     node1.propertyKeys().contains("STR") shouldBe true
     node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
     node1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
     node1.property(Node1.Properties.Str) shouldBe "<[empty]>"
     node1.property("DOESNT_EXIST") shouldBe null
     node1.propertiesMap.get("STR") shouldBe "<[empty]>"
-    node1.get.propertiesMapWithoutDefaults.isEmpty shouldBe true
+    node1.get.propertiesMapForStorage.isEmpty shouldBe true
 
     edge1.bool shouldBe true
     edge1.str shouldBe "<[empty]>"
@@ -51,7 +51,6 @@ class Schema04Test extends AnyWordSpec with Matchers {
     edge1.double2.isNaN shouldBe true
     edge1.char shouldBe '?'
     edge1.intList.size shouldBe 0
-    edge1.intListIndexed.size shouldBe 0
     edge1.propertyKeys().contains("STR") shouldBe true
     edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
     edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
@@ -69,9 +68,9 @@ class Schema04Test extends AnyWordSpec with Matchers {
 
   "defined property values" in {
     val storageLocation = Files.createTempFile("overflowdb-codegen-tests", "odb.bin")
-    def openGraph() = Graph.open(Config.withDefaults.withStorageLocation(storageLocation.toString), nodes.Factories.allAsJava, edges.Factories.allAsJava)
-    val graph = openGraph()
 
+    def openGraph(): Graph = TestSchema.withStorage(storageLocation).graph
+    val graph = openGraph()
 
     val node1 = graph.addNode(Node1.Label)
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
@@ -88,9 +87,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
       Properties.DOUBLE1.of(Double.NaN),
       Properties.DOUBLE2.of(105.5),
       Properties.CHAR.of('Z'),
-      // TODO bring back later - persistence of lists is currently broken
-//      Properties.INT_LIST.of(Seq(3, 4, 5)),
-//      Properties.INT_LIST_INDEXED.of(IndexedSeq(7, 8, 9))
+      Properties.INT_LIST.of(ArraySeq(3, 4, 5)),
     )
     properties.foreach(node1.setProperty)
     properties.foreach(edge1.setProperty)
@@ -116,9 +113,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
       node1.double1.isNaN shouldBe true
       node1.double2 shouldBe 105.5
       node1.char shouldBe 'Z'
-      // TODO bring back in, this doesn't currently work with persistence...
-      //      node1.intList shouldBe Seq(3, 4, 5)
-      //      node1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
+      node1.intList shouldBe Seq(3, 4, 5)
       node1.node1Inner shouldBe node2
       node1.propertyKeys().contains("STR") shouldBe true
       node1.propertyDefaultValue("STR") shouldBe "<[empty]>"
@@ -128,8 +123,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
       node1.property("DOESNT_EXIST") shouldBe null
       node1.propertiesMap.get("STR") shouldBe "foo"
       node1.propertiesMap.get(Node1.PropertyNames.Node1inner) shouldBe node2
-      node1.get.propertiesMapWithoutDefaults.get(PropertyNames.STR) shouldBe "foo"
-      node1.get.propertiesMapWithoutDefaults.get(Node1.PropertyNames.Node1inner) shouldBe node2
+      node1.get.propertiesMapForStorage.get(PropertyNames.STR) shouldBe "foo"
+      node1.get.propertiesMapForStorage.get(Node1.PropertyNames.Node1inner) shouldBe node2
 
       edge1.bool shouldBe false
       edge1.str shouldBe "foo"
@@ -142,30 +137,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
       edge1.double1.isNaN shouldBe true
       edge1.double2 shouldBe 105.5
       edge1.char shouldBe 'Z'
-      // TODO handle later in separate PR
-      //    edge1.intList shouldBe Seq(3, 4, 5)
-      //    edge1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
-      edge1.propertyKeys().contains("STR") shouldBe true
-      edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
-      edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
-      edge1.property(Node1.Properties.Str) shouldBe "foo"
-      edge1.property("DOESNT_EXIST") shouldBe null
-      edge1.propertiesMap.get("STR") shouldBe "foo"
-
-      edge1.bool shouldBe false
-      edge1.str shouldBe "foo"
-      edge1.byte shouldBe 100
-      edge1.short shouldBe 101
-      edge1.int shouldBe 102
-      edge1.long shouldBe 103
-      edge1.float1.isNaN shouldBe true
-      edge1.float2 shouldBe 104.4f
-      edge1.double1.isNaN shouldBe true
-      edge1.double2 shouldBe 105.5
-      edge1.char shouldBe 'Z'
-      // TODO handle later in separate PR
-      //    edge1.intList shouldBe Seq(3, 4, 5)
-      //    edge1.intListIndexed shouldBe IndexedSeq(7, 8, 9)
+      edge1.intList shouldBe Seq(3, 4, 5)
       edge1.propertyKeys().contains("STR") shouldBe true
       edge1.propertyDefaultValue("STR") shouldBe "<[empty]>"
       edge1.propertyDefaultValue("DOESNT_EXIST") shouldBe null
@@ -177,10 +149,23 @@ class Schema04Test extends AnyWordSpec with Matchers {
       def edge1Trav = graph.edges(Edge1.Label).cast[Edge1]
 
       node1Trav.str.head shouldBe "foo"
-//      node1Trav.intList.l shouldBe Seq(3, 4, 5)
-//      node1Trav.intListIndexed.l shouldBe IndexedSeq(7, 8, 9)
+      node1Trav.intList.l shouldBe Seq(3, 4, 5)
       node1Trav.property(Node1.Properties.Str).head shouldBe "foo"
       edge1Trav.property(Edge1.Properties.Str).head shouldBe "foo"
     }
+  }
+
+  "handle primitive arrays for list properties" in {
+    def openGraph(): Graph = TestSchema.empty.graph
+    val graph = openGraph()
+
+    val node1 = graph.addNode(Node1.Label).asInstanceOf[Node1]
+    val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
+    val edge1 = node1.addEdge(Edge1.Label, node2).asInstanceOf[Edge1]
+    node1.setProperty(Properties.INT_LIST.name, Array(1,2,3))
+    edge1.setProperty(Properties.INT_LIST.name, Array(3,4,5))
+
+    node1.intList shouldBe IndexedSeq(1,2,3)
+    edge1.intList shouldBe IndexedSeq(3,4,5)
   }
 }

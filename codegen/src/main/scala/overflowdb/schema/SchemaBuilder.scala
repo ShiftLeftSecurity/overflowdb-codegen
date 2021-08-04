@@ -5,7 +5,7 @@ import overflowdb.codegen.Helpers._
 import overflowdb.schema.Property.ValueType
 import scala.collection.mutable
 
-class SchemaBuilder(basePackage: String) {
+class SchemaBuilder(domainShortName: String, basePackage: String) {
   val properties = mutable.ListBuffer.empty[Property[_]]
   val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseType]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
@@ -64,6 +64,7 @@ class SchemaBuilder(basePackage: String) {
 
   def build: Schema = {
     val schema = new Schema(
+      domainShortName,
       basePackage,
       properties.sortBy(_.name.toLowerCase).toSeq,
       nodeBaseTypes.sortBy(_.name.toLowerCase).toSeq,

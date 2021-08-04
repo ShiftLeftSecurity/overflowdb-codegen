@@ -7,7 +7,7 @@ import java.io.File
 
 // TODO create integration test from this
 object TestSchema4 extends App {
-  val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
+  val builder = new SchemaBuilder("Cpg","io.shiftleft.codepropertygraph.generated")
 
   implicit val schemaInfo = SchemaInfo.forClass(getClass)
 

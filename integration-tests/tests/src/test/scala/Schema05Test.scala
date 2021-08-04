@@ -10,7 +10,7 @@ import testschema05.traversal._
 class Schema05Test extends AnyWordSpec with Matchers {
 
   "default property values: all empty" in {
-    val graph = Graph.open(Config.withDefaults, nodes.Factories.allAsJava, edges.Factories.allAsJava)
+    val graph = TestSchema.empty.graph
 
     val node1 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
@@ -43,7 +43,7 @@ class Schema05Test extends AnyWordSpec with Matchers {
   }
 
   "defined property values" in {
-    val graph = Graph.open(Config.withDefaults, nodes.Factories.allAsJava, edges.Factories.allAsJava)
+    val graph = TestSchema.empty.graph
 
     val node1 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]

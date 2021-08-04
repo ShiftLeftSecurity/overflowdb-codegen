@@ -8,7 +8,7 @@ import overflowdb.storage.ValueTypes
 
 // TODO create integration test from this
 object TestSchema1 extends App {
-  val builder = new SchemaBuilder("io.shiftleft.codepropertygraph.generated")
+  val builder = new SchemaBuilder("Cpg", "io.shiftleft.codepropertygraph.generated")
 
   implicit val schemaInfo = SchemaInfo.forClass(getClass)
 
@@ -48,7 +48,7 @@ object TestSchema1 extends App {
   val edgekey1Lst = builder
     .addProperty("EDGEKEY_1_LST", ValueType.Int,
       comment = "test list edge key"
-    ).asIndexedList()
+    ).asList()
     .protoId(6999)
 
   // edge types
