@@ -83,15 +83,14 @@ class CodeGen(schema: Schema) {
          |    * @param path to the storage file, e.g. /home/user1/overflowdb.bin
          |    */
          |  def withStorage(path: Path): $domainShortName =
-         |    new $domainShortName(
-         |      Graph.open(
-         |        Config.withoutOverflow.withStorageLocation(path),
-         |        nodes.Factories.allAsJava,
-         |        edges.Factories.allAsJava,
-         |        convertPropertyForPersistence))
+         |    withConfig(Config.withoutOverflow.withStorageLocation(path))
          |
          |  def withStorage(path: String): $domainShortName =
          |    withStorage(Paths.get(path))
+         |
+         |  def withConfig(config: overflowdb.Config): $domainShortName =
+         |    new $domainShortName(
+         |      Graph.open(config, nodes.Factories.allAsJava, edges.Factories.allAsJava, convertPropertyForPersistence))
          |
          |  def emptyGraph: Graph =
          |    Graph.open(Config.withoutOverflow, nodes.Factories.allAsJava, edges.Factories.allAsJava, convertPropertyForPersistence)
