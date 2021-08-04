@@ -136,7 +136,7 @@ class CodeGen(schema: Schema) {
            | ${constant.source}
            |""".stripMargin
       }.mkString("\n")
-      val allConstantsSetType = if (constantsSource.contains("PropertyKey")) "PropertyKey" else "String"
+      val allConstantsSetType = if (constantsSource.contains("PropertyKey")) "PropertyKey<?>" else "String"
       val allConstantsBody = constants.map { constant =>
         s"     add(${constant.name});"
       }.mkString("\n").stripSuffix("\n")
@@ -949,7 +949,7 @@ class CodeGen(schema: Schema) {
             case Cardinality.List =>
               s"""value match {
                  |        case null => collection.immutable.ArraySeq.empty
-                 |        case coll: IterableOnce[Any] if coll.isEmpty => collection.immutable.ArraySeq.empty
+                 |        case coll: IterableOnce[Any] if coll.iterator.isEmpty => collection.immutable.ArraySeq.empty
                  |        case arr: Array[_] if arr.isEmpty => collection.immutable.ArraySeq.empty
                  |        case arr: Array[_] => collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[IndexedSeq[$baseType]]
                  |        case jCollection: java.lang.Iterable[_]  =>
