@@ -56,7 +56,7 @@ class CodeGen(schema: Schema) {
     val domainShortName = schema.domainShortName
 
     val domainMain = baseDir.createChild(s"$domainShortName.scala").write(
-      s"""package $basePackage;
+      s"""package $basePackage
          |
          |import java.nio.file.{Path, Paths}
          |import overflowdb.traversal.help.TraversalHelp
@@ -88,18 +88,20 @@ class CodeGen(schema: Schema) {
          |        Config.withoutOverflow.withStorageLocation(path),
          |        nodes.Factories.allAsJava,
          |        edges.Factories.allAsJava,
-         |        property => property match {
-         |          case arraySeq: scala.collection.immutable.ArraySeq[_] => arraySeq.unsafeArray
-         |          case coll: IterableOnce[Any] => asJava(coll.iterator.toArray)
-         |          case other => other
-         |        }
-         |      ))
+         |        convertPropertyForPersistence))
          |
          |  def withStorage(path: String): $domainShortName =
          |    withStorage(Paths.get(path))
          |
-         |  private def emptyGraph: Graph =
-         |    Graph.open(Config.withoutOverflow, nodes.Factories.allAsJava, edges.Factories.allAsJava)
+         |  def emptyGraph: Graph =
+         |    Graph.open(Config.withoutOverflow, nodes.Factories.allAsJava, edges.Factories.allAsJava, convertPropertyForPersistence)
+         |
+         |  def convertPropertyForPersistence(property: Any): Any =
+         |    property match {
+         |      case arraySeq: scala.collection.immutable.ArraySeq[_] => arraySeq.unsafeArray
+         |      case coll: IterableOnce[Any] => asJava(coll.iterator.toArray)
+         |      case other => other
+         |    }
          |
          |}
          |
