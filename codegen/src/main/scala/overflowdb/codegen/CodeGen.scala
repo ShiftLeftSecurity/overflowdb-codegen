@@ -763,18 +763,19 @@ class CodeGen(schema: Schema) {
                    |    case _ => throw new MatchError("unreachable")
                    |  }""".stripMargin
               case Cardinality.List =>
-                s"""{
-                   |  val arr = if($newNodeCasted.$memberName == null || $newNodeCasted.$memberName.isEmpty) null
-                   |    else $newNodeCasted.$memberName.map { nodeRef => nodeRef match {
-                   |      case null => throw new NullPointerException("Nullpointers forbidden in contained nodes")
-                   |      case newNode:NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
-                   |      case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
-                   |      case _ => throw new MatchError("unreachable")
-                   |    }}.toArray
-                   |
-                   |  this._$memberName = if(arr == null) collection.immutable.ArraySeq.empty
-                   |    else collection.immutable.ArraySeq.unsafeWrapArray(arr)
-                   |}""".stripMargin
+                s"""  this._$memberName =
+                   |    if ($newNodeCasted.$memberName == null || $newNodeCasted.$memberName.isEmpty) {
+                   |      collection.immutable.ArraySeq.empty
+                   |    } else {
+                   |     collection.immutable.ArraySeq.unsafeWrapArray(
+                   |       $newNodeCasted.$memberName.map {
+                   |         case null => throw new NullPointerException("NullPointers forbidden in contained nodes")
+                   |         case newNode:NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
+                   |         case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
+                   |       }.toArray
+                   |     )
+                   |    }
+                   |""".stripMargin
             }
           }
         }.mkString("\n\n")
