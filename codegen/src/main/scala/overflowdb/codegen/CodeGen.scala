@@ -772,6 +772,7 @@ class CodeGen(schema: Schema) {
                    |         case null => throw new NullPointerException("NullPointers forbidden in contained nodes")
                    |         case newNode:NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
                    |         case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
+                   |         case _ => throw new MatchError("unreachable")
                    |       }.toArray
                    |     )
                    |    }
