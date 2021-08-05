@@ -56,7 +56,7 @@ class CodeGen(schema: Schema) {
     val domainShortName = schema.domainShortName
 
     val domainMain = baseDir.createChild(s"$domainShortName.scala").write(
-      s"""package $basePackage;
+      s"""package $basePackage
          |
          |import java.nio.file.{Path, Paths}
          |import overflowdb.traversal.help.TraversalHelp
@@ -83,23 +83,24 @@ class CodeGen(schema: Schema) {
          |    * @param path to the storage file, e.g. /home/user1/overflowdb.bin
          |    */
          |  def withStorage(path: Path): $domainShortName =
-         |    new $domainShortName(
-         |      Graph.open(
-         |        Config.withoutOverflow.withStorageLocation(path),
-         |        nodes.Factories.allAsJava,
-         |        edges.Factories.allAsJava,
-         |        property => property match {
-         |          case arraySeq: scala.collection.immutable.ArraySeq[_] => arraySeq.unsafeArray
-         |          case coll: IterableOnce[Any] => asJava(coll.iterator.toArray)
-         |          case other => other
-         |        }
-         |      ))
+         |    withConfig(Config.withoutOverflow.withStorageLocation(path))
          |
          |  def withStorage(path: String): $domainShortName =
          |    withStorage(Paths.get(path))
          |
-         |  private def emptyGraph: Graph =
-         |    Graph.open(Config.withoutOverflow, nodes.Factories.allAsJava, edges.Factories.allAsJava)
+         |  def withConfig(config: overflowdb.Config): $domainShortName =
+         |    new $domainShortName(
+         |      Graph.open(config, nodes.Factories.allAsJava, edges.Factories.allAsJava, convertPropertyForPersistence))
+         |
+         |  def emptyGraph: Graph =
+         |    Graph.open(Config.withoutOverflow, nodes.Factories.allAsJava, edges.Factories.allAsJava, convertPropertyForPersistence)
+         |
+         |  def convertPropertyForPersistence(property: Any): Any =
+         |    property match {
+         |      case arraySeq: scala.collection.immutable.ArraySeq[_] => arraySeq.unsafeArray
+         |      case coll: IterableOnce[Any] => asJava(coll.iterator.toArray)
+         |      case other => other
+         |    }
          |
          |}
          |
