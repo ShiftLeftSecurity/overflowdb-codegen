@@ -1558,7 +1558,8 @@ class CodeGen(schema: Schema) {
 
     def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property[_]]) = {
       import Property.Cardinality
-      val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, String)] // fieldName, type, default
+      case class FieldDescription(name: String, tpe: String, defaultValue: String)
+      val fieldDescriptions = mutable.ArrayBuffer.empty[FieldDescription]
       for (key <- keys) {
         val defaultImpl = key.cardinality match {
           case Cardinality.ZeroOrOne => "None"
@@ -1566,8 +1567,9 @@ class CodeGen(schema: Schema) {
           case Cardinality.One(default) => defaultValueImpl(default)
         }
         val typ = getCompleteType(key)
-        fieldDescriptions += ((camelCase(key.name), typ, defaultImpl))
+        fieldDescriptions += FieldDescription(camelCase(key.name), typ, defaultImpl)
       }
+
       for (containedNode <- nodeType.containedNodes) {
         val defaultImpl = containedNode.cardinality match {
           case Cardinality.ZeroOrOne => "None"
@@ -1575,14 +1577,15 @@ class CodeGen(schema: Schema) {
           case Cardinality.One(default) => defaultValueImpl(default)
         }
         val typ = getCompleteType(containedNode)
-        fieldDescriptions += ((containedNode.localName, typ, defaultImpl))
+        fieldDescriptions += FieldDescription(containedNode.localName, typ, defaultImpl)
       }
+
       val defaultsVal = fieldDescriptions.reverse.map {
-        case (name, typ, default) => s"var $name: $typ = $default"
+        case FieldDescription(name, typ, default) => s"var $name: $typ = $default"
       }.mkString(", ")
 
       val builderSetters = fieldDescriptions
-        .map {case (name, typ, _) => s"def $name(x: $typ): this.type = { result.$name = x; this }" }
+        .map {case FieldDescription(name, typ, _) => s"def $name(x: $typ): this.type = { result.$name = x; this }" }
         .mkString("\n")
 
       val propertiesMapImpl = {
