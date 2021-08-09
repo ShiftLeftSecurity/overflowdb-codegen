@@ -186,9 +186,7 @@ class Property[A](val name: String,
     _cardinality = Cardinality.List
     this
   }
-
 }
-
 
 object Property {
 

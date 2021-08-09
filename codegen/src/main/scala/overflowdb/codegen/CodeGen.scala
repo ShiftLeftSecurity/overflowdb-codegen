@@ -1577,10 +1577,13 @@ class CodeGen(schema: Schema) {
         val typ = getCompleteType(containedNode)
         fieldDescriptions += ((containedNode.localName, typ, defaultImpl))
       }
-      val defaultsVal = fieldDescriptions.reverse
-        .map {
-          case (name, typ, default) => s"var $name: $typ = $default"
-        }.mkString(", ")
+      val defaultsVal = fieldDescriptions.reverse.map {
+        case (name, typ, default) => s"var $name: $typ = $default"
+      }.mkString(", ")
+
+      val builderSetters = fieldDescriptions
+        .map {case (name, typ, _) => s"def $name(x: $typ): this.type = { result.$name = x; this }" }
+        .mkString("\n")
 
       val propertiesMapImpl = {
         val putKeysImpl = keys
@@ -1626,10 +1629,6 @@ class CodeGen(schema: Schema) {
            |$propertiesImpl
            |}""".stripMargin
       }
-
-      val builderSetters = fieldDescriptions
-        .map {case (name, typ, _) => s"def ${name}(x : $typ) : this.type = { result.$name = x; this }" }
-        .mkString("\n")
 
       val nodeClassName = nodeType.className
 
