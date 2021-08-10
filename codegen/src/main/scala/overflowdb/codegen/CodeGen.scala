@@ -1558,48 +1558,49 @@ class CodeGen(schema: Schema) {
 
     def generateNewNodeSource(nodeType: NodeType, properties: Seq[Property[_]]) = {
       import Property.Cardinality
-      val memberVariablesBuffer = mutable.ArrayBuffer.empty[String]
-      val builderSettersBuffer = mutable.ArrayBuffer.empty[String]
-      for (property <- properties) {
-        val name = camelCase(property.name)
-        val valueType = typeFor(property)
-        val fullType = getCompleteType(property)
-        val (parameterTypeX, assignParameterX, defaultValue) = property.cardinality match {
-          case Cardinality.One(default) => (valueType, "x", defaultValueImpl(default))
-          case Cardinality.ZeroOrOne => (valueType, "Option(x)", "None")
-          case Cardinality.List => (s"IterableOnce[$valueType]", "x.to(collection.immutable.ArraySeq)", "collection.immutable.ArraySeq.empty")
-        }
+      case class FieldDescription(name: String, valueType: String, fullType: String, cardinality: Cardinality)
+      val fieldDescriptions = mutable.ArrayBuffer.empty[FieldDescription]
 
-        memberVariablesBuffer.addOne(s"var $name: $fullType = $defaultValue")
-        builderSettersBuffer.addOne(
-          s"""def $name(x: $parameterTypeX): this.type = {
-             |  result.$name = $assignParameterX
-             |  this
-             |}""".stripMargin)
+      for (property <- properties) {
+        fieldDescriptions += FieldDescription(
+          camelCase(property.name),
+          typeFor(property),
+          getCompleteType(property),
+          property.cardinality)
       }
 
       for (containedNode <- nodeType.containedNodes) {
-        val name = containedNode.localName
-        val valueType = typeFor(containedNode)
-        val fullType = getCompleteType(containedNode)
-        val (parameterTypeX, assignParameterX, defaultValue) = containedNode.cardinality match {
-          case Cardinality.One(default) => (valueType, "x", defaultValueImpl(default))
-          case Cardinality.ZeroOrOne => (valueType, "Option(x)", "None")
-          case Cardinality.List => (s"IterableOnce[$valueType]", "x.to(collection.immutable.ArraySeq)", "collection.immutable.ArraySeq.empty")
-        }
+        fieldDescriptions += FieldDescription(
+          containedNode.localName,
+          typeFor(containedNode),
+          getCompleteType(containedNode),
+          containedNode.cardinality)
+      }
 
-        memberVariablesBuffer.addOne(s"var $name: $fullType = $defaultValue")
-        builderSettersBuffer.addOne(
+      val memberVariables = fieldDescriptions.reverse.map {
+        case FieldDescription(name, _, fullType, cardinality) =>
+          val defaultValue = cardinality match {
+            case Cardinality.One(default) => defaultValueImpl(default)
+            case Cardinality.ZeroOrOne => "None"
+            case Cardinality.List => "collection.immutable.ArraySeq.empty"
+          }
+          s"var $name: $fullType = $defaultValue"
+
+      }.mkString(", ")
+
+      val builderSetters = fieldDescriptions.map {
+        case FieldDescription(name, valueType, _, cardinality) =>
+          val (parameterTypeX, assignParameterX) = cardinality match {
+            case Cardinality.One(_) => (valueType, "x")
+            case Cardinality.ZeroOrOne => (valueType, "Option(x)")
+            case Cardinality.List => (s"IterableOnce[$valueType]", "x.to(collection.immutable.ArraySeq)")
+          }
           s"""def $name(x: $parameterTypeX): this.type = {
              |  result.$name = $assignParameterX
              |  this
-             |}""".stripMargin)
-      }
+             |}""".stripMargin
 
-      }
-
-      val memberVariables = memberVariablesBuffer.reverse.mkString(", ")
-      val builderSetters = builderSettersBuffer.mkString("\n")
+      }.mkString("\n")
 
       val propertiesMapImpl = {
         val putKeysImpl = properties
