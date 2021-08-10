@@ -102,14 +102,14 @@ object Helpers {
   def getCompleteType[A](property: Property[_]): String =
     getCompleteType(property.cardinality, typeFor(property))
 
-  def getCompleteType(containedNode: ContainedNode): String = {
+  def typeFor(containedNode: ContainedNode): String = {
     val className = containedNode.nodeType.className
-    val tpe =
-      if (DefaultNodeTypes.AllClassNames.contains(className)) className
-      else className + "Base"
-
-    getCompleteType(containedNode.cardinality, tpe)
+    if (DefaultNodeTypes.AllClassNames.contains(className)) className
+    else className + "Base"
   }
+
+  def getCompleteType(containedNode: ContainedNode): String =
+    getCompleteType(containedNode.cardinality, typeFor(containedNode))
 
   def getCompleteType(cardinality: Property.Cardinality, valueType: String): String = {
     import Property.Cardinality
