@@ -1593,7 +1593,7 @@ class CodeGen(schema: Schema) {
           val (parameterTypeX, assignParameterX) = cardinality match {
             case Cardinality.One(_) => (valueType, "x")
             case Cardinality.ZeroOrOne => (valueType, "Option(x)")
-            case Cardinality.List => (s"IterableOnce[$valueType]", "x.to(collection.immutable.ArraySeq)")
+            case Cardinality.List => (s"IterableOnce[$valueType]", "x.iterator.to(collection.immutable.ArraySeq)")
           }
           s"""def $name(x: $parameterTypeX): this.type = {
              |  result.$name = $assignParameterX
