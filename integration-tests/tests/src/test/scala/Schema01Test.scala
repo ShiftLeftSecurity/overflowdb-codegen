@@ -35,6 +35,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
     val node2b = graph.addNode(Node2.Label, PropertyNames.NAME, "node 2b", PropertyNames.PLACEMENTS, Seq(5,1,7))
     node1a.addEdge(Edge1.Label, node2a)
     val edge2 = node2a.addEdge(Edge2.Label, node1a, PropertyNames.NAME, "edge 2", PropertyNames.ORDER, 3)
+    val node3 = graph.addNode(Node3.Label).asInstanceOf[Node3]
 
     "lookup and traverse nodes/edges/properties" in {
       // generic traversal
@@ -78,6 +79,14 @@ class Schema01Test extends AnyWordSpec with Matchers {
       node1a.setProperty(Node1.Properties.Order.of(4))
 
       // TODO generate domain-specific setters in codegen
+    }
+
+    "NewNodes" in {
+      NewNode2()
+        .name("name1")
+        .node3(node3)
+        .options(Seq("one", "two", "three"))
+        .placements(Seq(1,2,3))
     }
   }
 

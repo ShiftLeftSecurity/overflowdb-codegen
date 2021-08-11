@@ -1556,34 +1556,64 @@ class CodeGen(schema: Schema) {
          |}
          |""".stripMargin
 
-    def generateNewNodeSource(nodeType: NodeType, keys: Seq[Property[_]]) = {
+    def generateNewNodeSource(nodeType: NodeType, properties: Seq[Property[_]]) = {
       import Property.Cardinality
-      val fieldDescriptions = mutable.ArrayBuffer.empty[(String, String, String)] // fieldName, type, default
-      for (key <- keys) {
-        val defaultImpl = key.cardinality match {
-          case Cardinality.ZeroOrOne => "None"
-          case Cardinality.List => "collection.immutable.ArraySeq.empty"
-          case Cardinality.One(default) => defaultValueImpl(default)
-        }
-        val typ = getCompleteType(key)
-        fieldDescriptions += ((camelCase(key.name), typ, defaultImpl))
+      case class FieldDescription(name: String, valueType: String, fullType: String, cardinality: Cardinality)
+      val fieldDescriptions = mutable.ArrayBuffer.empty[FieldDescription]
+
+      for (property <- properties) {
+        fieldDescriptions += FieldDescription(
+          camelCase(property.name),
+          typeFor(property),
+          getCompleteType(property),
+          property.cardinality)
       }
+
       for (containedNode <- nodeType.containedNodes) {
-        val defaultImpl = containedNode.cardinality match {
-          case Cardinality.ZeroOrOne => "None"
-          case Cardinality.List => "collection.immutable.ArraySeq.empty"
-          case Cardinality.One(default) => defaultValueImpl(default)
-        }
-        val typ = getCompleteType(containedNode)
-        fieldDescriptions += ((containedNode.localName, typ, defaultImpl))
+        fieldDescriptions += FieldDescription(
+          containedNode.localName,
+          typeFor(containedNode),
+          getCompleteType(containedNode),
+          containedNode.cardinality)
       }
-      val defaultsVal = fieldDescriptions.reverse
-        .map {
-          case (name, typ, default) => s"var $name: $typ = $default"
-        }.mkString(", ")
+
+      val memberVariables = fieldDescriptions.reverse.map {
+        case FieldDescription(name, _, fullType, cardinality) =>
+          val defaultValue = cardinality match {
+            case Cardinality.One(default) => defaultValueImpl(default)
+            case Cardinality.ZeroOrOne => "None"
+            case Cardinality.List => "collection.immutable.ArraySeq.empty"
+          }
+          s"var $name: $fullType = $defaultValue"
+
+      }.mkString(", ")
+
+      val builderSetters = fieldDescriptions.map {
+        case FieldDescription(name, valueType, _, cardinality) =>
+          cardinality match {
+            case Cardinality.One(_) =>
+              s"""def $name(x: $valueType): this.type = {
+                 |  result.$name = x
+                 |  this
+                 |}""".stripMargin
+            case Cardinality.ZeroOrOne =>
+              s"""def $name(x: $valueType): this.type = {
+                 |  result.$name = Option(x)
+                 |  this
+                 |}
+                 |
+                 |def $name(x: Option[$valueType]): this.type = $name(x.orNull)
+                 |""".stripMargin
+            case Cardinality.List =>
+              s"""def $name(x: IterableOnce[$valueType]): this.type = {
+                 |  result.$name = x.iterator.to(collection.immutable.ArraySeq)
+                 |  this
+                 |}""".stripMargin
+          }
+      }.mkString("\n")
 
       val propertiesMapImpl = {
-        val putKeysImpl = keys
+        val putKeysImpl = properties
           .map { key =>
             val memberName = camelCase(key.name)
             import Property.Cardinality
@@ -1627,10 +1657,6 @@ class CodeGen(schema: Schema) {
            |}""".stripMargin
       }
 
-      val builderSetters = fieldDescriptions
-        .map {case (name, typ, _) => s"def ${name}(x : $typ) : this.type = { result.$name = x; this }" }
-        .mkString("\n")
-
       val nodeClassName = nodeType.className
 
       s"""
@@ -1651,7 +1677,7 @@ class CodeGen(schema: Schema) {
          |  def apply(): New${nodeClassName}Builder = New${nodeClassName}Builder()
          |}
          |
-         |case class New${nodeClassName} private[nodes] ($defaultsVal) extends NewNode with ${nodeClassName}Base {
+         |case class New${nodeClassName} private[nodes] ($memberVariables) extends NewNode with ${nodeClassName}Base {
          |  override def label: String = "${nodeType.name}"
          |
          |  $propertiesMapImpl

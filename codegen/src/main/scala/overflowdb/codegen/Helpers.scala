@@ -99,28 +99,24 @@ object Helpers {
     }
   }
 
-  def getCompleteType[A](property: Property[_]): String = {
+  def getCompleteType[A](property: Property[_]): String =
+    getCompleteType(property.cardinality, typeFor(property))
+
+  def typeFor(containedNode: ContainedNode): String = {
+    val className = containedNode.nodeType.className
+    if (DefaultNodeTypes.AllClassNames.contains(className)) className
+    else className + "Base"
+  }
+
+  def getCompleteType(containedNode: ContainedNode): String =
+    getCompleteType(containedNode.cardinality, typeFor(containedNode))
+
+  def getCompleteType(cardinality: Property.Cardinality, valueType: String): String = {
     import Property.Cardinality
-    val valueType = typeFor(property)
-    property.cardinality match {
+    cardinality match {
       case Cardinality.One(_)    => valueType
       case Cardinality.ZeroOrOne => s"Option[$valueType]"
       case Cardinality.List      => s"IndexedSeq[$valueType]"
-    }
-  }
-
-  def getCompleteType(containedNode: ContainedNode): String = {
-    val className = containedNode.nodeType.className
-    val tpe = if (DefaultNodeTypes.AllClassNames.contains(className)) {
-      className
-    } else {
-      className + "Base"
-    }
-
-    containedNode.cardinality match {
-      case Property.Cardinality.ZeroOrOne => s"Option[$tpe]"
-      case Property.Cardinality.One(_)    => tpe
-      case Property.Cardinality.List      => s"IndexedSeq[$tpe]"
     }
   }
 
