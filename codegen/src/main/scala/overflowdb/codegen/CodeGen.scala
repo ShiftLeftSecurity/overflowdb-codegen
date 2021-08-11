@@ -1590,28 +1590,26 @@ class CodeGen(schema: Schema) {
 
       val builderSetters = fieldDescriptions.map {
         case FieldDescription(name, valueType, _, cardinality) =>
-          val (parameterTypeX, assignParameterX) = cardinality match {
-            case Cardinality.One(_) => (valueType, "x")
-            case Cardinality.ZeroOrOne => (valueType, "Option(x)")
-            case Cardinality.List => (s"IterableOnce[$valueType]", "x.iterator.to(collection.immutable.ArraySeq)")
-          }
-
-          // keeping old setters that take `Option[valueType]` for backwards compatibility - marking as deprecated
-          // for now (Aug 2021) - remove entirely in the future :tm:
-          val overloadedSetterMaybe = cardinality match {
+          cardinality match {
+            case Cardinality.One(_) =>
+              s"""def $name(x: $valueType): this.type = {
+                 |  result.$name = x
+                 |  this
+                 |}""".stripMargin
             case Cardinality.ZeroOrOne =>
-              s"""@deprecated("please use overloaded setter without `Option`", since = "odb codegen v1.96")
-                 |def $name(x: Option[$parameterTypeX]): this.type = $name(x.orNull)
+              s"""def $name(x: $valueType): this.type = {
+                 |  result.$name = Option(x)
+                 |  this
+                 |}
+                 |
+                 |def $name(x: Option[$valueType]): this.type = $name(x.orNull)
                  |""".stripMargin
-            case _ => ""
+            case Cardinality.List =>
+              s"""def $name(x: IterableOnce[$valueType]): this.type = {
+                 |  result.$name = x.iterator.to(collection.immutable.ArraySeq)
+                 |  this
+                 |}""".stripMargin
           }
-
-          s"""def $name(x: $parameterTypeX): this.type = {
-             |  result.$name = $assignParameterX
-             |  this
-             |}
-             |$overloadedSetterMaybe""".stripMargin
-
       }.mkString("\n")
 
       val propertiesMapImpl = {
