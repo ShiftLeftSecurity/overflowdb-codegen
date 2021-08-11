@@ -1595,10 +1595,22 @@ class CodeGen(schema: Schema) {
             case Cardinality.ZeroOrOne => (valueType, "Option(x)")
             case Cardinality.List => (s"IterableOnce[$valueType]", "x.iterator.to(collection.immutable.ArraySeq)")
           }
+
+          // keeping old setters that take `Option[valueType]` for backwards compatibility - marking as deprecated
+          // for now (Aug 2021) - remove entirely in the future :tm:
+          val overloadedSetterMaybe = cardinality match {
+            case Cardinality.ZeroOrOne =>
+              s"""@deprecated("please use overloaded setter without `Option`", since = "odb codegen v1.96")
+                 |def $name(x: Option[$parameterTypeX]): this.type = $name(x.orNull)
+                 |""".stripMargin
+            case _ => ""
+          }
+
           s"""def $name(x: $parameterTypeX): this.type = {
              |  result.$name = $assignParameterX
              |  this
-             |}""".stripMargin
+             |}
+             |$overloadedSetterMaybe""".stripMargin
 
       }.mkString("\n")
 
