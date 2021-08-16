@@ -952,6 +952,7 @@ class CodeGen(schema: Schema) {
             case Cardinality.List =>
               s"""value match {
                  |        case null => collection.immutable.ArraySeq.empty
+                 |        case singleValue: $baseType => collection.immutable.ArraySeq(singleValue)
                  |        case coll: IterableOnce[Any] if coll.iterator.isEmpty => collection.immutable.ArraySeq.empty
                  |        case arr: Array[_] if arr.isEmpty => collection.immutable.ArraySeq.empty
                  |        case arr: Array[_] => collection.immutable.ArraySeq.unsafeWrapArray(arr).asInstanceOf[IndexedSeq[$baseType]]
