@@ -1549,6 +1549,8 @@ class CodeGen(schema: Schema) {
          |}
          |
          |trait NewNodeBuilder[A <: NewNode] {
+         |  def id: Long
+         |  def id(x: Long): NewNodeBuilder[A]
          |  def build: A
          |}
          |
@@ -1666,12 +1668,28 @@ class CodeGen(schema: Schema) {
          |}
          |
          |class New${nodeClassName}Builder extends NewNodeBuilder[New$nodeClassName] {
-         |   val result: New$nodeClassName = new New${nodeClassName}()
+         |   var result: New$nodeClassName = new New${nodeClassName}()
+         |   private var _id: Long = -1L
+         |   def id: Long = _id
+         |   def id(x: Long): New${nodeClassName}Builder = { _id = x; this }
          |
          |   $builderSetters
          |
          |   def build: New${nodeClassName} = result
          |
+         |   def canEqual(other: Any): Boolean = other.isInstanceOf[New${nodeClassName}Builder]
+         |
+         |   override def equals(other: Any): Boolean = other match {
+         |      case that: New${nodeClassName}Builder => (that canEqual this) && _id == that._id
+         |      case _ => false
+         |   }
+         |
+         |   override def hashCode(): Int = {
+         |      val state = Seq(_id)
+         |      state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
+         |   }
+         |
+         |   override def toString = s"New${nodeClassName}Builder($${_id})"
          |}
          |
          |object New${nodeClassName}{
