@@ -1,22 +1,43 @@
 package overflowdb.codegen
 
-import overflowdb.schema.Schema
-
 import java.io.File
+import overflowdb.schema.Schema
+import scopt.OParser
 
 object Main extends App {
-  val outputDir =
-    args.headOption.map(new File(_)).getOrElse(throw new AssertionError("please pass outputDir as first parameter"))
+  case class Config(classWithSchema: String, fieldName: String, outputDir: File)
 
-  val schemaStaticClass = "io.shiftleft.codepropertygraph.schema.CpgSchema$"
-  val fieldName = "instance"
-  val clazz = getClass.getClassLoader.loadClass(schemaStaticClass)
-  val field = clazz.getDeclaredField(fieldName)
-  assert(field.getType == classOf[Schema], s"field $fieldName in class `$schemaStaticClass` must be of type `overflowdb.schema.Schema`, but actually is of type `${field.getType}`")
-  field.setAccessible(true)
-  val schema = field.get(clazz).asInstanceOf[Schema]
-  println(schema)
-//  val schema = field.get().asInstanceOf[Schema]
+  val builder = OParser.builder[Config]
+  val parser1 = {
+    import builder._
+    OParser.sequence(
+      programName("codegen"),
+      opt[String]('c', "classWithSchema")
+        .required()
+        .action((x, c) => c.copy(classWithSchema = x))
+        .text("class with schema field, e.g. `org.example.MyDomain$`"),
+      opt[String]('f', "field")
+        .required()
+        .action((x, c) => c.copy(fieldName = x))
+        .text("(static) field name for schema within the specified `classWithSchema` with schema field, e.g. `org.example.MyDomain$`"),
+      opt[File]('o', "out")
+        .required()
+        .action((x, c) => c.copy(outputDir = x))
+        .text("output directory"),
+    )
+  }
 
-//  new CodeGen(schema).run(outputDir)
+  OParser.parse(parser1, args, Config("", "", null)) .map {
+    case Config(classWithSchema, fieldName, outputDir) =>
+      val classLoader = getClass.getClassLoader
+      val clazz = classLoader.loadClass(classWithSchema)
+      val field = clazz.getDeclaredField(fieldName)
+      assert(field.getType == classOf[Schema], s"field $fieldName in class `$classWithSchema` must be of type `overflowdb.schema.Schema`, but actually is of type `${field.getType}`")
+      field.setAccessible(true)
+      val schema = field.get(clazz).asInstanceOf[Schema]
+
+      new CodeGen(schema).run(outputDir)
+  }
+
+
 }
