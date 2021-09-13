@@ -10,11 +10,15 @@ object CodegenSbtPlugin extends AutoPlugin {
     val classWithSchema = settingKey[String]("")
     val fieldName = settingKey[String]("")
 
-    lazy val baseSettings000: Seq[Def.Setting[_]] = Seq(
+    lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
       generateDomainClasses := {
-        Codegen(sources.value, (generateDomainClasses/classWithSchema).value)
+        val classWithSchema_ = (Compile/generateDomainClasses/classWithSchema).value
+        val fieldName_ = (Compile/generateDomainClasses/fieldName).value
+        val outputDir = sourceManaged.value / "overflowdb-codegen"
+        Codegen(classWithSchema_, fieldName_, outputDir)
       },
-      generateDomainClasses/classWithSchema := "initXX0"
+      generateDomainClasses/classWithSchema := "undefined",
+      generateDomainClasses/fieldName := "undefined",
     )
   }
   import autoImport._
@@ -25,13 +29,12 @@ object CodegenSbtPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   // a group of settings that are automatically added to projects.
-  override val projectSettings = inConfig(Compile)(baseSettings000)
+  override val projectSettings = inConfig(Compile)(baseSettings)
 }
 
 object Codegen {
-  def apply(sources: Seq[File], classWithSchema: String): Seq[File] = {
-    println("XXX0 $classWithSchema")
-    // TODO codegen stuff!
-    sources
+  def apply(classWithSchema: String, fieldName: String, outputDir: File): Seq[File] = {
+    println(s"XXX0 $classWithSchema $fieldName $outputDir")
+    Seq.empty
   }
 }

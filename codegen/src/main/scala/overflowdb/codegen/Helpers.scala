@@ -131,7 +131,7 @@ object Helpers {
 
   def defaultValueImpl[A](default: Property.Default[A]): String =
     default.value match {
-      case str: String => s"\"$str\""
+      case str: String => s"$quotes$str$quotes"
       case char: Char => s"'$char'"
       case byte: Byte => s"$byte: Byte"
       case short: Short => s"$short: Short"
@@ -247,4 +247,5 @@ object Helpers {
   def completeTypeHierarchy(node: AbstractNodeType): Seq[AbstractNodeType] =
     node +: node.extendzRecursively
 
+  val quotes = '"'
 }
