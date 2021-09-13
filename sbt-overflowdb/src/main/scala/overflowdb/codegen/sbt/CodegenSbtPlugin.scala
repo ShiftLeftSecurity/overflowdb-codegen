@@ -11,12 +11,14 @@ object CodegenSbtPlugin extends AutoPlugin {
     val fieldName = settingKey[String]("")
 
     lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
-      generateDomainClasses := {
-        val classWithSchema_ = (Compile/generateDomainClasses/classWithSchema).value
-        val fieldName_ = (Compile/generateDomainClasses/fieldName).value
-        val outputDir = sourceManaged.value / "overflowdb-codegen"
-        Codegen(classWithSchema_, fieldName_, outputDir)
-      },
+      generateDomainClasses := Def.taskDyn {
+        Def.task {
+          val classWithSchema_ = (Compile/generateDomainClasses/classWithSchema).value
+          val fieldName_ = (Compile/generateDomainClasses/fieldName).value
+          val outputDir = sourceManaged.value / "overflowdb-codegen"
+          Codegen(classWithSchema_, fieldName_, outputDir)
+        }
+      }.value,
       generateDomainClasses/classWithSchema := "undefined",
       generateDomainClasses/fieldName := "undefined",
     )
