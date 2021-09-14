@@ -36,7 +36,7 @@ object Codegen {
   def apply(classWithSchema: String, fieldName: String, outputDir: File): Def.Initialize[Task[Seq[File]]] =
     Def.task {
       (Compile/runMain).toTask(s" overflowdb.codegen.Main --classWithSchema=$classWithSchema --field=$fieldName --out=$outputDir").value
-      Seq.empty
-  }
+      FileUtils.listFilesRecursively(outputDir)
+    }
 
 }
