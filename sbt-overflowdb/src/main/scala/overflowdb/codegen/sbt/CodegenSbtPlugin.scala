@@ -35,10 +35,6 @@ object Codegen {
 
   def apply(classWithSchema: String, fieldName: String, outputDir: File): Def.Initialize[Task[Seq[File]]] =
     Def.task {
-      // val classWithSchema_ = (generateDomainClasses/classWithSchema).value
-      // val fieldName_ = (generateDomainClasses/fieldName).value
-      // val outputDir = sourceManaged.value / "overflowdb-codegen"
-      println(s"XXX6 $classWithSchema $fieldName $outputDir")
       (Compile/runMain).toTask(s" overflowdb.codegen.Main --classWithSchema=$classWithSchema --field=$fieldName --out=$outputDir").value
       Seq.empty
   }
