@@ -11,13 +11,28 @@ object CodegenSbtPlugin extends AutoPlugin {
     val fieldName = settingKey[String]("")
 
     lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
+      // generateDomainClasses := Def.taskDyn {
+      //   val classWithSchema_ = (generateDomainClasses/classWithSchema).value
+      //   val fieldName_ = (generateDomainClasses/fieldName).value
+      //   val outputDir = sourceManaged.value / "overflowdb-codegen"
+      //   Def.task {
+      //     // Codegen(classWithSchema_, fieldName_, outputDir)
+      //     (Compile/runMain).toTask(s" overflowdb.codegen.Main ")
+      //     // (Compile/runMain).toTask(s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir").value
+      //     // Seq.empty
+      //   }
+      // }.value,
       generateDomainClasses := Def.taskDyn {
         val classWithSchema_ = (generateDomainClasses/classWithSchema).value
         val fieldName_ = (generateDomainClasses/fieldName).value
         val outputDir = sourceManaged.value / "overflowdb-codegen"
-        Def.task {
-          Codegen(classWithSchema_, fieldName_, outputDir)
-        }
+        // val runFoo = (Compile/runMain).toTask(s" overflowdb.codegen.Main ")
+        // Def.task {
+          // runMain.toTask(s" overflowdb.codegen.Main ").value
+          // (Compile/runMain).toTask(s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir").value
+        //   Seq.empty
+        // }
+        Codegen.apply2(classWithSchema_, fieldName_, outputDir)
       }.value,
       generateDomainClasses/classWithSchema := "undefined",
       generateDomainClasses/fieldName := "undefined",
@@ -35,8 +50,17 @@ object CodegenSbtPlugin extends AutoPlugin {
 }
 
 object Codegen {
-  def apply(classWithSchema: String, fieldName: String, outputDir: File): Seq[File] = {
-    println(s"XXX0 $classWithSchema $fieldName $outputDir")
-    Seq.empty
+  def apply2(classWithSchema: String, fieldName: String, outputDir: File): sbt.Def.Initialize[sbt.Task[Seq[File]]] =
+    Def.task {
+      // runMain.toTask(s" overflowdb.codegen.Main ").value
+
+      // val classWithSchema_ = (generateDomainClasses/classWithSchema).value
+      // val fieldName_ = (generateDomainClasses/fieldName).value
+      // val outputDir = sourceManaged.value / "overflowdb-codegen"
+      println(s"XXX3 $classWithSchema $fieldName $outputDir")
+      (Compile/runMain).toTask(s" overflowdb.codegen.Main --classWithSchema=$classWithSchema --field=$fieldName --out=$outputDir").value
+      // (Compile/runMain).toTask(s" overflowdb.codegen.Main --classWithSchema=$c").value
+      Seq.empty
   }
+
 }
