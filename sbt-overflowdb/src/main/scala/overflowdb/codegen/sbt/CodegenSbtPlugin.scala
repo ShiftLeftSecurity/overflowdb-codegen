@@ -11,16 +11,12 @@ object CodegenSbtPlugin extends AutoPlugin {
     val fieldName = settingKey[String]("")
 
     lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
-      generateDomainClasses := Def.taskDyn {
-        val classWithSchema_ = (generateDomainClasses/classWithSchema).value
-        val fieldName_ = (generateDomainClasses/fieldName).value
-        val outputDir = sourceManaged.value / "overflowdb-codegen"
-        Codegen.apply(classWithSchema_, fieldName_, outputDir)
-      }.value,
+      generateDomainClasses := generateDomainClassesTask.value,
       generateDomainClasses/classWithSchema := "undefined",
       generateDomainClasses/fieldName := "undefined",
     )
   }
+  import autoImport._
 
   override def requires = sbt.plugins.JvmPlugin
 
@@ -29,14 +25,18 @@ object CodegenSbtPlugin extends AutoPlugin {
 
   // a group of settings that are automatically added to projects.
   override val projectSettings = inConfig(Compile)(autoImport.baseSettings)
-}
 
-object Codegen {
-
-  def apply(classWithSchema: String, fieldName: String, outputDir: File): Def.Initialize[Task[Seq[File]]] =
-    Def.task {
-      (Compile/runMain).toTask(s" overflowdb.codegen.Main --classWithSchema=$classWithSchema --field=$fieldName --out=$outputDir").value
-      FileUtils.listFilesRecursively(outputDir)
+  lazy val generateDomainClassesTask =
+    Def.taskDyn {
+      val classWithSchema_ = (generateDomainClasses/classWithSchema).value
+      val fieldName_ = (generateDomainClasses/fieldName).value
+      val outputDir = sourceManaged.value / "overflowdb-codegen"
+      Def.task {
+        (Compile/runMain).toTask(
+          s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir"
+        ).value
+        FileUtils.listFilesRecursively(outputDir)
+      }
     }
 
 }
