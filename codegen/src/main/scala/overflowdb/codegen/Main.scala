@@ -5,7 +5,7 @@ import overflowdb.schema.Schema
 import scopt.OParser
 
 object Main extends App {
-  import Main2._
+  case class Config(classWithSchema: String, fieldName: String, outputDir: File)
 
   val builder = OParser.builder[Config]
   val parser1 = {
@@ -29,11 +29,6 @@ object Main extends App {
 
   OParser.parse(parser1, args, Config("", "", null)).foreach(execute)
 
-}
-
-object Main2 {
-  case class Config(classWithSchema: String, fieldName: String, outputDir: File)
-
   def execute(config: Config): Seq[File] = config match {
     case Config(classWithSchema, fieldName, outputDir) =>
       val classLoader = getClass.getClassLoader
@@ -45,5 +40,5 @@ object Main2 {
 
       new CodeGen(schema).run(outputDir)
   }
-
 }
+
