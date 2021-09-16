@@ -42,17 +42,12 @@ object CodegenSbtPlugin extends AutoPlugin {
 
       if (outputDir.exists && lastSchemaMd5 == Some(currentSchemaMd5)) {
         // inputs did not change, don't regenerate
-        println("XXX0 before")
         Def.task {
-          println("XXXX0 nothing changed, only list files")
           FileUtils.listFilesRecursively(outputDir)
         }
       } else {
-        println("XXXX1 before")
         Def.task {
-          println("XXXX1 need to regenerate")
           IO.delete(outputDir)
-          println("XXXX1 after delete...")
           (Compile/runMain).toTask(
             s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir"
           ).value
