@@ -13,6 +13,15 @@ object FileUtils {
     }
   }
 
+  def deleteRecursively(root: File): Unit = {
+    if (root.exists) {
+      Files.walk(root.toPath).iterator.asScala.map(_.toFile).collect {
+        case file if (file.isDirectory) => deleteRecursively(file)
+        case file => file.delete()
+      }
+    }
+  }
+
   def md5(roots: File*): String = {
     val md = MessageDigest.getInstance("MD5")
     roots.foreach { root =>
