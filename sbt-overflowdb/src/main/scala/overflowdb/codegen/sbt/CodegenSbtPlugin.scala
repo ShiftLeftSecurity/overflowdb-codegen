@@ -2,6 +2,7 @@ package overflowdb.codegen.sbt
 
 import sbt._
 import sbt.Keys._
+import scala.util.Try
 
 object CodegenSbtPlugin extends AutoPlugin {
 
@@ -31,12 +32,35 @@ object CodegenSbtPlugin extends AutoPlugin {
       val classWithSchema_ = (generateDomainClasses/classWithSchema).value
       val fieldName_ = (generateDomainClasses/fieldName).value
       val outputDir = sourceManaged.value / "overflowdb-codegen"
-      Def.task {
-        (Compile/runMain).toTask(
-          s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir"
-        ).value
-        FileUtils.listFilesRecursively(outputDir)
+
+      val schemaMd5File = target.value / "overflowdb-schema.md5"
+      lazy val currentSchemaMd5 = FileUtils.md5(sourceDirectory.value, baseDirectory.value/"build.sbt")
+      lazy val lastSchemaMd5: Option[String] =
+        Try(IO.read(schemaMd5File)).toOption
+      def persistLastSchemaMd5(value: String) =
+        IO.write(schemaMd5File, value)
+
+      if (outputDir.exists && lastSchemaMd5 == Some(currentSchemaMd5)) {
+        // inputs did not change, don't regenerate
+        println("XXX0 before")
+        Def.task {
+          println("XXXX0 nothing changed, only list files")
+          FileUtils.listFilesRecursively(outputDir)
+        }
+      } else {
+        println("XXXX1 before")
+        Def.task {
+          println("XXXX1 need to regenerate")
+          IO.delete(outputDir)
+          println("XXXX1 after delete...")
+          (Compile/runMain).toTask(
+            s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir"
+          ).value
+          persistLastSchemaMd5(currentSchemaMd5)
+          FileUtils.listFilesRecursively(outputDir)
+        }
       }
     }
+
 
 }

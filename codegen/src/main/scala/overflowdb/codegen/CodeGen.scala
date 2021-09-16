@@ -32,6 +32,7 @@ class CodeGen(schema: Schema) {
       writeNodeTraversalFiles(_outputDir) :+
       writeNewNodeFile(_outputDir)
     println(s"generated ${results.size} files in ${_outputDir}")
+
     results.map(_.toJava)
   }
 
