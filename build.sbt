@@ -11,8 +11,6 @@ lazy val integrationTests = Projects.integrationTests
 
 ThisBuild/resolvers += Resolver.mavenLocal
 
-enablePlugins(GitVersioning)
-
 ThisBuild/Compile/scalacOptions ++= Seq(
   "-Xfatal-warnings",
   "-feature",
