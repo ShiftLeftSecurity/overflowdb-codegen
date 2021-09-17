@@ -8,8 +8,8 @@ object CodegenSbtPlugin extends AutoPlugin {
 
   object autoImport {
     val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for our schema")
-    val classWithSchema = settingKey[String]("")
-    val fieldName = settingKey[String]("")
+    val classWithSchema = settingKey[String]("class with schema field, e.g. `org.example.MyDomain$`")
+    val fieldName = settingKey[String]("(static) field name for schema within the specified `classWithSchema` with schema field, e.g. `org.example.MyDomain$`")
 
     lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
       generateDomainClasses := generateDomainClassesTask.value,
