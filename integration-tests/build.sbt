@@ -5,7 +5,7 @@ scalaVersion := "2.13.6"
 val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for all test schemas")
 
 val schemas = project.in(file("schemas"))
-  // .dependsOn(Projects.codegen_2_13)
+  .dependsOn(Projects.codegen_2_13)
   .settings(Seq(
     generateDomainClasses := Def.task {
       val outputRoot = target.value / "odb-codegen"
@@ -19,7 +19,7 @@ val schemas = project.in(file("schemas"))
 val integrationTests = project.in(file("tests"))
   .settings(Seq(
     libraryDependencies ++= Seq(
-      // "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
+      "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
       "org.scalatest" %% "scalatest" % "3.2.9" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.28" % Test,
     ),
