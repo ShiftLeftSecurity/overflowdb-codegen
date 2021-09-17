@@ -1,6 +1,6 @@
 name := "overflowdb-codegen"
 
-crossScalaVersions := Seq("2.12.14", scalaVersion.value)
+// cross scalaVersion is defined in project/Build.scala
 
 libraryDependencies ++= Seq(
   "io.shiftleft" % "overflowdb-core" % Versions.overflowdb,

@@ -1,9 +1,11 @@
 name := "integration-tests-root"
 
+scalaVersion := "2.13.6"
+
 val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for all test schemas")
 
 val schemas = project.in(file("schemas"))
-  .dependsOn(Projects.codegen)
+  .dependsOn(Projects.codegen_2_13)
   .settings(Seq(
     generateDomainClasses := Def.task {
       val outputRoot = target.value / "odb-codegen"
