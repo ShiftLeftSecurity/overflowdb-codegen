@@ -2,10 +2,35 @@ name := "overflowdb-codegen-root"
 
 ThisBuild/organization := "io.shiftleft"
 
-lazy val codegen_2_12 = Projects.codegen_2_12
-lazy val codegen_2_13 = Projects.codegen_2_13
-lazy val sbtPlugin = Projects.sbtPlugin
-// lazy val integrationTests = Projects.integrationTests
+/** scala cross version settings
+  * we need scala 2.12 for the sbt plugin and 2.13 for everything else */
+val codegen = project.in(file("codegen"))
+  .settings(
+    name := "overflowdb-codegen",
+    libraryDependencies ++= Seq(
+      "io.shiftleft" % "overflowdb-core" % "1.62",
+      "com.github.pathikrit" %% "better-files" % "3.8.0",
+      "com.github.scopt" %% "scopt" % "4.0.1",
+      "org.scalatest" %% "scalatest" % "3.2.9" % Test,
+    )
+  ).cross
+val codegen_2_12 = codegen("2.12.4") // for sbtPlugin
+val codegen_2_13 = codegen("2.13.6") // for everything else
+
+val sbtPlugin = project.in(file("sbt-overflowdb"))
+  .settings(
+    name := "sbt-overflowdb",
+    scalaVersion := "2.12.14")
+  .dependsOn(codegen_2_12)
+  .enablePlugins(SbtPlugin)
+
+val integrationTests = project.in(file("integration-tests"))
+  .dependsOn(codegen_2_13)
+  // .settings(
+  //   name := "sbt-overflowdb",
+  //   scalaVersion := "2.13.6")
+
+
 
 ThisBuild/resolvers += Resolver.mavenLocal
 
