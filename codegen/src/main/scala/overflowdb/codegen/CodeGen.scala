@@ -17,7 +17,7 @@ class CodeGen(schema: Schema) {
   private val noWarnList: mutable.Set[(AbstractNodeType, Property[_])] = mutable.Set.empty
 
   def dontWarnForDuplicateProperty(nodeType: AbstractNodeType, property: Property[_]): CodeGen = {
-    noWarnList.addOne((nodeType, property))
+    noWarnList.add((nodeType, property))
     this
   }
 
@@ -32,6 +32,7 @@ class CodeGen(schema: Schema) {
       writeNodeTraversalFiles(_outputDir) :+
       writeNewNodeFile(_outputDir)
     println(s"generated ${results.size} files in ${_outputDir}")
+
     results.map(_.toJava)
   }
 
