@@ -1,4 +1,4 @@
-name := "overflowdb-codegen"
+name := "overflowdb-schema"
 
 libraryDependencies ++= Seq(
   "io.shiftleft" % "overflowdb-core" % Versions.overflowdb,

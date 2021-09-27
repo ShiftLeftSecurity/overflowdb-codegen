@@ -2,8 +2,10 @@ name := "overflowdb-codegen-root"
 
 ThisBuild/organization := "io.shiftleft"
 
-/** scala cross version settings for codegen:
+/** scala cross version settings for schema and codegen:
   * we need scala 2.12 for the sbt plugin and 2.13 for everything else */
+lazy val schema_2_12 = Projects.schema_2_12
+lazy val schema_2_13 = Projects.schema_2_13
 lazy val codegen_2_12 = Projects.codegen_2_12
 lazy val codegen_2_13 = Projects.codegen_2_13
 lazy val sbtPlugin = Projects.sbtPlugin

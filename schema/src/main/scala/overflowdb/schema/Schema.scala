@@ -1,7 +1,7 @@
 package overflowdb.schema
 
 import overflowdb.NodeRef
-import overflowdb.codegen.Helpers._
+// import overflowdb.schema.Helpers._
 import overflowdb.schema.Property.Default
 
 import scala.collection.mutable
@@ -273,6 +273,9 @@ object Direction extends Enumeration {
 object DefaultEdgeTypes {
   // TODO define this in actual schema, not here
   val ContainsNode = new EdgeType("CONTAINS_NODE", None, SchemaInfo.forClass(getClass)).protoId(9)
+
+  // TODO drop
+  val ContainsNode = "CONTAINS_NODE"
 }
 
 case class ProductElement(name: String, accessorSrc: String, index: Int)

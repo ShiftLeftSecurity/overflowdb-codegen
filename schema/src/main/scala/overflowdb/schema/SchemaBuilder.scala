@@ -1,7 +1,6 @@
 package overflowdb.schema
 
-import overflowdb.codegen.DefaultNodeTypes
-import overflowdb.codegen.Helpers._
+// import Helpers._
 import overflowdb.schema.Property.ValueType
 import scala.collection.mutable
 
