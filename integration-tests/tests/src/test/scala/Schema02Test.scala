@@ -22,9 +22,9 @@ class Schema02Test extends AnyWordSpec with Matchers {
   }
 
   "Allow newNode cloning and mutation" in {
-    val newNode = NewNode1().name("A").build.clone()
+    val newNode = NewNode1().name("A").build.copy
     val nn2: BaseNodeNew = newNode
-    val nn3 = nn2.clone()
+    val nn3 = nn2.copy
     nn3.name shouldBe "A"
     nn3.name = "B"
     nn3.isInstanceOf[NewNode1] shouldBe true
