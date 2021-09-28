@@ -21,15 +21,15 @@ class Schema02Test extends AnyWordSpec with Matchers {
     Node1.Edges.In shouldBe Array(Edge2.Label)
   }
 
-  "Allow newNode cloning and mutation" in {
-    val newNode = NewNode1().name("A").build.copy
-    val nn2: BaseNodeNew = newNode
-    val nn3 = nn2.copy
-    nn3.name shouldBe "A"
-    nn3.name = "B"
-    nn3.isInstanceOf[NewNode1] shouldBe true
-    nn3.name shouldBe "B"
-    nn2.name shouldBe "A"
+  "allow newNode cloning and mutation" in {
+    val original = NewNode1().name("A").build
+    val copy: NewNode1 = original.copy // prove that type is resolved correctly as `NewNode1`
+    copy.isInstanceOf[NewNode1] shouldBe true
+    copy.name shouldBe "A"
+
+    copy.name = "B"
+    copy.name shouldBe "B"
+    original.name shouldBe "A"
   }
 
   "working with a concrete sample graph" can {

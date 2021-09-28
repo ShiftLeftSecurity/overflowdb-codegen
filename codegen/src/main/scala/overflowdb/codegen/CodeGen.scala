@@ -336,9 +336,12 @@ class CodeGen(schema: Schema) {
       val keyBasedTraits =
         schema.nodeProperties.map { property =>
           val camelCaseName = camelCase(property.name)
-          val tpe = getCompleteType(property)
-          s"trait Has${property.className} { def $camelCaseName: $tpe }\n" +
-            s"trait Has${property.className}New extends Has${property.className} { def ${camelCaseName}_=(value: ${tpe}) }"
+          val mixinTraitName = s"Has${property.className}"
+
+          s"""trait $mixinTraitName {
+             |  def $camelCaseName: ${getCompleteType(property)}
+             |  def $camelCaseName(value: ${getCompleteTypeForSetters(property)}): $mixinTraitName
+             |}""".stripMargin
         }.mkString("\n") + "\n"
 
       val factories = {
@@ -413,14 +416,6 @@ class CodeGen(schema: Schema) {
 
       val mixinTraits = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}"
-      }.mkString(" ")
-
-      val mixinsNew = nodeBaseType.properties.map { property =>
-        s"with Has${property.className}New"
-      }.mkString(" ")
-
-      val mixinTraitsNew = nodeBaseType.extendz.map { baseTrait =>
-        s"with ${baseTrait.className}New"
       }.mkString(" ")
 
       val mixinTraitsForBase = nodeBaseType.extendz.map { baseTrait =>
@@ -518,10 +513,6 @@ class CodeGen(schema: Schema) {
          |trait ${className}Base extends AbstractNode
          |$mixins
          |$mixinTraitsForBase
-         |
-         |trait ${className}New extends NewNode with TypedCopyable[${className}New]
-         |$mixinsNew
-         |$mixinTraitsNew
          |
          |trait $className extends StoredNode with ${className}Base
          |$mixinTraits {
@@ -898,9 +889,11 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
 
       val nodeRefImpl = {
-        val propertyDelegators = properties.map { key =>
-          val name = camelCase(key.name)
-          s"""  override def $name: ${getCompleteType(key)} = get().$name"""
+        val propertyDelegators = properties.map { property =>
+          val name = camelCase(property.name)
+          s"""  override def $name: ${getCompleteType(property)} = get().$name
+             |  override def $name(value: ${getCompleteTypeForSetters(property)}): $className = get().$name(value)
+             |""".stripMargin
         }.mkString("\n")
 
         val propertyDefaultValues = propertyDefaultValueImpl(s"$className.PropertyDefaults", properties)
@@ -1018,7 +1011,7 @@ class CodeGen(schema: Schema) {
            |  }""".stripMargin
       }
 
-      def propertyBasedFields(properties: Seq[Property[_]]): String = {
+      def propertyBasedMembersAndAccessors(properties: Seq[Property[_]]): String = {
         import Property.Cardinality
         properties.map { property =>
           val publicName = camelCase(property.name)
@@ -1034,7 +1027,8 @@ class CodeGen(schema: Schema) {
           }
 
           s"""private var $fieldName: $tpeForField = $defaultValue
-             |def $publicName: $publicType = $fieldAccessor""".stripMargin
+             |override def $publicName: $publicType = $fieldAccessor
+             |override def $publicName(value: $tpeForField): $className = ???""".stripMargin
         }.mkString("\n\n")
       }
 
@@ -1044,7 +1038,7 @@ class CodeGen(schema: Schema) {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
-           |${propertyBasedFields(properties)}
+           |${propertyBasedMembersAndAccessors(properties)}
            |
            |$containedNodesAsMembers
            |
@@ -1552,13 +1546,9 @@ class CodeGen(schema: Schema) {
       s"""package $nodesPackage
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
-         |trait NewNode extends AbstractNode with TypedCopyable[NewNode] with scala.Cloneable{
-         |  override def clone():Object = super.clone()
-         |
+         |trait NewNode extends AbstractNode {
          |  def properties: Map[String, Any]
-         |}
-         |trait TypedCopyable[+NodeType <: Object] extends scala.Cloneable {
-         |  def copy: NodeType = super.clone().asInstanceOf[NodeType]
+         |  def copy: NewNode
          |}
          |
          |trait NewNodeBuilder[A <: NewNode] {
@@ -1673,7 +1663,15 @@ class CodeGen(schema: Schema) {
 
       val nodeClassName = nodeType.className
 
-      val mixins = nodeType.extendz.map{baseType => s"with ${baseType.className}New"}.mkString(" ")
+      val propertySettersImpl = properties.map { property =>
+        val memberName = camelCase(property.name)
+        s"override def $memberName(value: ${getCompleteTypeForSetters(property)}): this.type = ???"
+      }.mkString("\n")
+
+      val copyPropertiesImpl = properties.map { property =>
+        val memberName = camelCase(property.name)
+        s"newInstance.$memberName = this.$memberName"
+      }.mkString("\n")
 
       s"""
          |object New${nodeClassName}Builder {
@@ -1689,14 +1687,22 @@ class CodeGen(schema: Schema) {
          |
          |}
          |
-         |object New${nodeClassName}{
+         |object New$nodeClassName{
          |  def apply(): New${nodeClassName}Builder = New${nodeClassName}Builder()
          |}
          |
-         |class New${nodeClassName} private[nodes] ($memberVariables)
-         |  extends NewNode with ${nodeClassName}Base ${mixins} with TypedCopyable[New${nodeClassName}] {
+         |class New$nodeClassName private[nodes] ($memberVariables)
+         |  extends NewNode with ${nodeClassName}Base {
          |
          |  override def label: String = "${nodeType.name}"
+         |
+         |  override def copy: New$nodeClassName = {
+         |    val newInstance = new New$nodeClassName
+         |    $copyPropertiesImpl
+         |    newInstance
+         |  }
+         |
+         |  $propertySettersImpl
          |
          |  $propertiesMapImpl
          |}

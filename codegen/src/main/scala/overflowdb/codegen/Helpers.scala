@@ -102,6 +102,9 @@ object Helpers {
   def getCompleteType[A](property: Property[_]): String =
     getCompleteType(property.cardinality, typeFor(property))
 
+  def getCompleteTypeForSetters[A](property: Property[_]): String =
+    getCompleteTypeForSetters(property.cardinality, typeFor(property))
+
   def typeFor(containedNode: ContainedNode): String = {
     val className = containedNode.nodeType.className
     if (DefaultNodeTypes.AllClassNames.contains(className)) className
@@ -117,6 +120,14 @@ object Helpers {
       case Cardinality.One(_)    => valueType
       case Cardinality.ZeroOrOne => s"Option[$valueType]"
       case Cardinality.List      => s"IndexedSeq[$valueType]"
+    }
+  }
+
+  def getCompleteTypeForSetters(cardinality: Property.Cardinality, valueType: String): String = {
+    import Property.Cardinality
+    cardinality match {
+      case Cardinality.One(_) | Cardinality.ZeroOrOne => valueType
+      case Cardinality.List => s"IndexedSeq[$valueType]"
     }
   }
 
