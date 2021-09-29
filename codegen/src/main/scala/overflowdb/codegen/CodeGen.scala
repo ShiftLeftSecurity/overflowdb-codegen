@@ -337,8 +337,11 @@ class CodeGen(schema: Schema) {
         schema.nodeProperties.map { property =>
           val camelCaseName = camelCase(property.name)
           val tpe = getCompleteType(property)
-          s"""trait Has${property.className} { def $camelCaseName: $tpe }
-             |trait Has${property.className}New extends Has${property.className} { def ${camelCaseName}_=(value: ${tpe}) }
+          val traitName = s"Has${property.className}"
+          s"""trait $traitName { def $camelCaseName: $tpe }
+             |trait ${traitName}Mutable extends $traitName {
+             |  def ${camelCaseName}_=(value: $tpe)
+             |}
              |""".stripMargin
 
         }.mkString("\n") + "\n"
@@ -418,7 +421,7 @@ class CodeGen(schema: Schema) {
       }.mkString(" ")
 
       val mixinsNew = nodeBaseType.properties.map { property =>
-        s"with Has${property.className}New"
+        s"with Has${property.className}Mutable"
       }.mkString(" ")
 
       val mixinTraitsNew = nodeBaseType.extendz.map { baseTrait =>
