@@ -337,8 +337,10 @@ class CodeGen(schema: Schema) {
         schema.nodeProperties.map { property =>
           val camelCaseName = camelCase(property.name)
           val tpe = getCompleteType(property)
-          s"trait Has${property.className} { def $camelCaseName: $tpe }\n" +
-            s"trait Has${property.className}New extends Has${property.className} { def ${camelCaseName}_=(value: ${tpe}) }"
+          s"""trait Has${property.className} { def $camelCaseName: $tpe }
+             |trait Has${property.className}New extends Has${property.className} { def ${camelCaseName}_=(value: ${tpe}) }
+             |""".stripMargin
+
         }.mkString("\n") + "\n"
 
       val factories = {
