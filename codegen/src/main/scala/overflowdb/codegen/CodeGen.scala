@@ -1552,7 +1552,7 @@ class CodeGen(schema: Schema) {
       s"""package $nodesPackage
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
-         |trait NewNode extends AbstractNode {
+         |trait NewNode extends AbstractNode with Product {
          |  def properties: Map[String, Any]
          |  def copy: NewNode
          |}
@@ -1672,11 +1672,18 @@ class CodeGen(schema: Schema) {
         s"newInstance.$memberName = this.$memberName"
       }.mkString("\n")
 
-      s"""object New$nodeClassName{
-         |  def apply(): New$nodeClassName = new New$nodeClassName
+      val classNameNewNode = s"New$nodeClassName"
+
+      val productElementAccessors = fieldDescriptions.reverse.zipWithIndex.map  {
+        case (fieldDescription, index) =>
+          s"case $index => this.${fieldDescription.name}"
+      }.mkString("\n")
+
+      s"""object $classNameNewNode {
+         |  def apply(): $classNameNewNode = new $classNameNewNode
          |}
          |
-         |class New$nodeClassName($memberVariables)
+         |class $classNameNewNode($memberVariables)
          |  extends NewNode with ${nodeClassName}Base $mixins {
          |
          |  override def label: String = "${nodeType.name}"
@@ -1690,6 +1697,17 @@ class CodeGen(schema: Schema) {
          |  $propertySettersImpl
          |
          |  $propertiesMapImpl
+         |
+         |  override def productElement(n: Int): Any =
+         |    n match {
+         |      $productElementAccessors
+         |      case _ => null
+         |    }
+         |
+         |  override def productPrefix = "$classNameNewNode"
+         |  override def productArity = ${fieldDescriptions.size}
+         |
+         |  override def canEqual(that: Any): Boolean = that != null && that.isInstanceOf[$classNameNewNode]
          |}
          |""".stripMargin
     }
