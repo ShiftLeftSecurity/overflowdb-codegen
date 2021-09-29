@@ -1681,6 +1681,34 @@ class CodeGen(schema: Schema) {
 
       val mixins = nodeType.extendz.map{baseType => s"with ${baseType.className}New"}.mkString(" ")
 
+      val propertySettersImpl = fieldDescriptions.map {
+        case FieldDescription(name, valueType , _, cardinality) =>
+          cardinality match {
+            case Cardinality.One(_) =>
+              s"""def $name(value: $valueType): this.type = {
+                 |  this.$name = value
+                 |  this
+                 |}
+                 |""".stripMargin
+
+            case Cardinality.ZeroOrOne =>
+              s"""def $name(value: $valueType): this.type = {
+                 |  this.$name = Option(value)
+                 |  this
+                 |}
+                 |
+                 |def $name(value: Option[$valueType]): this.type = $name(value.orNull)
+                 |""".stripMargin
+
+            case Cardinality.List =>
+              s"""def $name(value: IterableOnce[$valueType]): this.type = {
+                 |  this.$name = value.iterator.to(collection.immutable.ArraySeq)
+                 |  this
+                 |}
+                 |""".stripMargin
+          }
+      }.mkString("\n")
+
       s"""
          |object New${nodeClassName}Builder {
          |  def apply(): New${nodeClassName}Builder = new New${nodeClassName}Builder()
@@ -1703,6 +1731,8 @@ class CodeGen(schema: Schema) {
          |  extends NewNode with ${nodeClassName}Base ${mixins} {
          |
          |  override def label: String = "${nodeType.name}"
+         |
+         |  $propertySettersImpl
          |
          |  $propertiesMapImpl
          |}

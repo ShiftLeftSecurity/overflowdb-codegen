@@ -37,13 +37,13 @@ class Schema02Test extends AnyWordSpec with Matchers {
     copy.name shouldBe "B"
     copy.order shouldBe Some(2)
 
-//    copy.name("C")
-//    copy.name shouldBe "C"
-//    copy.order(3)
-//    copy.order shouldBe Some(3)
+    copy.name("C")
+    copy.name shouldBe "C"
+    copy.order(3)
+    copy.order shouldBe Some(3)
 
-//    copy.order(Some(4))
-//    copy.order shouldBe Some(4)
+    copy.order(Some(4: Integer))
+    copy.order shouldBe Some(4)
 
     original.name shouldBe "A"
     original.order shouldBe Some(1)
