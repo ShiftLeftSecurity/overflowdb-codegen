@@ -1558,21 +1558,12 @@ class CodeGen(schema: Schema) {
          |  def properties: Map[String, Any]
          |}
          |
-         |trait NewNodeBuilder[A <: NewNode] {
-         |  def build: A
-         |}
-         |
-         |
          |class NewNodeCopyExtension[T<:NewNode](val node: T) extends AnyVal {
          |    def copy:T = node.clone().asInstanceOf[T]
          |}
          |
          |trait NewNodeCopyImplicit{
          |  implicit def toNewNodeCopyExtension[T<:NewNode](node:T):NewNodeCopyExtension[T] = new NewNodeCopyExtension(node)
-         |}
-         |
-         |object NewNodeBuilder {
-         |  implicit def newNodeBuilderToNewNode[A <: NewNode](builder: NewNodeBuilder[A]): A = builder.build
          |}
          |""".stripMargin
 
@@ -1607,30 +1598,6 @@ class CodeGen(schema: Schema) {
           s"var $name: $fullType = $defaultValue"
 
       }.mkString(", ")
-
-      val builderSetters = fieldDescriptions.map {
-        case FieldDescription(name, valueType, _, cardinality) =>
-          cardinality match {
-            case Cardinality.One(_) =>
-              s"""def $name(x: $valueType): this.type = {
-                 |  result.$name = x
-                 |  this
-                 |}""".stripMargin
-            case Cardinality.ZeroOrOne =>
-              s"""def $name(x: $valueType): this.type = {
-                 |  result.$name = Option(x)
-                 |  this
-                 |}
-                 |
-                 |def $name(x: Option[$valueType]): this.type = $name(x.orNull)
-                 |""".stripMargin
-            case Cardinality.List =>
-              s"""def $name(x: IterableOnce[$valueType]): this.type = {
-                 |  result.$name = x.iterator.to(collection.immutable.ArraySeq)
-                 |  this
-                 |}""".stripMargin
-          }
-      }.mkString("\n")
 
       val propertiesMapImpl = {
         val putKeysImpl = properties
@@ -1709,26 +1676,12 @@ class CodeGen(schema: Schema) {
           }
       }.mkString("\n")
 
-      s"""
-         |object New${nodeClassName}Builder {
-         |  def apply(): New${nodeClassName}Builder = new New${nodeClassName}Builder()
+      s"""object New$nodeClassName{
+         |  def apply(): New$nodeClassName = new New$nodeClassName
          |}
          |
-         |class New${nodeClassName}Builder extends NewNodeBuilder[New$nodeClassName] {
-         |   val result: New$nodeClassName = new New${nodeClassName}()
-         |
-         |   $builderSetters
-         |
-         |   def build: New${nodeClassName} = result
-         |
-         |}
-         |
-         |object New${nodeClassName}{
-         |  def apply(): New${nodeClassName}Builder = New${nodeClassName}Builder()
-         |}
-         |
-         |class New${nodeClassName} private[nodes] ($memberVariables)
-         |  extends NewNode with ${nodeClassName}Base ${mixins} {
+         |class New$nodeClassName($memberVariables)
+         |  extends NewNode with ${nodeClassName}Base $mixins {
          |
          |  override def label: String = "${nodeType.name}"
          |
@@ -1738,7 +1691,6 @@ class CodeGen(schema: Schema) {
          |}
          |""".stripMargin
     }
-
 
     val outfile = outputDir / nodesPackage.replaceAll("\\.", "/") / "NewNodes.scala"
     if (outfile.exists) outfile.delete()
