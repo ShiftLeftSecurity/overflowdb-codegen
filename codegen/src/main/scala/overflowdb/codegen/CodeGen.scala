@@ -519,7 +519,7 @@ class CodeGen(schema: Schema) {
          |$mixins
          |$mixinTraitsForBase
          |
-         |trait ${className}New extends NewNode with TypedCopyable[${className}New]
+         |trait ${className}New extends NewNode
          |$mixinsNew
          |$mixinTraitsNew
          |
@@ -1522,7 +1522,7 @@ class CodeGen(schema: Schema) {
 
     val packageObject =
       s"""package $basePackage
-         |package object traversal extends NodeTraversalImplicits
+         |package object traversal extends NodeTraversalImplicits with nodes.NewNodeCopyImplicit
          |""".stripMargin
 
     val results = mutable.Buffer.empty[File]
@@ -1552,17 +1552,23 @@ class CodeGen(schema: Schema) {
       s"""package $nodesPackage
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
-         |trait NewNode extends AbstractNode with TypedCopyable[NewNode] with scala.Cloneable{
+         |trait NewNode extends AbstractNode with scala.Cloneable{
          |  override def clone():Object = super.clone()
          |
          |  def properties: Map[String, Any]
          |}
-         |trait TypedCopyable[+NodeType <: Object] extends scala.Cloneable {
-         |  def copy: NodeType = super.clone().asInstanceOf[NodeType]
-         |}
          |
          |trait NewNodeBuilder[A <: NewNode] {
          |  def build: A
+         |}
+         |
+         |
+         |class NewNodeCopyExtension[T<:NewNode](val node: T) extends AnyVal {
+         |    def copy:T = node.clone().asInstanceOf[T]
+         |}
+         |
+         |trait NewNodeCopyImplicit{
+         |  implicit def toNewNodeCopyExtension[T<:NewNode](node:T):NewNodeCopyExtension[T] = new NewNodeCopyExtension(node)
          |}
          |
          |object NewNodeBuilder {
@@ -1694,7 +1700,7 @@ class CodeGen(schema: Schema) {
          |}
          |
          |class New${nodeClassName} private[nodes] ($memberVariables)
-         |  extends NewNode with ${nodeClassName}Base ${mixins} with TypedCopyable[New${nodeClassName}] {
+         |  extends NewNode with ${nodeClassName}Base ${mixins} {
          |
          |  override def label: String = "${nodeType.name}"
          |

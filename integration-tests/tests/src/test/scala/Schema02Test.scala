@@ -22,14 +22,23 @@ class Schema02Test extends AnyWordSpec with Matchers {
   }
 
   "Allow newNode cloning and mutation" in {
-    val newNode = NewNode1().name("A").build.copy
-    val nn2: BaseNodeNew = newNode
-    val nn3 = nn2.copy
-    nn3.name shouldBe "A"
-    nn3.name = "B"
-    nn3.isInstanceOf[NewNode1] shouldBe true
-    nn3.name shouldBe "B"
-    nn2.name shouldBe "A"
+    val newNode = NewNode1().name("A").build
+    val nn2: NewNode = newNode
+    val nn3 = nn2 match {
+      case node: NewNode with HasNameNew => node
+      case _ => null
+    }
+    //verify that we can copy
+    val c = nn3.copy
+    //verify that copy preserved the static type, such that assignment is available
+    c.name = nn3.name + "B"
+
+    newNode.isInstanceOf[NewNode1] shouldBe true
+    c.isInstanceOf[NewNode1] shouldBe true
+
+    //verify that a assignment and copying was successful
+    newNode.name shouldBe "A"
+    c.name shouldBe "AB"
   }
 
   "working with a concrete sample graph" can {
