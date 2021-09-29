@@ -1556,7 +1556,7 @@ class CodeGen(schema: Schema) {
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
          |trait NewNode extends AbstractNode with Product {
          |  def properties: Map[String, Any]
-         |  def copy: NewNode
+         |  def copy: this.type
          |}
          |""".stripMargin
 
@@ -1690,10 +1690,10 @@ class CodeGen(schema: Schema) {
          |
          |  override def label: String = "${nodeType.name}"
          |
-         |  override def copy: New$nodeClassName = {
+         |  override def copy: this.type = {
          |    val newInstance = new New$nodeClassName
          |    $copyPropertiesImpl
-         |    newInstance
+         |    newInstance.asInstanceOf[this.type]
          |  }
          |
          |  $propertySettersImpl

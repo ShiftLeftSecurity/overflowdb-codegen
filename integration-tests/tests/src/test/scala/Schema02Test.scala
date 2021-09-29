@@ -49,6 +49,14 @@ class Schema02Test extends AnyWordSpec with Matchers {
       original.order shouldBe Some(1)
     }
 
+    "copied and mutated when upcasted" in {
+      val original = NewNode1().name("A").order(1)
+      val upcasted = original.asInstanceOf[NewNode with HasNameNew]
+      upcasted.name = "A"
+      val upcastedCopy = upcasted.copy
+      upcastedCopy.name = "C"
+    }
+
     "be used as a Product" in {
       val newNode = NewNode1().name("A").order(1)
       newNode.productArity shouldBe 2
