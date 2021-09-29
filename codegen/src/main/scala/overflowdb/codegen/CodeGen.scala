@@ -1522,7 +1522,7 @@ class CodeGen(schema: Schema) {
 
     val packageObject =
       s"""package $basePackage
-         |package object traversal extends NodeTraversalImplicits with nodes.NewNodeCopyImplicit
+         |package object traversal extends NodeTraversalImplicits
          |""".stripMargin
 
     val results = mutable.Buffer.empty[File]
@@ -1552,18 +1552,9 @@ class CodeGen(schema: Schema) {
       s"""package $nodesPackage
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
-         |trait NewNode extends AbstractNode with scala.Cloneable{
-         |  override def clone():Object = super.clone()
-         |
+         |trait NewNode extends AbstractNode {
          |  def properties: Map[String, Any]
-         |}
-         |
-         |class NewNodeCopyExtension[T<:NewNode](val node: T) extends AnyVal {
-         |    def copy:T = node.clone().asInstanceOf[T]
-         |}
-         |
-         |trait NewNodeCopyImplicit{
-         |  implicit def toNewNodeCopyExtension[T<:NewNode](node:T):NewNodeCopyExtension[T] = new NewNodeCopyExtension(node)
+         |  def copy: NewNode
          |}
          |""".stripMargin
 
@@ -1676,6 +1667,11 @@ class CodeGen(schema: Schema) {
           }
       }.mkString("\n")
 
+      val copyPropertiesImpl = properties.map { property =>
+        val memberName = camelCase(property.name)
+        s"newInstance.$memberName = this.$memberName"
+      }.mkString("\n")
+
       s"""object New$nodeClassName{
          |  def apply(): New$nodeClassName = new New$nodeClassName
          |}
@@ -1684,6 +1680,12 @@ class CodeGen(schema: Schema) {
          |  extends NewNode with ${nodeClassName}Base $mixins {
          |
          |  override def label: String = "${nodeType.name}"
+         |
+         |  override def copy: New$nodeClassName = {
+         |    val newInstance = new New$nodeClassName
+         |    $copyPropertiesImpl
+         |    newInstance
+         |  }
          |
          |  $propertySettersImpl
          |
