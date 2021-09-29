@@ -338,7 +338,9 @@ class CodeGen(schema: Schema) {
           val camelCaseName = camelCase(property.name)
           val tpe = getCompleteType(property)
           val traitName = s"Has${property.className}"
-          s"""trait $traitName { def $camelCaseName: $tpe }
+          s"""trait $traitName {
+             |  def $camelCaseName: $tpe
+             |}
              |trait ${traitName}Mutable extends $traitName {
              |  def ${camelCaseName}_=(value: $tpe)
              |}
