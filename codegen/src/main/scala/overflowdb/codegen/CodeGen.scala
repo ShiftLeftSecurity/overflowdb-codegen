@@ -414,23 +414,23 @@ class CodeGen(schema: Schema) {
       val className = nodeBaseType.className
       val properties = nodeBaseType.properties
 
-      val mixins = nodeBaseType.properties.map { property =>
+      val mixinsForPropertyAccessorsReadOnly = nodeBaseType.properties.map { property =>
         s"with Has${property.className}"
       }.mkString(" ")
 
-      val mixinTraits = nodeBaseType.extendz.map { baseTrait =>
+      val mixinsForBaseTypes = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}"
       }.mkString(" ")
 
-      val mixinsNew = nodeBaseType.properties.map { property =>
+      val mixinsForPropertyAccessorsMutable = nodeBaseType.properties.map { property =>
         s"with Has${property.className}Mutable"
       }.mkString(" ")
 
-      val mixinTraitsNew = nodeBaseType.extendz.map { baseTrait =>
+      val mixinForBaseTypesNew = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}New"
       }.mkString(" ")
 
-      val mixinTraitsForBase = nodeBaseType.extendz.map { baseTrait =>
+      val mixinsForBaseTypes2 = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}Base"
       }.mkString(" ")
 
@@ -523,15 +523,15 @@ class CodeGen(schema: Schema) {
          |$companionObject
          |
          |trait ${className}Base extends AbstractNode
-         |$mixins
-         |$mixinTraitsForBase
+         |$mixinsForPropertyAccessorsReadOnly
+         |$mixinsForBaseTypes2
          |
          |trait ${className}New extends NewNode
-         |$mixinsNew
-         |$mixinTraitsNew
+         |$mixinsForPropertyAccessorsMutable
+         |$mixinForBaseTypesNew
          |
          |trait $className extends StoredNode with ${className}Base
-         |$mixinTraits {
+         |$mixinsForBaseTypes {
          |${abstractEdgeAccessors(nodeBaseType, Direction.OUT)}
          |${abstractEdgeAccessors(nodeBaseType, Direction.IN)}
          |}""".stripMargin
