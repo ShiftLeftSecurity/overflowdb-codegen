@@ -426,6 +426,10 @@ class CodeGen(schema: Schema) {
         s"with Has${property.className}Mutable"
       }.mkString(" ")
 
+      val mixinForBaseTypesNew = nodeBaseType.extendz.map { baseTrait =>
+        s"with ${baseTrait.className}New"
+      }.mkString(" ")
+
       val mixinsForBaseTypes2 = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}Base"
       }.mkString(" ")
@@ -524,6 +528,7 @@ class CodeGen(schema: Schema) {
          |
          |trait ${className}New extends NewNode
          |$mixinsForPropertyAccessorsMutable
+         |$mixinForBaseTypesNew
          |
          |trait $className extends StoredNode with ${className}Base
          |$mixinsForBaseTypes {
@@ -1639,11 +1644,7 @@ class CodeGen(schema: Schema) {
 
       val nodeClassName = nodeType.className
 
-//      val mixins = nodeType.extendz.map{baseType => s"with ${baseType.className}New"}.mkString(" ")
-      val mixins = properties.map { property =>
-        val nameCamelCase = camelCaseCaps(property.name)
-        s"with Has${nameCamelCase}Mutable"
-      }.mkString(" ")
+      val mixins = nodeType.extendz.map{baseType => s"with ${baseType.className}New"}.mkString(" ")
 
       val propertySettersImpl = fieldDescriptions.map {
         case FieldDescription(name, valueType , _, cardinality) =>
