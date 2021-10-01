@@ -1,7 +1,6 @@
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import overflowdb.traversal._
-import overflowdb.{Config, Graph}
 import testschema02._
 import testschema02.edges._
 import testschema02.nodes._
@@ -20,6 +19,65 @@ class Schema02Test extends AnyWordSpec with Matchers {
     Node1.Edges.Out shouldBe Array(Edge1.Label)
     Node1.Edges.In shouldBe Array(Edge2.Label)
   }
+
+  "NewNode" can {
+    "get copied and mutated" in {
+      val original = NewNode1().name("A").order(1)
+
+      //verify that we can copy
+      val copy = original.copy
+      original.isInstanceOf[NewNode1] shouldBe true
+      copy.isInstanceOf[NewNode1] shouldBe true
+      copy.name shouldBe "A"
+      copy.order shouldBe Some(1)
+
+      //verify that copy preserved the static type, such that assignment is available
+      copy.name = "B"
+      copy.order = Some(2)
+      copy.name shouldBe "B"
+      copy.order shouldBe Some(2)
+
+      copy.name("C")
+      copy.name shouldBe "C"
+      copy.order(3)
+      copy.order shouldBe Some(3)
+
+      copy.order(Some(4: Integer))
+      copy.order shouldBe Some(4)
+
+      original.name shouldBe "A"
+      original.order shouldBe Some(1)
+    }
+
+    "copied and mutated when upcasted" in {
+      val original = NewNode1().name("A").order(1)
+      val upcasted = original.asInstanceOf[NewNode with HasNameMutable]
+      upcasted.name = "A"
+      val upcastedCopy = upcasted.copy
+      upcastedCopy.name = "C"
+
+      upcastedCopy.name shouldBe "C"
+    }
+
+    "copied and mutated when upcasted (2)" in {
+      val original = NewNode1().name("A").order(1)
+      val upcasted: BaseNodeNew = original
+
+      val upcastedCopy = upcasted.copy
+      upcastedCopy.name = "C"
+      upcastedCopy.name shouldBe "C"
+    }
+
+    "be used as a Product" in {
+      val newNode = NewNode1().name("A").order(1)
+      newNode.productArity shouldBe 2
+      newNode.productElement(0) shouldBe Some(1)
+      newNode.productElement(1) shouldBe "A"
+      newNode.productPrefix shouldBe "NewNode1"
+    }
+
+  }
+
 
   "working with a concrete sample graph" can {
     val graph = TestSchema.empty.graph

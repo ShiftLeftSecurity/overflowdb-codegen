@@ -86,7 +86,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
         .name("name1")
         .node3(node3)
         .options(Seq("one", "two", "three"))
-        .placements(Seq(1,2,3))
+        .placements(Seq(1,2,3): Seq[Integer])
     }
   }
 
