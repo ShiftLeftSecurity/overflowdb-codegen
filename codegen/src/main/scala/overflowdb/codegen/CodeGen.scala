@@ -1674,8 +1674,8 @@ class CodeGen(schema: Schema) {
           }
       }.mkString("\n")
 
-      val copyPropertiesImpl = properties.map { property =>
-        val memberName = camelCase(property.name)
+      val copyFieldsImpl = fieldDescriptions.map { field =>
+        val memberName = field.name
         s"newInstance.$memberName = this.$memberName"
       }.mkString("\n")
 
@@ -1697,7 +1697,7 @@ class CodeGen(schema: Schema) {
          |
          |  override def copy: this.type = {
          |    val newInstance = new New$nodeClassName
-         |    $copyPropertiesImpl
+         |    $copyFieldsImpl
          |    newInstance.asInstanceOf[this.type]
          |  }
          |
