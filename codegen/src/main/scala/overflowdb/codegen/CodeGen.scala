@@ -342,7 +342,7 @@ class CodeGen(schema: Schema) {
              |  def $camelCaseName: $tpe
              |}
              |trait ${traitName}Mutable extends $traitName {
-             |  def ${camelCaseName}_=(value: $tpe)
+             |  def ${camelCaseName}_=(value: $tpe): Unit
              |}
              |""".stripMargin
 
