@@ -168,4 +168,21 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1.intList shouldBe IndexedSeq(1,2,3)
     edge1.intList shouldBe IndexedSeq(3,4,5)
   }
+
+  "NewNode.copy includes contained nodes" in {
+    val node1 = NewNode1()
+      .bool(true)
+      .str("foo")
+      .intList(Seq(1,2,3): Seq[Integer])
+
+    val node2 = NewNode1().node1Inner(node1)
+
+    val node1Copy = node1.copy
+    node1Copy.bool shouldBe true
+    node1Copy.str shouldBe "foo"
+    node1Copy.intList shouldBe Seq(1,2,3)
+
+    val node2Copy = node2.copy
+    node2Copy.node1Inner shouldBe node1
+  }
 }
