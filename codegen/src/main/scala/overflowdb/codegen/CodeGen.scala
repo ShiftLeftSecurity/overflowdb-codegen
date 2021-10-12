@@ -1092,6 +1092,9 @@ class CodeGen(schema: Schema) {
            |override def removeSpecificProperty(key: String): Unit =
            |  this.updateSpecificProperty(key, null)
            |
+           |override def _initializeFromDetached(data: overflowdb.DetachedNodeData, mapper: java.util.function.Function[overflowdb.DetachedNodeData, Node]) =
+           |    fromNewNode(data.asInstanceOf[NewNode], nn=>mapper.apply(nn).asInstanceOf[StoredNode])
+           |
            |$fromNew
            |
            |}""".stripMargin
@@ -1559,9 +1562,14 @@ class CodeGen(schema: Schema) {
       s"""package $nodesPackage
          |
          |/** base type for all nodes that can be added to a graph, e.g. the diffgraph */
-         |trait NewNode extends AbstractNode with Product {
+         |abstract class NewNode extends AbstractNode with overflowdb.DetachedNodeData with Product {
          |  def properties: Map[String, Any]
          |  def copy: this.type
+         |  type StoredType <: StoredNode
+         |  private var refOrId: Object = null
+         |  override def getRefOrId(): Object = refOrId
+         |  override def setRefOrId(r: Object): Unit = {this.refOrId = r}
+         |  def stored: Option[StoredType] = if(refOrId != null && refOrId.isInstanceOf[StoredNode]) Some(refOrId).asInstanceOf[Option[StoredType]] else None
          |}
          |""".stripMargin
 
@@ -1692,6 +1700,8 @@ class CodeGen(schema: Schema) {
          |
          |class $classNameNewNode($memberVariables)
          |  extends NewNode with ${nodeClassName}Base $mixins {
+         |
+         |  type StoredType = $nodeClassName
          |
          |  override def label: String = "${nodeType.name}"
          |
