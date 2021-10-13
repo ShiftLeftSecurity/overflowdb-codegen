@@ -1681,9 +1681,14 @@ class CodeGen(schema: Schema) {
 
       val classNameNewNode = s"New$nodeClassName"
 
-      val productElementAccessors = fieldDescriptions.reverse.zipWithIndex.map  {
+      val productElements = fieldDescriptions.reverse.zipWithIndex
+      val productElementAccessors = productElements.map {
         case (fieldDescription, index) =>
           s"case $index => this.${fieldDescription.name}"
+      }.mkString("\n")
+      val productElementNames = productElements.map {
+        case (fieldDescription, index) =>
+          s"""case $index => "${fieldDescription.name}""""
       }.mkString("\n")
 
       s"""object $classNameNewNode {
@@ -1709,6 +1714,12 @@ class CodeGen(schema: Schema) {
          |    n match {
          |      $productElementAccessors
          |      case _ => null
+         |    }
+         |
+         |  override def productElementName(n: Int): String =
+         |    n match {
+         |      $productElementNames
+         |      case _ => ""
          |    }
          |
          |  override def productPrefix = "$classNameNewNode"
