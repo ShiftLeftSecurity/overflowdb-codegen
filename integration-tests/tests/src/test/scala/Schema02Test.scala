@@ -21,6 +21,17 @@ class Schema02Test extends AnyWordSpec with Matchers {
   }
 
   "NewNode" can {
+    "be used as a product, e.g. for pretty printing" in {
+      val newNode = NewNode1().name("A").order(1)
+
+      newNode.productPrefix shouldBe "NewNode1"
+      newNode.productArity shouldBe 2
+      newNode.productElementName(0) shouldBe "order"
+      newNode.productElement(0) shouldBe Some(1)
+      newNode.productElementName(1) shouldBe "name"
+      newNode.productElement(1) shouldBe "A"
+    }
+
     "get copied and mutated" in {
       val original = NewNode1().name("A").order(1)
 
