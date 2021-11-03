@@ -209,7 +209,9 @@ object TestSchema1 extends App {
     )
   )
 
+  builder.dontWarnForDuplicateProperty(file, order)
+  builder.dontWarnForDuplicateProperty(namespaceBlock, order)
+
   new CodeGen(builder.build)
-    .dontWarnForDuplicateProperty(file, order)
     .run(new File("target"))
 }
