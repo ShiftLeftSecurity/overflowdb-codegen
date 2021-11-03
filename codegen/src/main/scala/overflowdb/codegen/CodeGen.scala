@@ -14,12 +14,6 @@ class CodeGen(schema: Schema) {
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
   val traversalsPackage = s"$basePackage.traversal"
-  private val noWarnList: mutable.Set[(AbstractNodeType, Property[_])] = mutable.Set.empty
-
-  def dontWarnForDuplicateProperty(nodeType: AbstractNodeType, property: Property[_]): CodeGen = {
-    noWarnList.add((nodeType, property))
-    this
-  }
 
   def run(outputDir: java.io.File): Seq[java.io.File] = {
     warnForDuplicatePropertyDefinitions()
@@ -43,8 +37,8 @@ class CodeGen(schema: Schema) {
       nodeType <- schema.allNodeTypes
       property <- nodeType.propertiesWithoutInheritance
       baseType <- nodeType.extendzRecursively
-      if baseType.propertiesWithoutInheritance.contains(property) && !noWarnList.contains((nodeType, property))
-    } yield s"[info]: $nodeType wouldn't need to have $property added explicitly - $baseType already brings it in"
+      if baseType.propertiesWithoutInheritance.contains(property) && !schema.noWarnList.contains((nodeType, property))
+    } yield s"[info]: $nodeType wouldn't need to have property `${property.name}` added explicitly - $baseType already brings it in"
 
     if (warnings.size > 0) println(s"${warnings.size} warnings found:")
     warnings.sorted.foreach(println)

@@ -16,7 +16,8 @@ class Schema(val domainShortName: String,
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
              val constantsByCategory: Map[String, Seq[Constant]],
-             val protoOptions: Option[ProtoOptions]) {
+             val protoOptions: Option[ProtoOptions],
+             val noWarnList: Set[(AbstractNodeType, Property[_])]) {
 
   /** nodeTypes and nodeBaseTypes combined */
   lazy val allNodeTypes: Seq[AbstractNodeType] =
