@@ -44,7 +44,7 @@ class CodeGen(schema: Schema) {
       property <- nodeType.propertiesWithoutInheritance
       baseType <- nodeType.extendzRecursively
       if baseType.propertiesWithoutInheritance.contains(property) && !noWarnList.contains((nodeType, property))
-    } yield s"[info]: $nodeType wouldn't need to have $property added explicitly - $baseType already brings it in"
+    } yield s"[info]: $nodeType wouldn't need to have property `${property.name}` added explicitly - $baseType already brings it in"
 
     if (warnings.size > 0) println(s"${warnings.size} warnings found:")
     warnings.sorted.foreach(println)
