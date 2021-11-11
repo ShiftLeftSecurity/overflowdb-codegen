@@ -178,8 +178,11 @@ class Property[A](val name: String,
 
   def default: Option[Default[A]] =
     _cardinality match {
-      case c: Cardinality.One[A] => Option(c.default)
-      case _ => None
+      case c: Cardinality.One[_] =>
+        // casting is safe here because only `mandatory(A)` can set the value
+        Option(c.default).map(_.asInstanceOf[Default[A]])
+      case _ =>
+        None
     }
 
   /** make this a list property, using a regular Sequence, with linear (slow) random access */
