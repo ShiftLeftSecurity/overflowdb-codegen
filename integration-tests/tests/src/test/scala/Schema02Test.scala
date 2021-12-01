@@ -86,9 +86,7 @@ class Schema02Test extends AnyWordSpec with Matchers {
       newNode.productElement(1) shouldBe "A"
       newNode.productPrefix shouldBe "NewNode1"
     }
-
   }
-
 
   "working with a concrete sample graph" can {
     val graph = TestSchema.empty.graph
@@ -98,20 +96,55 @@ class Schema02Test extends AnyWordSpec with Matchers {
     node1.addEdge(Edge1.Label, node2)
     node2.addEdge(Edge2.Label, node1, PropertyNames.NAME, "edge 02")
 
-    "lookup and traverse nodes/edges/properties" in {
-      def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
+    def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
+    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
+    def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
+
+    "lookup and traverse nodes/edges via domain specific dsl" in {
       val baseNode = baseNodeTraversal.head
+      val node1 = node1Traversal.head
+      val node2 = node2Traversal.head
+
+      baseNode.label shouldBe Node1.Label
+      node1.label shouldBe Node1.Label
+      node2.label shouldBe Node2.Label
+
       baseNode.edge2In.l shouldBe Seq(node2)
       baseNode.edge1Out.l shouldBe Seq(node2)
-      baseNode._node2ViaEdge2In shouldBe node2
-      baseNode._node2ViaEdge1Out.l shouldBe Seq(node2)
 
+      // use the custom defined stepNames from schema definition
+      val baseNodeToNode2: Traversal[Node2] = baseNode.customStepName1
+  // TODO      baseNodeTraversal.customStepName1  - same for others
+      baseNodeToNode2.l shouldBe Seq(node2)
+
+      val baseNodeToNode2ViaEdge2: Node2 = baseNode.customStepName2Inverse
+      baseNodeToNode2ViaEdge2 shouldBe node2
+
+      val node1ToNode2: Traversal[Node2] = node1.customStepName1
+      node1ToNode2.l shouldBe Seq(node2)
+
+      val node1ToNode2ViaEdge2: Node2 = node1.customStepName2Inverse
+      node1ToNode2ViaEdge2 shouldBe node2
+
+      // TODO same for the inverse
+      node2.customStepNameInverse
+//      ???
+
+      // if no specific stepName is defined, we still generate an 'internal' (with `_` prefix) accessor
+      val baseNodeToNode2ViaEdge2In: Node2 = baseNode.customStepName2Inverse
+      baseNodeToNode2ViaEdge2In shouldBe node2
+      //      val node2Trav2: Traversal[Node2] = baseNode.stepName1
+      //      node2Trav2.l shouldBe Seq(node2)
+      //      val _: Node2 = baseNode._node2ViaEdge2In
+
+    }
+
+    "property filters" in {
       baseNodeTraversal.name.l shouldBe Seq("node 01")
       baseNodeTraversal.name(".*").size shouldBe 1
       baseNodeTraversal.nameExact("node 01").size shouldBe 1
       baseNodeTraversal.nameNot("abc").size shouldBe 1
 
-      def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
       node1Traversal.order.l shouldBe Seq(4)
       node1Traversal.orderGt(3).size shouldBe 1
       node1Traversal.orderLt(4).size shouldBe 0

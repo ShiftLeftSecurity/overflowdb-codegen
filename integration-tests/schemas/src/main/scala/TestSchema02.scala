@@ -10,7 +10,7 @@ class TestSchema02 extends TestSchema {
 
   val order = builder.addProperty("ORDER", ValueType.Int, "General ordering property.")
 
-  val node1Base = builder.addNodeBaseType(
+  val baseNode = builder.addNodeBaseType(
     name = "BASE_NODE",
     comment = "base node"
   ).addProperty(name)
@@ -19,7 +19,7 @@ class TestSchema02 extends TestSchema {
     name = "NODE1",
     comment = "sample node 1"
   ).addProperties(order)
-    .extendz(node1Base)
+    .extendz(baseNode)
 
   val node2 = builder.addNodeType(
     name = "NODE2",
@@ -34,15 +34,19 @@ class TestSchema02 extends TestSchema {
     name = "EDGE2",
     comment = "sample edge 2").addProperty(name)
 
-  node1Base.addOutEdge(
+  baseNode.addOutEdge(
     edge = edge1,
     inNode = node2,
     cardinalityOut = EdgeType.Cardinality.List,
-    cardinalityIn = EdgeType.Cardinality.ZeroOrOne)
+    cardinalityIn = EdgeType.Cardinality.ZeroOrOne,
+    stepNameOut = "customStepName1",
+    stepNameIn = "customStepName1Inverse")
 
   node2.addOutEdge(
     edge = edge2,
-    inNode = node1Base,
+    inNode = baseNode,
     cardinalityOut = EdgeType.Cardinality.One,
-    cardinalityIn = EdgeType.Cardinality.One)
+    cardinalityIn = EdgeType.Cardinality.One,
+    stepNameOut = "customStepName2",
+    stepNameIn = "customStepName2Inverse")
 }

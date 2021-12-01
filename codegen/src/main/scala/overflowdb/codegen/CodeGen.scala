@@ -457,7 +457,12 @@ class CodeGen(schema: Schema) {
             val neighbor = adjacentNode.neighbor
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
             entireNodeHierarchy.map { neighbor =>
-              val accessorName = s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+              val accessorName = {
+                if (adjacentNode.stepName.isEmpty)
+                  s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+                else adjacentNode.stepName
+              }
+              println(accessorName) // TODO drop
               val cardinality = adjacentNode.cardinality
               val appendix = cardinality match {
                 case EdgeType.Cardinality.One => ".next()"
@@ -473,7 +478,6 @@ class CodeGen(schema: Schema) {
              |$specificNodeAccessors""".stripMargin
         }.mkString("\n")
       }
-
 
       val companionObject = {
         val propertyNames = nodeBaseType.properties.map(_.name)
@@ -566,7 +570,7 @@ class CodeGen(schema: Schema) {
 
           // only edge and neighbor node matter, not the cardinality
           val inheritedLookup: Set[(EdgeType, AbstractNodeType)] =
-            inherited.map(_.adjacentNode).map { case AdjacentNode(viaEdge, neighbor, _) => (viaEdge, neighbor) }.toSet
+            inherited.map(_.adjacentNode).map { adjacentNode => (adjacentNode.viaEdge, adjacentNode.neighbor) }.toSet
 
           val direct = adjacentNodes(nodeType).map { adjacentNode =>
             val isInherited = inheritedLookup.contains((adjacentNode.viaEdge, adjacentNode.neighbor))
