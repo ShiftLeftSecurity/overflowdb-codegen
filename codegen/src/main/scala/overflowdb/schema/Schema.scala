@@ -251,8 +251,6 @@ case class NeighborInfoForNode(
   cardinality: EdgeType.Cardinality,
   isInherited: Boolean) {
 
-  lazy val accessorName = s"_${camelCase(neighborNode.name)}Via${edge.className}${camelCaseCaps(direction.toString)}"
-
   /** handling some accidental complexity within the schema: if a relationship is defined on a base node and
    * separately on a concrete node, with different cardinalities, we need to use the highest cardinality  */
   lazy val consolidatedCardinality: EdgeType.Cardinality = {

@@ -55,6 +55,13 @@ object Helpers {
     }
   }
 
+  def accessorName(neighborInfoForNode: NeighborInfoForNode): String = {
+    val neighborNodeName = neighborInfoForNode.neighborNode.name
+    val edgeName = neighborInfoForNode.edge.className
+    val direction = neighborInfoForNode.direction.toString
+     s"_${camelCase(neighborNodeName)}Via$edgeName${camelCaseCaps(direction)}"
+  }
+
   def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.AbstractNodeName || baseTraits.map(_.name).contains(nodeName)
 

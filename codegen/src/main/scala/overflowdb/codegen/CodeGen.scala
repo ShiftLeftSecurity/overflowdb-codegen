@@ -462,7 +462,6 @@ class CodeGen(schema: Schema) {
                   s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
                 else adjacentNode.stepName
               }
-              println(accessorName) // TODO drop
               val cardinality = adjacentNode.cardinality
               val appendix = cardinality match {
                 case EdgeType.Cardinality.One => ".next()"
@@ -892,7 +891,7 @@ class CodeGen(schema: Schema) {
         val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
         val nodeDelegators = neighborInfo.nodeInfos.collect {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
-            val accessorNameForNode = neighborNodeInfo.accessorName
+            val accessorNameForNode = accessorName(neighborNodeInfo)
             s"def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode"
         }.mkString("\n")
 
@@ -953,7 +952,7 @@ class CodeGen(schema: Schema) {
               case EdgeType.Cardinality.ZeroOrOne => s".nextOption()"
               case _ => ""
             }
-            s"def ${neighborNodeInfo.accessorName}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
+            s"def ${accessorName(neighborNodeInfo)}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
         }.mkString("\n")
 
         s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborType] = overflowdb.traversal.Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))

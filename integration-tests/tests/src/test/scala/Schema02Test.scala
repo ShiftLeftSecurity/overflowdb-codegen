@@ -127,7 +127,7 @@ class Schema02Test extends AnyWordSpec with Matchers {
       node1ToNode2ViaEdge2 shouldBe node2
 
       // TODO same for the inverse
-      node2.customStepNameInverse
+//      node2.customStepNameInverse
 //      ???
 
       // if no specific stepName is defined, we still generate an 'internal' (with `_` prefix) accessor
