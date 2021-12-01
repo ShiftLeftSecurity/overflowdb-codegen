@@ -581,7 +581,7 @@ class CodeGen(schema: Schema) {
         def createNeighborInfos(neighborContexts: Seq[AjacentNodeWithInheritanceStatus], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
           neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edge, neighborContexts) =>
             val neighborInfoForNodes = neighborContexts.map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
-              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited)
+              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, Option(adjacentNode.stepName).filter(_.nonEmpty))
             }
             NeighborInfoForEdge(edge, neighborInfoForNodes, nextOffsetPos)
           }.toSeq

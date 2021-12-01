@@ -249,7 +249,8 @@ case class NeighborInfoForNode(
   edge: EdgeType,
   direction: Direction.Value,
   cardinality: EdgeType.Cardinality,
-  isInherited: Boolean) {
+  isInherited: Boolean,
+  customStepName: Option[String] = None) {
 
   /** handling some accidental complexity within the schema: if a relationship is defined on a base node and
    * separately on a concrete node, with different cardinalities, we need to use the highest cardinality  */

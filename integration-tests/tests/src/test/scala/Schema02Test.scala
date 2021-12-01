@@ -101,9 +101,9 @@ class Schema02Test extends AnyWordSpec with Matchers {
     def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
 
     "lookup and traverse nodes/edges via domain specific dsl" in {
-      val baseNode = baseNodeTraversal.head
-      val node1 = node1Traversal.head
-      val node2 = node2Traversal.head
+      def baseNode = baseNodeTraversal.head
+      def node1 = node1Traversal.head
+      def node2 = node2Traversal.head
 
       baseNode.label shouldBe Node1.Label
       node1.label shouldBe Node1.Label
@@ -111,10 +111,14 @@ class Schema02Test extends AnyWordSpec with Matchers {
 
       baseNode.edge2In.l shouldBe Seq(node2)
       baseNode.edge1Out.l shouldBe Seq(node2)
+    }
 
-      // use the custom defined stepNames from schema definition
+    "generate custom defined stepNames from schema definition" in {
+      def baseNode = baseNodeTraversal.head
+      def node1 = node1Traversal.head
+      def node2 = node2Traversal.head
+
       val baseNodeToNode2: Traversal[Node2] = baseNode.customStepName1
-  // TODO      baseNodeTraversal.customStepName1  - same for others
       baseNodeToNode2.l shouldBe Seq(node2)
 
       val baseNodeToNode2ViaEdge2: Node2 = baseNode.customStepName2Inverse
@@ -126,17 +130,11 @@ class Schema02Test extends AnyWordSpec with Matchers {
       val node1ToNode2ViaEdge2: Node2 = node1.customStepName2Inverse
       node1ToNode2ViaEdge2 shouldBe node2
 
-      // TODO same for the inverse
-//      node2.customStepNameInverse
-//      ???
+      val node2ToBaseNodeViaEdge2: BaseNode = node2.customStepName2
+      node2ToBaseNodeViaEdge2 shouldBe node1
 
-      // if no specific stepName is defined, we still generate an 'internal' (with `_` prefix) accessor
-      val baseNodeToNode2ViaEdge2In: Node2 = baseNode.customStepName2Inverse
-      baseNodeToNode2ViaEdge2In shouldBe node2
-      //      val node2Trav2: Traversal[Node2] = baseNode.stepName1
-      //      node2Trav2.l shouldBe Seq(node2)
-      //      val _: Node2 = baseNode._node2ViaEdge2In
-
+      val node2ToBaseNodeViaEdge1: Option[BaseNode] = node2.customStepName1Inverse
+      node2ToBaseNodeViaEdge1 shouldBe Some(node1)
     }
 
     "property filters" in {
