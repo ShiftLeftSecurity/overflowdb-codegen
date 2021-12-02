@@ -120,23 +120,33 @@ class Schema02Test extends AnyWordSpec with Matchers {
 
       val baseNodeToNode2: Traversal[Node2] = baseNode.customStepName1
       baseNodeToNode2.l shouldBe Seq(node2)
-// TODO      baseNodeTraversal.customStepName1
-      baseNodeTraversal.name
+      val baseNodeTraversalToNode2: Traversal[Node2] = baseNodeTraversal.customStepName1
+      baseNodeTraversalToNode2.l shouldBe Seq(node2)
 
       val baseNodeToNode2ViaEdge2: Node2 = baseNode.customStepName2Inverse
       baseNodeToNode2ViaEdge2 shouldBe node2
+      val baseNodeTraversalToNode2ViaEdge2: Traversal[Node2] = baseNodeTraversal.customStepName2Inverse
+      baseNodeTraversalToNode2ViaEdge2.l shouldBe Seq(node2)
 
       val node1ToNode2: Traversal[Node2] = node1.customStepName1
       node1ToNode2.l shouldBe Seq(node2)
+      val node1TraversalToNode2: Traversal[Node2] = node1Traversal.customStepName1
+      node1TraversalToNode2.l shouldBe Seq(node2)
 
       val node1ToNode2ViaEdge2: Node2 = node1.customStepName2Inverse
       node1ToNode2ViaEdge2 shouldBe node2
+      val node1TraversalToNode2ViaEdge2: Traversal[Node2] = node1Traversal.customStepName2Inverse
+      node1TraversalToNode2ViaEdge2.l shouldBe Seq(node2)
 
       val node2ToBaseNodeViaEdge2: BaseNode = node2.customStepName2
       node2ToBaseNodeViaEdge2 shouldBe node1
+      val node2TraversalToBaseNodeViaEdge2: Traversal[BaseNode] = node2Traversal.customStepName2
+      node2TraversalToBaseNodeViaEdge2.l shouldBe Seq(node1)
 
       val node2ToBaseNodeViaEdge1: Option[BaseNode] = node2.customStepName1Inverse
       node2ToBaseNodeViaEdge1 shouldBe Some(node1)
+      val node2TraversalToBaseNodeViaEdge1: Traversal[BaseNode] = node2Traversal.customStepName1Inverse
+      node2TraversalToBaseNodeViaEdge1.l shouldBe Seq(node1)
     }
 
     "property filters" in {

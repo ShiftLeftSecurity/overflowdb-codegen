@@ -104,6 +104,9 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
       case Direction.IN => inEdges
       case Direction.OUT => outEdges
     }
+
+  def edges: Seq[AdjacentNode] =
+    outEdges ++ inEdges
 }
 
 class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)

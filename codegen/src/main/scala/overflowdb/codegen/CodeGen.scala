@@ -2,6 +2,7 @@ package overflowdb.codegen
 
 import better.files._
 import overflowdb.codegen.CodeGen.ConstantContext
+import overflowdb.schema.EdgeType.Cardinality
 import overflowdb.schema.Property.ValueType
 import overflowdb.schema._
 
@@ -581,7 +582,7 @@ class CodeGen(schema: Schema) {
         def createNeighborInfos(neighborContexts: Seq[AjacentNodeWithInheritanceStatus], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
           neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edge, neighborContexts) =>
             val neighborInfoForNodes = neighborContexts.map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
-              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, Option(adjacentNode.stepName).filter(_.nonEmpty))
+              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, Option(adjacentNode.customStepName).filter(_.nonEmpty))
             }
             NeighborInfoForEdge(edge, neighborInfoForNodes, nextOffsetPos)
           }.toSeq
@@ -1120,13 +1121,6 @@ class CodeGen(schema: Schema) {
   }
 
   protected def writeNodeTraversalFiles(outputDir: File): Seq[File] = {
-    val staticHeader =
-      s"""package $traversalsPackage
-         |
-         |import overflowdb.traversal.Traversal
-         |import $nodesPackage._
-         |""".stripMargin
-
     lazy val nodeTraversalImplicits = {
       def implicitForNodeType(name: String) = {
         val traversalName = s"${name}TraversalExtGen"
@@ -1156,15 +1150,19 @@ class CodeGen(schema: Schema) {
     }
 
     def generateCustomStepNameTraversals(nodeType: AbstractNodeType): String = {
-      for {
-        direction <- Seq(Direction.IN, Direction.OUT)
-        (edge, neighbors) <- nodeType.edges(direction).groupBy(_.viaEdge)
-        neighbor <- neighbors
-        if neighbor.customStepName.nonEmpty
-//        AdjacentNode(viaEdge, neighbor, _, customStepName) <- neighborsWithStepName
-      } ()
-
-      ???
+      nodeType.edges
+        .filter(_.customStepName.nonEmpty)
+        .sortBy(_.customStepName)
+        .map { case AdjacentNode(viaEdge, neighbor, cardinality, customStepName) =>
+          val mapOrFlatMap = cardinality match {
+            case Cardinality.One => "map"
+            case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
+          }
+          s"""/** traverse to ${neighbor.name} via ${viaEdge.name} - this relationship was given a customStepName in the schema */
+             |def $customStepName: Traversal[${neighbor.className}] =
+             |  traversal.$mapOrFlatMap(_.$customStepName)
+             |""".stripMargin
+        }.mkString("\n")
     }
 
     def generatePropertyTraversals(properties: Seq[Property[_]]): String = {
