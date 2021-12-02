@@ -458,9 +458,9 @@ class CodeGen(schema: Schema) {
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
             entireNodeHierarchy.map { neighbor =>
               val accessorName = {
-                if (adjacentNode.stepName.isEmpty)
+                if (adjacentNode.customStepName.isEmpty)
                   s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
-                else adjacentNode.stepName
+                else adjacentNode.customStepName
               }
               val cardinality = adjacentNode.cardinality
               val appendix = cardinality match {
@@ -1155,7 +1155,19 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generatePropertyTraversals(className: String, properties: Seq[Property[_]]): String = {
+    def generateCustomStepNameTraversals(nodeType: AbstractNodeType): String = {
+      for {
+        direction <- Seq(Direction.IN, Direction.OUT)
+        (edge, neighbors) <- nodeType.edges(direction).groupBy(_.viaEdge)
+        neighbor <- neighbors
+        if neighbor.customStepName.nonEmpty
+//        AdjacentNode(viaEdge, neighbor, _, customStepName) <- neighborsWithStepName
+      } ()
+
+      ???
+    }
+
+    def generatePropertyTraversals(properties: Seq[Property[_]]): String = {
       import Property.Cardinality
       properties.map { property =>
         val nameCamelCase = camelCase(property.name)
@@ -1499,9 +1511,8 @@ class CodeGen(schema: Schema) {
       }.mkString("\n")
     }
 
-    def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
-      val className = nodeBaseType.className
-      val propertyTraversals = generatePropertyTraversals(className, nodeBaseType.properties)
+    def generateNodeTraversalExt(nodeType: AbstractNodeType): String = {
+      val className = nodeType.className
       s"""package $traversalsPackage
          |
          |import overflowdb.traversal.Traversal
@@ -1510,17 +1521,11 @@ class CodeGen(schema: Schema) {
          |/** Traversal steps for $className */
          |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
          |
-         |$propertyTraversals
+         |${generateCustomStepNameTraversals(nodeType)}
          |
-         |}
+         |${generatePropertyTraversals(nodeType.properties)}
          |
-         |""".stripMargin
-    }
-
-    def generateNodeSource(nodeType: NodeType) = {
-      s"""$staticHeader
-         |${generatePropertyTraversals(nodeType.className, nodeType.properties)}
-         |""".stripMargin
+         |}""".stripMargin
     }
 
     val packageObject =
@@ -1534,13 +1539,8 @@ class CodeGen(schema: Schema) {
     baseDir.createDirectories()
     results.append(baseDir.createChild("package.scala").write(packageObject))
     results.append(baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits))
-    schema.nodeBaseTypes.foreach { nodeBaseTrait =>
-      val src = generateNodeBaseTypeSource(nodeBaseTrait)
-      val srcFile = nodeBaseTrait.className + ".scala"
-      results.append(baseDir.createChild(srcFile).write(src))
-    }
-    schema.nodeTypes.foreach { nodeType =>
-      val src = generateNodeSource(nodeType)
+    schema.allNodeTypes.foreach { nodeType =>
+      val src = generateNodeTraversalExt(nodeType)
       val srcFile = nodeType.className + ".scala"
       results.append(baseDir.createChild(srcFile).write(src))
     }

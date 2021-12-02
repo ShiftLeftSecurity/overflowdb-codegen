@@ -138,7 +138,7 @@ class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo
   override def toString = s"NodeBaseType($name)"
 }
 
-case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: EdgeType.Cardinality, stepName: String)
+case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: EdgeType.Cardinality, customStepName: String)
 
 case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Property.Cardinality)
 
