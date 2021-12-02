@@ -86,9 +86,7 @@ class Schema02Test extends AnyWordSpec with Matchers {
       newNode.productElement(1) shouldBe "A"
       newNode.productPrefix shouldBe "NewNode1"
     }
-
   }
-
 
   "working with a concrete sample graph" can {
     val graph = TestSchema.empty.graph
@@ -98,20 +96,65 @@ class Schema02Test extends AnyWordSpec with Matchers {
     node1.addEdge(Edge1.Label, node2)
     node2.addEdge(Edge2.Label, node1, PropertyNames.NAME, "edge 02")
 
-    "lookup and traverse nodes/edges/properties" in {
-      def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
-      val baseNode = baseNodeTraversal.head
+    def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
+    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
+    def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
+
+    "lookup and traverse nodes/edges via domain specific dsl" in {
+      def baseNode = baseNodeTraversal.head
+      def node1 = node1Traversal.head
+      def node2 = node2Traversal.head
+
+      baseNode.label shouldBe Node1.Label
+      node1.label shouldBe Node1.Label
+      node2.label shouldBe Node2.Label
+
       baseNode.edge2In.l shouldBe Seq(node2)
       baseNode.edge1Out.l shouldBe Seq(node2)
-      baseNode._node2ViaEdge2In shouldBe node2
-      baseNode._node2ViaEdge1Out.l shouldBe Seq(node2)
+    }
 
+    "generate custom defined stepNames from schema definition" in {
+      def baseNode = baseNodeTraversal.head
+      def node1 = node1Traversal.head
+      def node2 = node2Traversal.head
+
+      val baseNodeToNode2: Traversal[Node2] = baseNode.customStepName1
+      baseNodeToNode2.l shouldBe Seq(node2)
+      val baseNodeTraversalToNode2: Traversal[Node2] = baseNodeTraversal.customStepName1
+      baseNodeTraversalToNode2.l shouldBe Seq(node2)
+
+      val baseNodeToNode2ViaEdge2: Node2 = baseNode.customStepName2Inverse
+      baseNodeToNode2ViaEdge2 shouldBe node2
+      val baseNodeTraversalToNode2ViaEdge2: Traversal[Node2] = baseNodeTraversal.customStepName2Inverse
+      baseNodeTraversalToNode2ViaEdge2.l shouldBe Seq(node2)
+
+      val node1ToNode2: Traversal[Node2] = node1.customStepName1
+      node1ToNode2.l shouldBe Seq(node2)
+      val node1TraversalToNode2: Traversal[Node2] = node1Traversal.customStepName1
+      node1TraversalToNode2.l shouldBe Seq(node2)
+
+      val node1ToNode2ViaEdge2: Node2 = node1.customStepName2Inverse
+      node1ToNode2ViaEdge2 shouldBe node2
+      val node1TraversalToNode2ViaEdge2: Traversal[Node2] = node1Traversal.customStepName2Inverse
+      node1TraversalToNode2ViaEdge2.l shouldBe Seq(node2)
+
+      val node2ToBaseNodeViaEdge2: BaseNode = node2.customStepName2
+      node2ToBaseNodeViaEdge2 shouldBe node1
+      val node2TraversalToBaseNodeViaEdge2: Traversal[BaseNode] = node2Traversal.customStepName2
+      node2TraversalToBaseNodeViaEdge2.l shouldBe Seq(node1)
+
+      val node2ToBaseNodeViaEdge1: Option[BaseNode] = node2.customStepName1Inverse
+      node2ToBaseNodeViaEdge1 shouldBe Some(node1)
+      val node2TraversalToBaseNodeViaEdge1: Traversal[BaseNode] = node2Traversal.customStepName1Inverse
+      node2TraversalToBaseNodeViaEdge1.l shouldBe Seq(node1)
+    }
+
+    "property filters" in {
       baseNodeTraversal.name.l shouldBe Seq("node 01")
       baseNodeTraversal.name(".*").size shouldBe 1
       baseNodeTraversal.nameExact("node 01").size shouldBe 1
       baseNodeTraversal.nameNot("abc").size shouldBe 1
 
-      def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
       node1Traversal.order.l shouldBe Seq(4)
       node1Traversal.orderGt(3).size shouldBe 1
       node1Traversal.orderLt(4).size shouldBe 0

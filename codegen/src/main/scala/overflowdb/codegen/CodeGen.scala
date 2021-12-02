@@ -2,6 +2,7 @@ package overflowdb.codegen
 
 import better.files._
 import overflowdb.codegen.CodeGen.ConstantContext
+import overflowdb.schema.EdgeType.Cardinality
 import overflowdb.schema.Property.ValueType
 import overflowdb.schema._
 
@@ -457,7 +458,11 @@ class CodeGen(schema: Schema) {
             val neighbor = adjacentNode.neighbor
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
             entireNodeHierarchy.map { neighbor =>
-              val accessorName = s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+              val accessorName = {
+                if (adjacentNode.customStepName.isEmpty)
+                  s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+                else adjacentNode.customStepName
+              }
               val cardinality = adjacentNode.cardinality
               val appendix = cardinality match {
                 case EdgeType.Cardinality.One => ".next()"
@@ -473,7 +478,6 @@ class CodeGen(schema: Schema) {
              |$specificNodeAccessors""".stripMargin
         }.mkString("\n")
       }
-
 
       val companionObject = {
         val propertyNames = nodeBaseType.properties.map(_.name)
@@ -566,7 +570,7 @@ class CodeGen(schema: Schema) {
 
           // only edge and neighbor node matter, not the cardinality
           val inheritedLookup: Set[(EdgeType, AbstractNodeType)] =
-            inherited.map(_.adjacentNode).map { case AdjacentNode(viaEdge, neighbor, _) => (viaEdge, neighbor) }.toSet
+            inherited.map(_.adjacentNode).map { adjacentNode => (adjacentNode.viaEdge, adjacentNode.neighbor) }.toSet
 
           val direct = adjacentNodes(nodeType).map { adjacentNode =>
             val isInherited = inheritedLookup.contains((adjacentNode.viaEdge, adjacentNode.neighbor))
@@ -578,7 +582,7 @@ class CodeGen(schema: Schema) {
         def createNeighborInfos(neighborContexts: Seq[AjacentNodeWithInheritanceStatus], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
           neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edge, neighborContexts) =>
             val neighborInfoForNodes = neighborContexts.map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
-              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited)
+              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, Option(adjacentNode.customStepName).filter(_.nonEmpty))
             }
             NeighborInfoForEdge(edge, neighborInfoForNodes, nextOffsetPos)
           }.toSeq
@@ -888,7 +892,7 @@ class CodeGen(schema: Schema) {
         val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
         val nodeDelegators = neighborInfo.nodeInfos.collect {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
-            val accessorNameForNode = neighborNodeInfo.accessorName
+            val accessorNameForNode = accessorName(neighborNodeInfo)
             s"def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode"
         }.mkString("\n")
 
@@ -949,7 +953,7 @@ class CodeGen(schema: Schema) {
               case EdgeType.Cardinality.ZeroOrOne => s".nextOption()"
               case _ => ""
             }
-            s"def ${neighborNodeInfo.accessorName}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
+            s"def ${accessorName(neighborNodeInfo)}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
         }.mkString("\n")
 
         s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborType] = overflowdb.traversal.Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
@@ -1117,13 +1121,6 @@ class CodeGen(schema: Schema) {
   }
 
   protected def writeNodeTraversalFiles(outputDir: File): Seq[File] = {
-    val staticHeader =
-      s"""package $traversalsPackage
-         |
-         |import overflowdb.traversal.Traversal
-         |import $nodesPackage._
-         |""".stripMargin
-
     lazy val nodeTraversalImplicits = {
       def implicitForNodeType(name: String) = {
         val traversalName = s"${name}TraversalExtGen"
@@ -1152,9 +1149,25 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generatePropertyTraversals(className: String, properties: Seq[Property[_]]): String = {
+    def generateCustomStepNameTraversals(nodeType: AbstractNodeType): String = {
+      nodeType.edges
+        .filter(_.customStepName.nonEmpty)
+        .sortBy(_.customStepName)
+        .map { case AdjacentNode(viaEdge, neighbor, cardinality, customStepName) =>
+          val mapOrFlatMap = cardinality match {
+            case Cardinality.One => "map"
+            case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
+          }
+          s"""/** traverse to ${neighbor.name} via ${viaEdge.name} - this relationship was given a customStepName in the schema */
+             |def $customStepName: Traversal[${neighbor.className}] =
+             |  traversal.$mapOrFlatMap(_.$customStepName)
+             |""".stripMargin
+        }.mkString("\n")
+    }
+
+    def generatePropertyTraversals(properties: Seq[Property[_]]): String = {
       import Property.Cardinality
-      val propertyTraversals = properties.map { property =>
+      properties.map { property =>
         val nameCamelCase = camelCase(property.name)
         val baseType = typeFor(property)
         val cardinality = property.cardinality
@@ -1494,31 +1507,23 @@ class CodeGen(schema: Schema) {
            |  $filterSteps
            |""".stripMargin
       }.mkString("\n")
-
-      s"""
-         |/** Traversal steps for $className */
-         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
-         |
-         |$propertyTraversals
-         |
-         |}""".stripMargin
     }
 
-    def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
+    def generateNodeTraversalExt(nodeType: AbstractNodeType): String = {
+      val className = nodeType.className
       s"""package $traversalsPackage
          |
          |import overflowdb.traversal.Traversal
          |import $nodesPackage._
          |
-         |${generatePropertyTraversals(nodeBaseType.className, nodeBaseType.properties)}
+         |/** Traversal steps for $className */
+         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
          |
-         |""".stripMargin
-    }
-
-    def generateNodeSource(nodeType: NodeType) = {
-      s"""$staticHeader
-         |${generatePropertyTraversals(nodeType.className, nodeType.properties)}
-         |""".stripMargin
+         |${generateCustomStepNameTraversals(nodeType)}
+         |
+         |${generatePropertyTraversals(nodeType.properties)}
+         |
+         |}""".stripMargin
     }
 
     val packageObject =
@@ -1532,13 +1537,8 @@ class CodeGen(schema: Schema) {
     baseDir.createDirectories()
     results.append(baseDir.createChild("package.scala").write(packageObject))
     results.append(baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits))
-    schema.nodeBaseTypes.foreach { nodeBaseTrait =>
-      val src = generateNodeBaseTypeSource(nodeBaseTrait)
-      val srcFile = nodeBaseTrait.className + ".scala"
-      results.append(baseDir.createChild(srcFile).write(src))
-    }
-    schema.nodeTypes.foreach { nodeType =>
-      val src = generateNodeSource(nodeType)
+    schema.allNodeTypes.foreach { nodeType =>
+      val src = generateNodeTraversalExt(nodeType)
       val srcFile = nodeType.className + ".scala"
       results.append(baseDir.createChild(srcFile).write(src))
     }
