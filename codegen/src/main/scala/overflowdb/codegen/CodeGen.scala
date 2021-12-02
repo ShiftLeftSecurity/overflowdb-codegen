@@ -1157,7 +1157,7 @@ class CodeGen(schema: Schema) {
 
     def generatePropertyTraversals(className: String, properties: Seq[Property[_]]): String = {
       import Property.Cardinality
-      val propertyTraversals = properties.map { property =>
+      properties.map { property =>
         val nameCamelCase = camelCase(property.name)
         val baseType = typeFor(property)
         val cardinality = property.cardinality
@@ -1497,23 +1497,22 @@ class CodeGen(schema: Schema) {
            |  $filterSteps
            |""".stripMargin
       }.mkString("\n")
-
-      s"""
-         |/** Traversal steps for $className */
-         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
-         |
-         |$propertyTraversals
-         |
-         |}""".stripMargin
     }
 
     def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
+      val className = nodeBaseType.className
+      val propertyTraversals = generatePropertyTraversals(className, nodeBaseType.properties)
       s"""package $traversalsPackage
          |
          |import overflowdb.traversal.Traversal
          |import $nodesPackage._
          |
-         |${generatePropertyTraversals(nodeBaseType.className, nodeBaseType.properties)}
+         |/** Traversal steps for $className */
+         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
+         |
+         |$propertyTraversals
+         |
+         |}
          |
          |""".stripMargin
     }
