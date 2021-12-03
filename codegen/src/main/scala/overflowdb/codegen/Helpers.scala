@@ -64,6 +64,13 @@ object Helpers {
     }
   }
 
+  def docAnnotationMaybe(customStepDoc: Option[String]): String = {
+    customStepDoc match {
+      case Some(doc) => s"""\n@overflowdb.traversal.help.Doc("$doc")"""
+      case None => ""
+    }
+  }
+
   def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.AbstractNodeName || baseTraits.map(_.name).contains(nodeName)
 
