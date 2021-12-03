@@ -470,7 +470,7 @@ class CodeGen(schema: Schema) {
 
               s"""/** ${adjacentNode.customStepDoc.getOrElse("")}
                  |  * Traverse to ${neighbor.name} via ${adjacentNode.viaEdge.name}.
-                 |  */
+                 |  */ ${docAnnotationMaybe(adjacentNode.customStepDoc)}
                  |def $accessorName: ${fullScalaType(neighbor, cardinality)} =
                  |  $edgeAccessorName.collectAll[${neighbor.className}]$appendix""".stripMargin
             }
@@ -896,11 +896,15 @@ class CodeGen(schema: Schema) {
         val nodeDelegators = neighborInfo.nodeInfos.collect {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
             val accessorNameForNode = accessorName(neighborNodeInfo)
-            s"def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode"
+            s"""/** ${neighborNodeInfo.customStepDoc.getOrElse("")}
+               |  * Traverse to ${neighborNodeInfo.neighborNode.name} via ${neighborNodeInfo.edge.name}.
+               |  */  ${docAnnotationMaybe(neighborNodeInfo.customStepDoc)}
+               |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString("\n")
 
         s"""def $edgeAccessorName = get().$edgeAccessorName
            |override def _$edgeAccessorName = get()._$edgeAccessorName
+           |
            |$nodeDelegators
            |""".stripMargin
       }.mkString("\n")
@@ -1162,7 +1166,7 @@ class CodeGen(schema: Schema) {
           }
           s"""/** ${customStepDoc.getOrElse("")}
              |  * Traverse to ${neighbor.name} via ${viaEdge.name} - this relationship was given a customStepName in the schema.
-             |  */
+             |  */ ${docAnnotationMaybe(customStepDoc)}
              |def $customStepName: Traversal[${neighbor.className}] =
              |  traversal.$mapOrFlatMap(_.$customStepName)
              |""".stripMargin
