@@ -66,7 +66,7 @@ object Helpers {
 
   def docAnnotationMaybe(customStepDoc: Option[String]): String = {
     customStepDoc match {
-      case Some(doc) => s"""\n@overflowdb.traversal.help.Doc("$doc")"""
+      case Some(doc) => s"""\n@overflowdb.traversal.help.Doc(info = "$doc")"""
       case None => ""
     }
   }
