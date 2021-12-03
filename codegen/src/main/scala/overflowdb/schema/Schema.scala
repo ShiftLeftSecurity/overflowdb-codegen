@@ -76,9 +76,11 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
                  cardinalityOut: EdgeType.Cardinality = EdgeType.Cardinality.List,
                  cardinalityIn: EdgeType.Cardinality = EdgeType.Cardinality.List,
                  stepNameOut: String = "",
-                 stepNameIn: String = ""): this.type = {
-    _outEdges.add(AdjacentNode(edge, inNode, cardinalityOut, stepNameOut))
-    inNode._inEdges.add(AdjacentNode(edge, this, cardinalityIn, stepNameIn))
+                 stepNameOutDoc: String = "",
+                 stepNameIn: String = "",
+                 stepNameInDoc: String = ""): this.type = {
+    _outEdges.add(AdjacentNode(edge, inNode, cardinalityOut, stringToOption(stepNameOut), stringToOption(stepNameOutDoc)))
+    inNode._inEdges.add(AdjacentNode(edge, this, cardinalityIn, stringToOption(stepNameIn), stringToOption(stepNameInDoc)))
     this
   }
 
@@ -87,9 +89,11 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
                 cardinalityIn: EdgeType.Cardinality = EdgeType.Cardinality.List,
                 cardinalityOut: EdgeType.Cardinality = EdgeType.Cardinality.List,
                 stepNameIn: String = "",
-                stepNameOut: String = ""): this.type = {
-    _inEdges.add(AdjacentNode(edge, outNode, cardinalityIn, stepNameIn))
-    outNode._outEdges.add(AdjacentNode(edge, this, cardinalityOut, stepNameOut))
+                stepNameInDoc: String = "",
+                stepNameOut: String = "",
+                stepNameOutDoc: String = ""): this.type = {
+    _inEdges.add(AdjacentNode(edge, outNode, cardinalityIn, stringToOption(stepNameIn), stringToOption(stepNameInDoc)))
+    outNode._outEdges.add(AdjacentNode(edge, this, cardinalityOut, stringToOption(stepNameOut), stringToOption(stepNameOutDoc)))
     this
   }
 
@@ -141,7 +145,9 @@ class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo
   override def toString = s"NodeBaseType($name)"
 }
 
-case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: EdgeType.Cardinality, customStepName: String)
+case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinality: EdgeType.Cardinality,
+                        customStepName: Option[String] = None,
+                        customStepDoc: Option[String] = None)
 
 case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Property.Cardinality)
 
@@ -253,13 +259,14 @@ case class NeighborInfoForNode(
   direction: Direction.Value,
   cardinality: EdgeType.Cardinality,
   isInherited: Boolean,
-  customStepName: Option[String] = None) {
+  customStepName: Option[String] = None,
+  customStepDoc: Option[String] = None) {
 
   /** handling some accidental complexity within the schema: if a relationship is defined on a base node and
    * separately on a concrete node, with different cardinalities, we need to use the highest cardinality  */
   lazy val consolidatedCardinality: EdgeType.Cardinality = {
     val inheritedCardinalities = neighborNode.extendzRecursively.flatMap(_.inEdges).collect {
-      case AdjacentNode(viaEdge, neighbor, cardinality, _)
+      case AdjacentNode(viaEdge, neighbor, cardinality, _, _)
         if viaEdge == edge && neighbor == neighborNode => cardinality
     }
     val allCardinalities = cardinality +: inheritedCardinalities
