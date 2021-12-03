@@ -40,6 +40,7 @@ class TestSchema02 extends TestSchema {
     cardinalityOut = EdgeType.Cardinality.List,
     cardinalityIn = EdgeType.Cardinality.ZeroOrOne,
     stepNameOut = "customStepName1",
+    stepNameOutDoc = "custom step name 1 documentation",
     stepNameIn = "customStepName1Inverse")
 
   node2.addOutEdge(
@@ -48,5 +49,6 @@ class TestSchema02 extends TestSchema {
     cardinalityOut = EdgeType.Cardinality.One,
     cardinalityIn = EdgeType.Cardinality.One,
     stepNameOut = "customStepName2",
+    stepNameOutDoc = "custom step name 2 documentation",
     stepNameIn = "customStepName2Inverse")
 }

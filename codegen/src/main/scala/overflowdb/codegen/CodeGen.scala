@@ -458,18 +458,21 @@ class CodeGen(schema: Schema) {
             val neighbor = adjacentNode.neighbor
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
             entireNodeHierarchy.map { neighbor =>
-              val accessorName = {
-                if (adjacentNode.customStepName.isEmpty)
-                  s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
-                else adjacentNode.customStepName
-              }
+              val accessorName = adjacentNode.customStepName.getOrElse(
+                s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+              )
               val cardinality = adjacentNode.cardinality
               val appendix = cardinality match {
                 case EdgeType.Cardinality.One => ".next()"
                 case EdgeType.Cardinality.ZeroOrOne => s".nextOption()"
                 case _ => ""
               }
-              s"def $accessorName: ${fullScalaType(neighbor, cardinality)} = $edgeAccessorName.collectAll[${neighbor.className}]$appendix"
+
+              s"""/** ${adjacentNode.customStepDoc.getOrElse("")}
+                 |  * Traverse to ${neighbor.name} via ${adjacentNode.viaEdge.name}.
+                 |  */
+                 |def $accessorName: ${fullScalaType(neighbor, cardinality)} =
+                 |  $edgeAccessorName.collectAll[${neighbor.className}]$appendix""".stripMargin
             }
           }.distinct.mkString("\n\n")
 
@@ -582,7 +585,7 @@ class CodeGen(schema: Schema) {
         def createNeighborInfos(neighborContexts: Seq[AjacentNodeWithInheritanceStatus], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
           neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edge, neighborContexts) =>
             val neighborInfoForNodes = neighborContexts.map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
-              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, Option(adjacentNode.customStepName).filter(_.nonEmpty))
+              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, adjacentNode.customStepName, adjacentNode.customStepDoc)
             }
             NeighborInfoForEdge(edge, neighborInfoForNodes, nextOffsetPos)
           }.toSeq
@@ -1151,14 +1154,15 @@ class CodeGen(schema: Schema) {
 
     def generateCustomStepNameTraversals(nodeType: AbstractNodeType): String = {
       nodeType.edges
-        .filter(_.customStepName.nonEmpty)
         .sortBy(_.customStepName)
-        .map { case AdjacentNode(viaEdge, neighbor, cardinality, customStepName) =>
+        .collect { case AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) =>
           val mapOrFlatMap = cardinality match {
             case Cardinality.One => "map"
             case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
           }
-          s"""/** traverse to ${neighbor.name} via ${viaEdge.name} - this relationship was given a customStepName in the schema */
+          s"""/** ${customStepDoc.getOrElse("")}
+             |  * Traverse to ${neighbor.name} via ${viaEdge.name} - this relationship was given a customStepName in the schema.
+             |  */
              |def $customStepName: Traversal[${neighbor.className}] =
              |  traversal.$mapOrFlatMap(_.$customStepName)
              |""".stripMargin
