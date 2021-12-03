@@ -896,7 +896,10 @@ class CodeGen(schema: Schema) {
         val nodeDelegators = neighborInfo.nodeInfos.collect {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
             val accessorNameForNode = accessorName(neighborNodeInfo)
-            s"def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode"
+            s"""/** ${neighborNodeInfo.customStepDoc.getOrElse("")}
+               |  * Traverse to ${neighborNodeInfo.neighborNode.name} via ${neighborNodeInfo.edge.name}.
+               |*/
+               |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString("\n")
 
         s"""def $edgeAccessorName = get().$edgeAccessorName
