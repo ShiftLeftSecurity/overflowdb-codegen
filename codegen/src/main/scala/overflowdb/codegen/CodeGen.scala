@@ -1159,23 +1159,20 @@ class CodeGen(schema: Schema) {
     def generateCustomStepNameTraversals(nodeType: AbstractNodeType): String = {
       for {
         direction <- Seq(Direction.IN, Direction.OUT)
+        AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) <- nodeType.edges(direction).sortBy(_.customStepName)
+      } yield {
+        val mapOrFlatMap = cardinality match {
+          case Cardinality.One => "map"
+          case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
+        }
+        s"""/** ${customStepDoc.getOrElse("")}
+           |  * Traverse to ${neighbor.name} via ${viaEdge.name} $direction edge.
+           |  */ ${docAnnotationMaybe(customStepDoc)}
+           |def $customStepName: Traversal[${neighbor.className}] =
+           |  traversal.$mapOrFlatMap(_.$customStepName)
+           |""".stripMargin
       }
-
-      nodeType.edges(direction)
-        .sortBy(_.customStepName)
-        .collect { case AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) =>
-          val mapOrFlatMap = cardinality match {
-            case Cardinality.One => "map"
-            case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
-          }
-          s"""/** ${customStepDoc.getOrElse("")}
-             |  * Traverse to ${neighbor.name} via ${viaEdge.name} $direction edge. 
-             |  */ ${docAnnotationMaybe(customStepDoc)}
-             |def $customStepName: Traversal[${neighbor.className}] =
-             |  traversal.$mapOrFlatMap(_.$customStepName)
-             |""".stripMargin
-        }.mkString("\n")
-    }
+    }.mkString("\n")
 
     def generatePropertyTraversals(properties: Seq[Property[_]]): String = {
       import Property.Cardinality
