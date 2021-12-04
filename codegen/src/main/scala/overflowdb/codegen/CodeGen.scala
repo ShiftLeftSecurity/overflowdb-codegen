@@ -1522,11 +1522,11 @@ class CodeGen(schema: Schema) {
       val className = nodeType.className
       s"""package $traversalsPackage
          |
-         |import overflowdb.traversal.Traversal
+         |import overflowdb.traversal._
          |import $nodesPackage._
          |
          |/** Traversal steps for $className */
-         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
+         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: IterableOnce[NodeType]) extends AnyVal {
          |
          |${generateCustomStepNameTraversals(nodeType)}
          |
