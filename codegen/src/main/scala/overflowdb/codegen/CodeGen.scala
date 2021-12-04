@@ -1142,7 +1142,6 @@ class CodeGen(schema: Schema) {
 
       s"""package $traversalsPackage
          |
-         |import overflowdb.traversal.Traversal
          |import $nodesPackage._
          |
          |trait NodeTraversalImplicits extends NodeBaseTypeTraversalImplicits {
