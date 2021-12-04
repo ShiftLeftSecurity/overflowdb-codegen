@@ -469,7 +469,7 @@ class CodeGen(schema: Schema) {
               }
 
               s"""/** ${adjacentNode.customStepDoc.getOrElse("")}
-                 |  * Traverse to ${neighbor.name} via ${adjacentNode.viaEdge.name}.
+                 |  * Traverse to ${neighbor.name} via ${adjacentNode.viaEdge.name} $direction edge.
                  |  */ ${docAnnotationMaybe(adjacentNode.customStepDoc)}
                  |def $accessorName: ${fullScalaType(neighbor, cardinality)} =
                  |  $edgeAccessorName.collectAll[${neighbor.className}]$appendix""".stripMargin
@@ -897,7 +897,7 @@ class CodeGen(schema: Schema) {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
             val accessorNameForNode = accessorName(neighborNodeInfo)
             s"""/** ${neighborNodeInfo.customStepDoc.getOrElse("")}
-               |  * Traverse to ${neighborNodeInfo.neighborNode.name} via ${neighborNodeInfo.edge.name}.
+               |  * Traverse to ${neighborNodeInfo.neighborNode.name} via ${neighborNodeInfo.edge.name} $direction edge.
                |  */  ${docAnnotationMaybe(neighborNodeInfo.customStepDoc)}
                |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString("\n")
@@ -1157,7 +1157,11 @@ class CodeGen(schema: Schema) {
     }
 
     def generateCustomStepNameTraversals(nodeType: AbstractNodeType): String = {
-      nodeType.edges
+      for {
+        direction <- Seq(Direction.IN, Direction.OUT)
+      }
+
+      nodeType.edges(direction)
         .sortBy(_.customStepName)
         .collect { case AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) =>
           val mapOrFlatMap = cardinality match {
@@ -1165,7 +1169,7 @@ class CodeGen(schema: Schema) {
             case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
           }
           s"""/** ${customStepDoc.getOrElse("")}
-             |  * Traverse to ${neighbor.name} via ${viaEdge.name} - this relationship was given a customStepName in the schema.
+             |  * Traverse to ${neighbor.name} via ${viaEdge.name} $direction edge. 
              |  */ ${docAnnotationMaybe(customStepDoc)}
              |def $customStepName: Traversal[${neighbor.className}] =
              |  traversal.$mapOrFlatMap(_.$customStepName)
