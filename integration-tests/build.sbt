@@ -5,7 +5,8 @@ val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain class
 val schemas = project.in(file("schemas"))
   .dependsOn(Projects.codegen_2_13)
   .settings(
-    scalaVersion := Versions.scala_2_13,
+    scalaVersion := Versions.scala_3,
+    crossScalaVersions := Seq(Versions.scala_2_13, Versions.scala_3),
     generateDomainClasses := Def.task {
       val outputRoot = target.value / "odb-codegen"
       FileUtils.deleteRecursively(outputRoot)
@@ -16,7 +17,8 @@ val schemas = project.in(file("schemas"))
 
 val integrationTests = project.in(file("tests"))
   .settings(
-    scalaVersion := Versions.scala_2_13,
+    scalaVersion := Versions.scala_3,
+    crossScalaVersions := Seq(Versions.scala_2_13, Versions.scala_3),
     libraryDependencies ++= Seq(
       "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
       "org.scalatest" %% "scalatest" % "3.2.9" % Test,

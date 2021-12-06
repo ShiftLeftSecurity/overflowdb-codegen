@@ -9,7 +9,7 @@ import java.io.File
 object TestSchema4 extends App {
   val builder = new SchemaBuilder("Cpg","io.shiftleft.codepropertygraph.generated")
 
-  implicit val schemaInfo = SchemaInfo.forClass(getClass)
+  implicit val schemaInfo: SchemaInfo = SchemaInfo.forClass(getClass)
 
   val edge1 = builder.addEdgeType("EDGE_1")
   val rootNode1 = builder.addNodeBaseType("ROOT_NODE_1")

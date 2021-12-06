@@ -39,13 +39,13 @@ class Schema01Test extends AnyWordSpec with Matchers {
 
     "lookup and traverse nodes/edges/properties" in {
       // generic traversal
-      graph.nodes.property(Properties.NAME).toSet shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
-      graph.edges.property(Properties.NAME).toSet shouldBe Set("edge 2")
+      graph.nodes.property(Properties.NAME).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
+      graph.edges.property(Properties.NAME).toSetMutable shouldBe Set("edge 2")
       // TODO generate node type starters
       def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
       def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
       node1Traversal.out.toList shouldBe Seq(node2a)
-      node1Traversal.name.toSet shouldBe Set("node 1a", "node 1b")
+      node1Traversal.name.toSetMutable shouldBe Set("node 1a", "node 1b")
       node1Traversal.order.l shouldBe Seq(2)
       node2Traversal.options.l shouldBe Seq("opt1", "opt2")
       node2Traversal.placements.l shouldBe Seq(5, 1, 7)
@@ -58,10 +58,10 @@ class Schema01Test extends AnyWordSpec with Matchers {
       val edge2Specific = edge2.asInstanceOf[Edge2]
       val name: String = node1aSpecific.name
       name shouldBe "node 1a"
-      val _: Option[Integer] = node1aSpecific.order
+      val o1: Option[Integer] = node1aSpecific.order
       node1aSpecific.order shouldBe Some(2)
       node1bSpecific.order shouldBe None
-      val _: Seq[String] = node2aSpecific.options
+      val o2: Seq[String] = node2aSpecific.options
       node2aSpecific.options shouldBe Seq("opt1", "opt2")
       node2bSpecific.options shouldBe Seq.empty
       node2bSpecific.placements shouldBe IndexedSeq(5, 1, 7)

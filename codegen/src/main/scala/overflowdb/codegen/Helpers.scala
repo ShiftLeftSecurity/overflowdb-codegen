@@ -181,7 +181,7 @@ object Helpers {
        |      $propertyDefaultValueCases
        |      case _ => super.propertyDefaultValue(propertyKey)
        |  }
-       |""".stripMargin
+       |""".stripMargin.replaceAll("\n", "\n  ")
   }
 
   def propertyDefaultCases(properties: Seq[Property[_]]): String =

@@ -902,7 +902,7 @@ class CodeGen(schema: Schema) {
                |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString("\n")
 
-        s"""def $edgeAccessorName = get().$edgeAccessorName
+        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[${neighborInfo.deriveNeighborNodeType}] = get().$edgeAccessorName
            |override def _$edgeAccessorName = get()._$edgeAccessorName
            |
            |$nodeDelegators

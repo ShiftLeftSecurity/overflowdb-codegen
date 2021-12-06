@@ -6,6 +6,7 @@ ThisBuild/organization := "io.shiftleft"
   * we need scala 2.12 for the sbt plugin and 2.13 for everything else */
 lazy val codegen_2_12 = Projects.codegen_2_12
 lazy val codegen_2_13 = Projects.codegen_2_13
+lazy val codegen_3 = Projects.codegen_3
 lazy val sbtPlugin = Projects.sbtPlugin
 lazy val integrationTests = Projects.integrationTests
 
@@ -16,8 +17,6 @@ ThisBuild/Compile/scalacOptions ++= Seq(
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
-  "-Ywarn-unused",
-  // "-language:existentials",
 )
 
 ThisBuild/licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
