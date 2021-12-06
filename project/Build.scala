@@ -23,15 +23,11 @@ object Projects {
   lazy val integrationTestDomainClasses_3 = project.in(file("integration-tests/domain-classes_3"))
 
   lazy val integrationTests = BaseProject(project.in(file("integration-tests/tests"))).cross
-  lazy val integrationTests_2_13 = integrationTests(Versions.scala_2_13)
-  lazy val integrationTests_3 = integrationTests(Versions.scala_3)
+  lazy val integrationTests_2_13 = integrationTests(Versions.scala_2_13).dependsOn(integrationTestDomainClasses_2_13)
+  lazy val integrationTests_3 = integrationTests(Versions.scala_3).dependsOn(integrationTestDomainClasses_3)
 
   val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for all test schemas")
   val sourceGenerators = sbt.Keys.sourceGenerators
-
-  // integrationTests_3.settings(
-    // Compile/sourceGenerators += integrationTestSchemas_3 / generateDomainClasses
-  // )
 
   lazy val sbtPlugin = project.in(file("sbt-overflowdb"))
 }
