@@ -19,10 +19,10 @@ object Projects {
   lazy val integrationTestSchemas = BaseProject(project.in(file("integration-tests/schemas"))).cross.dependsOn(codegen)
   lazy val integrationTestSchemas_2_13 = integrationTestSchemas(Versions.scala_2_13)
   lazy val integrationTestSchemas_3 = integrationTestSchemas(Versions.scala_3)
+  lazy val integrationTestDomainClasses_3 = project.in(file("integration-tests/domain-classes_3"))
 
   lazy val integrationTests = BaseProject(project.in(file("integration-tests/tests"))).cross
   lazy val integrationTests_2_13 = integrationTests(Versions.scala_2_13)
-  // integrationTests_2_13.settings() TODO
   lazy val integrationTests_3 = integrationTests(Versions.scala_3)
 
   val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for all test schemas")
