@@ -1155,7 +1155,7 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generateCustomStepNameTraversals(nodeType: AbstractNodeType): String = {
+    def generateCustomStepNameTraversals(nodeType: AbstractNodeType): Seq[String] = {
       for {
         direction <- Seq(Direction.IN, Direction.OUT)
         AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) <- nodeType.edges(direction).sortBy(_.customStepName)
@@ -1171,9 +1171,9 @@ class CodeGen(schema: Schema) {
            |  traversal.$mapOrFlatMap(_.$customStepName)
            |""".stripMargin
       }
-    }.mkString("\n")
+    }
 
-    def generatePropertyTraversals(properties: Seq[Property[_]]): String = {
+    def generatePropertyTraversals(properties: Seq[Property[_]]): Seq[String] = {
       import Property.Cardinality
       properties.map { property =>
         val nameCamelCase = camelCase(property.name)
@@ -1514,10 +1514,10 @@ class CodeGen(schema: Schema) {
            |
            |  $filterSteps
            |""".stripMargin
-      }.mkString("\n")
+      }
     }
 
-    def generateNodeTraversalExt(nodeType: AbstractNodeType): String = {
+    def generateNodeTraversalExt(nodeType: AbstractNodeType, customStepNameTraversals: Seq[String], propertyTraversals: Seq[String]): String = {
       val className = nodeType.className
       s"""package $traversalsPackage
          |
@@ -1527,9 +1527,9 @@ class CodeGen(schema: Schema) {
          |/** Traversal steps for $className */
          |class ${className}TraversalExtGen[NodeType <: $className](val traversal: IterableOnce[NodeType]) extends AnyVal {
          |
-         |${generateCustomStepNameTraversals(nodeType)}
+         |${customStepNameTraversals.mkString("\n")}
          |
-         |${generatePropertyTraversals(nodeType.properties)}
+         |${propertyTraversals.mkString("\n")}
          |
          |}""".stripMargin
     }
@@ -1546,9 +1546,13 @@ class CodeGen(schema: Schema) {
     results.append(baseDir.createChild("package.scala").write(packageObject))
     results.append(baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits))
     schema.allNodeTypes.foreach { nodeType =>
-      val src = generateNodeTraversalExt(nodeType)
-      val srcFile = nodeType.className + ".scala"
-      results.append(baseDir.createChild(srcFile).write(src))
+      val customStepNameTraversals = generateCustomStepNameTraversals(nodeType)
+      val propertyTraversals = generatePropertyTraversals(nodeType.properties)
+      if (customStepNameTraversals.size + propertyTraversals.size > 0) {
+        val src = generateNodeTraversalExt(nodeType, customStepNameTraversals, propertyTraversals)
+        val srcFile = nodeType.className + ".scala"
+        results.append(baseDir.createChild(srcFile).write(src))
+      }
     }
     results.toSeq
   }
