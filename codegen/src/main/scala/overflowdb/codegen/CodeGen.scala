@@ -469,7 +469,7 @@ class CodeGen(schema: Schema) {
               }
 
               s"""/** ${adjacentNode.customStepDoc.getOrElse("")}
-                 |  * Traverse to ${neighbor.name} via ${adjacentNode.viaEdge.name}.
+                 |  * Traverse to ${neighbor.name} via ${adjacentNode.viaEdge.name} $direction edge.
                  |  */ ${docAnnotationMaybe(adjacentNode.customStepDoc)}
                  |def $accessorName: ${fullScalaType(neighbor, cardinality)} =
                  |  $edgeAccessorName.collectAll[${neighbor.className}]$appendix""".stripMargin
@@ -897,7 +897,7 @@ class CodeGen(schema: Schema) {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
             val accessorNameForNode = accessorName(neighborNodeInfo)
             s"""/** ${neighborNodeInfo.customStepDoc.getOrElse("")}
-               |  * Traverse to ${neighborNodeInfo.neighborNode.name} via ${neighborNodeInfo.edge.name}.
+               |  * Traverse to ${neighborNodeInfo.neighborNode.name} via ${neighborNodeInfo.edge.name} $direction edge.
                |  */  ${docAnnotationMaybe(neighborNodeInfo.customStepDoc)}
                |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString("\n")
@@ -1131,7 +1131,7 @@ class CodeGen(schema: Schema) {
     lazy val nodeTraversalImplicits = {
       def implicitForNodeType(name: String) = {
         val traversalName = s"${name}TraversalExtGen"
-        s"implicit def to$traversalName[NodeType <: $name](trav: Traversal[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
+        s"implicit def to$traversalName[NodeType <: $name](trav: IterableOnce[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
       }
 
       val implicitsForNodeTraversals =
@@ -1142,7 +1142,6 @@ class CodeGen(schema: Schema) {
 
       s"""package $traversalsPackage
          |
-         |import overflowdb.traversal.Traversal
          |import $nodesPackage._
          |
          |trait NodeTraversalImplicits extends NodeBaseTypeTraversalImplicits {
@@ -1156,24 +1155,25 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generateCustomStepNameTraversals(nodeType: AbstractNodeType): String = {
-      nodeType.edges
-        .sortBy(_.customStepName)
-        .collect { case AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) =>
-          val mapOrFlatMap = cardinality match {
-            case Cardinality.One => "map"
-            case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
-          }
-          s"""/** ${customStepDoc.getOrElse("")}
-             |  * Traverse to ${neighbor.name} via ${viaEdge.name} - this relationship was given a customStepName in the schema.
-             |  */ ${docAnnotationMaybe(customStepDoc)}
-             |def $customStepName: Traversal[${neighbor.className}] =
-             |  traversal.$mapOrFlatMap(_.$customStepName)
-             |""".stripMargin
-        }.mkString("\n")
+    def generateCustomStepNameTraversals(nodeType: AbstractNodeType): Seq[String] = {
+      for {
+        direction <- Seq(Direction.IN, Direction.OUT)
+        AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) <- nodeType.edges(direction).sortBy(_.customStepName)
+      } yield {
+        val mapOrFlatMap = cardinality match {
+          case Cardinality.One => "map"
+          case Cardinality.ZeroOrOne | Cardinality.List => "flatMap"
+        }
+        s"""/** ${customStepDoc.getOrElse("")}
+           |  * Traverse to ${neighbor.name} via ${viaEdge.name} $direction edge.
+           |  */ ${docAnnotationMaybe(customStepDoc)}
+           |def $customStepName: Traversal[${neighbor.className}] =
+           |  traversal.$mapOrFlatMap(_.$customStepName)
+           |""".stripMargin
+      }
     }
 
-    def generatePropertyTraversals(properties: Seq[Property[_]]): String = {
+    def generatePropertyTraversals(properties: Seq[Property[_]]): Seq[String] = {
       import Property.Cardinality
       properties.map { property =>
         val nameCamelCase = camelCase(property.name)
@@ -1514,22 +1514,25 @@ class CodeGen(schema: Schema) {
            |
            |  $filterSteps
            |""".stripMargin
-      }.mkString("\n")
+      }
     }
 
     def generateNodeTraversalExt(nodeType: AbstractNodeType): String = {
+      val customStepNameTraversals = generateCustomStepNameTraversals(nodeType)
+      val propertyTraversals = generatePropertyTraversals(nodeType.properties)
       val className = nodeType.className
+
       s"""package $traversalsPackage
          |
-         |import overflowdb.traversal.Traversal
+         |import overflowdb.traversal._
          |import $nodesPackage._
          |
          |/** Traversal steps for $className */
-         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Traversal[NodeType]) extends AnyVal {
+         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: IterableOnce[NodeType]) extends AnyVal {
          |
-         |${generateCustomStepNameTraversals(nodeType)}
+         |${customStepNameTraversals.mkString("\n")}
          |
-         |${generatePropertyTraversals(nodeType.properties)}
+         |${propertyTraversals.mkString("\n")}
          |
          |}""".stripMargin
     }
