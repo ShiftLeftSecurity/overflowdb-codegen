@@ -3,12 +3,15 @@ name := "overflowdb-codegen-root"
 ThisBuild/organization := "io.shiftleft"
 
 /** scala cross version settings for codegen:
-  * we need scala 2.12 for the sbt plugin and 2.13 for everything else */
+  * we need scala 2.12 for the sbt plugin, 2.13 and 3 for everything else */
 lazy val codegen_2_12 = Projects.codegen_2_12
 lazy val codegen_2_13 = Projects.codegen_2_13
 lazy val codegen_3 = Projects.codegen_3
+lazy val integrationTestSchemas_2_13 = Projects.integrationTestSchemas_2_13
+lazy val integrationTestSchemas_3 = Projects.integrationTestSchemas_3
+lazy val integrationTests_2_13 = Projects.integrationTests_2_13
+lazy val integrationTests_3 = Projects.integrationTests_3
 lazy val sbtPlugin = Projects.sbtPlugin
-lazy val integrationTests = Projects.integrationTests
 
 ThisBuild/resolvers += Resolver.mavenLocal
 

@@ -1,9 +1,8 @@
 name := "integration-tests"
 
-val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for all test schemas")
+// val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for all test schemas")
 
-scalaVersion := Versions.scala_3
-crossScalaVersions := Seq(Versions.scala_2_13, Versions.scala_3)
+// cross scalaVersion is defined in project/Build.scala
 
 libraryDependencies ++= Seq(
   "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
@@ -11,7 +10,8 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-simple" % "1.7.28" % Test,
 )
 
-Compile/sourceGenerators += schemas / generateDomainClasses
+// Compile/sourceGenerators += Projects.integrationTestSchemas / generateDomainClasses
+// Compile/sourceGenerators += schemas / generateDomainClasses
 scalacOptions -= "-Xfatal-warnings"
 
 publish/skip := true
