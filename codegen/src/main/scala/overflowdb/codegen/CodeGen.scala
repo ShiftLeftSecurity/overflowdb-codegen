@@ -1517,8 +1517,11 @@ class CodeGen(schema: Schema) {
       }
     }
 
-    def generateNodeTraversalExt(nodeType: AbstractNodeType, customStepNameTraversals: Seq[String], propertyTraversals: Seq[String]): String = {
+    def generateNodeTraversalExt(nodeType: AbstractNodeType): String = {
+      val customStepNameTraversals = generateCustomStepNameTraversals(nodeType)
+      val propertyTraversals = generatePropertyTraversals(nodeType.properties)
       val className = nodeType.className
+
       s"""package $traversalsPackage
          |
          |import overflowdb.traversal._
@@ -1546,13 +1549,9 @@ class CodeGen(schema: Schema) {
     results.append(baseDir.createChild("package.scala").write(packageObject))
     results.append(baseDir.createChild("NodeTraversalImplicits.scala").write(nodeTraversalImplicits))
     schema.allNodeTypes.foreach { nodeType =>
-      val customStepNameTraversals = generateCustomStepNameTraversals(nodeType)
-      val propertyTraversals = generatePropertyTraversals(nodeType.properties)
-      if (customStepNameTraversals.size + propertyTraversals.size > 0) {
-        val src = generateNodeTraversalExt(nodeType, customStepNameTraversals, propertyTraversals)
-        val srcFile = nodeType.className + ".scala"
-        results.append(baseDir.createChild(srcFile).write(src))
-      }
+      val src = generateNodeTraversalExt(nodeType)
+      val srcFile = nodeType.className + ".scala"
+      results.append(baseDir.createChild(srcFile).write(src))
     }
     results.toSeq
   }
