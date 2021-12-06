@@ -7,7 +7,7 @@ val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain class
 generateDomainClasses := Def.task {
   val outputRoot = target.value / "odb-codegen"
   FileUtils.deleteRecursively(outputRoot)
-  (Compile/runMain).toTask(s" CodegenForAllSchemas integration-tests/schemas/target/scala-3/odb-codegen").value
+  (Compile/runMain).toTask(s" CodegenForAllSchemas").value
   FileUtils.listFilesRecursively(outputRoot)
 }.value
 

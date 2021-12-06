@@ -19,6 +19,7 @@ object Projects {
   lazy val integrationTestSchemas = BaseProject(project.in(file("integration-tests/schemas"))).cross.dependsOn(codegen)
   lazy val integrationTestSchemas_2_13 = integrationTestSchemas(Versions.scala_2_13)
   lazy val integrationTestSchemas_3 = integrationTestSchemas(Versions.scala_3)
+  lazy val integrationTestDomainClasses_2_13 = project.in(file("integration-tests/domain-classes_2_13"))
   lazy val integrationTestDomainClasses_3 = project.in(file("integration-tests/domain-classes_3"))
 
   lazy val integrationTests = BaseProject(project.in(file("integration-tests/tests"))).cross
