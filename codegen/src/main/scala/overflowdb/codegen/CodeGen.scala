@@ -284,7 +284,7 @@ class CodeGen(schema: Schema) {
                  |  }
                  |}""".stripMargin
           }
-        }.mkString("\n\n")
+        }.mkString("\n\n  ")
       }
 
       val propertyDefaultValues = propertyDefaultValueImpl(s"$edgeClassName.PropertyDefaults", properties)
@@ -390,7 +390,7 @@ class CodeGen(schema: Schema) {
          |  /*Sets fields from newNode*/
          |  def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = ???
          |
-         |  ${genericNeighborAccessors.mkString("\n")}
+         |  ${genericNeighborAccessors.mkString("\n  ")}
          |}
          |
          |  $keyBasedTraits
@@ -676,11 +676,11 @@ class CodeGen(schema: Schema) {
           val memberName = camelCase(key.name)
           key.cardinality match {
             case Cardinality.One(_) =>
-              s"""properties.put("${key.name}", $memberName)"""
+              s"""  properties.put("${key.name}", $memberName)"""
             case Cardinality.ZeroOrOne =>
-              s"""$memberName.map { value => properties.put("${key.name}", value) }"""
+              s"""  $memberName.map { value => properties.put("${key.name}", value) }"""
             case Cardinality.List =>
-              s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName) }"""
+              s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName) }"""
           }
         }.mkString("\n")
 
@@ -689,7 +689,7 @@ class CodeGen(schema: Schema) {
             val memberName = cnt.localName
             cnt.cardinality match {
               case Cardinality.One(_) =>
-                s"""properties.put("$memberName", this._$memberName)"""
+                s"""  properties.put("$memberName", this._$memberName)"""
               case Cardinality.ZeroOrOne =>
                 s"""   $memberName.map { value => properties.put("$memberName", value) }"""
               case Cardinality.List =>
@@ -700,8 +700,8 @@ class CodeGen(schema: Schema) {
 
         s""" {
            |  val properties = new java.util.HashMap[String, Any]
-           |$putKeysImpl
-           |$putContainedNodesImpl
+           |  $putKeysImpl
+           |  $putContainedNodesImpl
            |  properties
            |}""".stripMargin
       }
@@ -713,11 +713,11 @@ class CodeGen(schema: Schema) {
           key.cardinality match {
             case Cardinality.One(default) =>
               val isDefaultValueImpl = defaultValueCheckImpl(memberName, default)
-              s"""if (!($isDefaultValueImpl)) { properties.put("${key.name}", $memberName) }"""
+              s"""  if (!($isDefaultValueImpl)) { properties.put("${key.name}", $memberName) }"""
             case Cardinality.ZeroOrOne =>
-              s"""$memberName.map { value => properties.put("${key.name}", value) }"""
+              s"""  $memberName.map { value => properties.put("${key.name}", value) }"""
             case Cardinality.List =>
-              s"""if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName) }"""
+              s"""  if (this._$memberName != null && this._$memberName.nonEmpty) { properties.put("${key.name}", $memberName) }"""
           }
         }.mkString("\n")
 
@@ -739,8 +739,8 @@ class CodeGen(schema: Schema) {
 
         s""" {
            |  val properties = new java.util.HashMap[String, Any]
-           |$putKeysImpl
-           |$putContainedNodesImpl
+           |  $putKeysImpl
+           |  $putContainedNodesImpl
            |  properties
            |}""".stripMargin
       }
@@ -754,14 +754,14 @@ class CodeGen(schema: Schema) {
             val memberName = camelCase(key.name)
             key.cardinality match {
               case Cardinality.One(_) =>
-                s"""   this._$memberName = $newNodeCasted.$memberName""".stripMargin
+                s"""this._$memberName = $newNodeCasted.$memberName""".stripMargin
               case Cardinality.ZeroOrOne =>
-                s"""   this._$memberName = $newNodeCasted.$memberName.orNull""".stripMargin
+                s"""this._$memberName = $newNodeCasted.$memberName.orNull""".stripMargin
               case Cardinality.List =>
-                s"""   this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else collection.immutable.ArraySeq.empty""".stripMargin
+                s"""this._$memberName = if ($newNodeCasted.$memberName != null) $newNodeCasted.$memberName else collection.immutable.ArraySeq.empty""".stripMargin
             }
           }
-          lines.mkString("\n")
+          lines.mkString("\n  ")
         }
 
         val initRefsImpl = {
@@ -772,46 +772,46 @@ class CodeGen(schema: Schema) {
 
             containedNode.cardinality match {
               case Cardinality.One(_) =>
-                s"""  this._$memberName = $newNodeCasted.$memberName match {
-                   |    case null => null
-                   |    case newNode: NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
-                   |    case oldNode: StoredNode => oldNode.asInstanceOf[$containedNodeType]
-                   |    case _ => throw new MatchError("unreachable")
-                   |  }""".stripMargin
+                s"""this._$memberName = $newNodeCasted.$memberName match {
+                   |  case null => null
+                   |  case newNode: NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
+                   |  case oldNode: StoredNode => oldNode.asInstanceOf[$containedNodeType]
+                   |  case _ => throw new MatchError("unreachable")
+                   |}""".stripMargin.replaceAll("\n", "\n  ")
               case Cardinality.ZeroOrOne =>
-                s"""  this._$memberName = $newNodeCasted.$memberName match {
-                   |    case null | None => null
-                   |    case Some(newNode:NewNode) => mapping(newNode).asInstanceOf[$containedNodeType]
-                   |    case Some(oldNode:StoredNode) => oldNode.asInstanceOf[$containedNodeType]
-                   |    case _ => throw new MatchError("unreachable")
-                   |  }""".stripMargin
+                s"""this._$memberName = $newNodeCasted.$memberName match {
+                   |  case null | None => null
+                   |  case Some(newNode:NewNode) => mapping(newNode).asInstanceOf[$containedNodeType]
+                   |  case Some(oldNode:StoredNode) => oldNode.asInstanceOf[$containedNodeType]
+                   |  case _ => throw new MatchError("unreachable")
+                   |}""".stripMargin.replaceAll("\n", "\n  ")
               case Cardinality.List =>
-                s"""  this._$memberName =
-                   |    if ($newNodeCasted.$memberName == null || $newNodeCasted.$memberName.isEmpty) {
-                   |      collection.immutable.ArraySeq.empty
-                   |    } else {
-                   |     collection.immutable.ArraySeq.unsafeWrapArray(
-                   |       $newNodeCasted.$memberName.map {
-                   |         case null => throw new NullPointerException("NullPointers forbidden in contained nodes")
-                   |         case newNode:NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
-                   |         case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
-                   |         case _ => throw new MatchError("unreachable")
-                   |       }.toArray
-                   |     )
-                   |    }
-                   |""".stripMargin
+                s"""this._$memberName =
+                   |  if ($newNodeCasted.$memberName == null || $newNodeCasted.$memberName.isEmpty) {
+                   |    collection.immutable.ArraySeq.empty
+                   |  } else {
+                   |    collection.immutable.ArraySeq.unsafeWrapArray(
+                   |      $newNodeCasted.$memberName.map {
+                   |        case null => throw new NullPointerException("NullPointers forbidden in contained nodes")
+                   |        case newNode:NewNode => mapping(newNode).asInstanceOf[$containedNodeType]
+                   |        case oldNode:StoredNode => oldNode.asInstanceOf[$containedNodeType]
+                   |        case _ => throw new MatchError("unreachable")
+                   |      }.toArray
+                   |    )
+                   |  }
+                   |""".stripMargin.replaceAll("\n", "\n  ")
             }
           }
-        }.mkString("\n\n")
+        }.mkString("\n\n  ")
 
         val registerFullName = if(!properties.map{_.name}.contains("FULL_NAME")) "" else {
-          s"""  graph.indexManager.putIfIndexed("FULL_NAME", $newNodeCasted.fullName, this.ref)"""
+          s"""graph.indexManager.putIfIndexed("FULL_NAME", $newNodeCasted.fullName, this.ref)"""
         }
 
         s"""override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode):Unit = {
-           |$initKeysImpl
-           |$initRefsImpl
-           |$registerFullName
+           |  $initKeysImpl
+           |  $initRefsImpl
+           |  $registerFullName
            |}""".stripMargin
       }
 
@@ -838,7 +838,7 @@ class CodeGen(schema: Schema) {
                    |""".stripMargin
             }
           }
-          .mkString("\n")
+          .mkString("\n").replaceAll("\n", "\n  ")
 
       val productElements: Seq[ProductElement] = {
         var currIndex = -1
@@ -869,7 +869,7 @@ class CodeGen(schema: Schema) {
 
       val abstractContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         s"""def ${containedNode.localName}: ${getCompleteType(containedNode)}"""
-      }.mkString("\n")
+      }.mkString("\n  ")
 
       val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         import Property.Cardinality
@@ -881,7 +881,7 @@ class CodeGen(schema: Schema) {
           case Cardinality.List =>
             s"""  def ${containedNode.localName}: collection.immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
         }
-      }.mkString("\n")
+      }.mkString("\n  ")
 
       val nodeBaseImpl =
         s"""trait ${className}Base extends AbstractNode $mixinTraitsForBase $propertyBasedTraits {
@@ -902,18 +902,18 @@ class CodeGen(schema: Schema) {
                |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString("\n")
 
-        s"""def $edgeAccessorName = get().$edgeAccessorName
+        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[${neighborInfo.deriveNeighborNodeType}] = get().$edgeAccessorName
            |override def _$edgeAccessorName = get()._$edgeAccessorName
            |
            |$nodeDelegators
            |""".stripMargin
-      }.mkString("\n")
+      }.mkString("\n").replaceAll("\n", "\n    ")
 
       val nodeRefImpl = {
         val propertyDelegators = properties.map { key =>
           val name = camelCase(key.name)
           s"""  override def $name: ${getCompleteType(key)} = get().$name"""
-        }.mkString("\n")
+        }.mkString("\n  ")
 
         val propertyDefaultValues = propertyDefaultValueImpl(s"$className.PropertyDefaults", properties)
 
@@ -924,26 +924,26 @@ class CodeGen(schema: Schema) {
            |  $propertyDelegators
            |  $propertyDefaultValues
            |  $delegatingContainedNodeAccessors
-           |  $neighborAccessorDelegators
+           |    $neighborAccessorDelegators
            |
-           |  override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode): Unit = get().fromNewNode(newNode, mapping)
-           |  override def canEqual(that: Any): Boolean = get.canEqual(that)
-           |  override def label: String = {
-           |    $className.Label
-           |  }
-           |
-           |  override def productElementLabel(n: Int): String =
-           |    n match {
-           |      $productElementLabels
+           |    override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode): Unit = get().fromNewNode(newNode, mapping)
+           |    override def canEqual(that: Any): Boolean = get.canEqual(that)
+           |    override def label: String = {
+           |      $className.Label
            |    }
            |
-           |  override def productElement(n: Int): Any =
-           |    n match {
-           |      $productElementAccessors
-           |    }
+           |    override def productElementLabel(n: Int): String =
+           |      n match {
+           |        $productElementLabels
+           |      }
            |
-           |  override def productPrefix = "$className"
-           |  override def productArity = ${productElements.size}
+           |    override def productElement(n: Int): Any =
+           |      n match {
+           |        $productElementAccessors
+           |      }
+           |
+           |    override def productPrefix = "$className"
+           |    override def productArity = ${productElements.size}
            |}
            |""".stripMargin
       }
@@ -967,7 +967,7 @@ class CodeGen(schema: Schema) {
            |override def _$edgeAccessorName = createAdjacentNodeIteratorByOffSet[StoredNode]($offsetPosition)
            |$nodeAccessors
            |""".stripMargin
-      }.mkString("\n")
+      }.mkString("\n").replaceAll("\n", "\n  ")
 
       val updateSpecificPropertyImpl: String = {
         import Property.Cardinality
@@ -1047,7 +1047,7 @@ class CodeGen(schema: Schema) {
 
           s"""private var $fieldName: $tpeForField = $defaultValue
              |def $publicName: $publicType = $fieldAccessor""".stripMargin
-        }.mkString("\n\n")
+        }.mkString("\n\n").replaceAll("\n", "\n  ")
       }
 
       val classImpl =
@@ -1056,9 +1056,9 @@ class CodeGen(schema: Schema) {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
-           |${propertyBasedFields(properties)}
+           |  ${propertyBasedFields(properties)}
            |
-           |$containedNodesAsMembers
+           |  $containedNodesAsMembers
            |
            |  /** faster than the default implementation */
            |  override def propertiesMap: java.util.Map[String, Any] =
@@ -1094,10 +1094,10 @@ class CodeGen(schema: Schema) {
            |
            |$updateSpecificPropertyImpl
            |
-           |override def removeSpecificProperty(key: String): Unit =
-           |  this.updateSpecificProperty(key, null)
+           |  override def removeSpecificProperty(key: String): Unit =
+           |    this.updateSpecificProperty(key, null)
            |
-           |$fromNew
+           |  $fromNew
            |
            |}""".stripMargin
 
@@ -1135,10 +1135,10 @@ class CodeGen(schema: Schema) {
       }
 
       val implicitsForNodeTraversals =
-        schema.nodeTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+        schema.nodeTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n  ")
 
       val implicitsForNodeBaseTypeTraversals =
-        schema.nodeBaseTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n")
+        schema.nodeBaseTypes.map(_.className).sorted.map(implicitForNodeType).mkString("\n  ")
 
       s"""package $traversalsPackage
          |
@@ -1169,7 +1169,7 @@ class CodeGen(schema: Schema) {
            |  */ ${docAnnotationMaybe(customStepDoc)}
            |def $customStepName: Traversal[${neighbor.className}] =
            |  traversal.$mapOrFlatMap(_.$customStepName)
-           |""".stripMargin
+           |""".stripMargin.replace("\n", "\n  ")
       }
     }
 
@@ -1530,7 +1530,7 @@ class CodeGen(schema: Schema) {
          |/** Traversal steps for $className */
          |class ${className}TraversalExtGen[NodeType <: $className](val traversal: IterableOnce[NodeType]) extends AnyVal {
          |
-         |${customStepNameTraversals.mkString("\n")}
+         |${customStepNameTraversals.mkString("\n  ")}
          |
          |${propertyTraversals.mkString("\n")}
          |
@@ -1617,7 +1617,7 @@ class CodeGen(schema: Schema) {
                 s"""  if ($memberName != null && $memberName.nonEmpty) { res += "${key.name}" -> $memberName }"""
             }
           }
-      val putRefsImpl = nodeType.containedNodes.map { key =>
+        val putRefsImpl = nodeType.containedNodes.map { key =>
           import Property.Cardinality
           val memberName = key.localName
           key.cardinality match {
@@ -1677,12 +1677,12 @@ class CodeGen(schema: Schema) {
                  |}
                  |""".stripMargin
           }
-      }.mkString("\n")
+      }.mkString("\n").replaceAll("\n", "\n  ")
 
       val copyFieldsImpl = fieldDescriptions.map { field =>
         val memberName = field.name
         s"newInstance.$memberName = this.$memberName"
-      }.mkString("\n")
+      }.mkString("\n    ")
 
       val classNameNewNode = s"New$nodeClassName"
 

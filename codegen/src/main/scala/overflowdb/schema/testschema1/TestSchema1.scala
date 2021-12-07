@@ -10,7 +10,7 @@ import overflowdb.storage.ValueTypes
 object TestSchema1 extends App {
   val builder = new SchemaBuilder("Cpg", "io.shiftleft.codepropertygraph.generated")
 
-  implicit val schemaInfo = SchemaInfo.forClass(getClass)
+  implicit val schemaInfo: SchemaInfo = SchemaInfo.forClass(getClass)
 
   // properties
   val name = builder
