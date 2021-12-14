@@ -3,6 +3,7 @@ package overflowdb.schema
 import overflowdb.codegen.DefaultNodeTypes
 import overflowdb.codegen.Helpers._
 import overflowdb.schema.Property.ValueType
+
 import scala.collection.mutable
 
 class SchemaBuilder(domainShortName: String, basePackage: String) {
@@ -12,6 +13,7 @@ class SchemaBuilder(domainShortName: String, basePackage: String) {
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
   val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
   var protoOptions: Option[ProtoOptions] = None
+  val noWarnList: mutable.Set[(AbstractNodeType, Property[_])] = mutable.Set.empty
 
   /** root node trait for all nodes - use if you want to be explicitly unspecific
     * n.b. 1: this one allows for StoredNode and NewNode
@@ -62,6 +64,11 @@ class SchemaBuilder(domainShortName: String, basePackage: String) {
     this
   }
 
+  def dontWarnForDuplicateProperty(nodeType: AbstractNodeType, property: Property[_]): SchemaBuilder = {
+    noWarnList.add((nodeType, property))
+    this
+  }
+
   def build: Schema = {
     val schema = new Schema(
       domainShortName,
@@ -72,6 +79,7 @@ class SchemaBuilder(domainShortName: String, basePackage: String) {
       edgeTypes.sortBy(_.name.toLowerCase).toSeq,
       constantsByCategory.toMap,
       protoOptions,
+      noWarnList.toSet,
     )
     verifyProtoIdsUnique(schema)
     schema

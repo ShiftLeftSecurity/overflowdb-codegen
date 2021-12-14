@@ -55,6 +55,22 @@ object Helpers {
     }
   }
 
+  def accessorName(neighborInfoForNode: NeighborInfoForNode): String = {
+    neighborInfoForNode.customStepName.getOrElse {
+      val neighborNodeName = neighborInfoForNode.neighborNode.name
+      val edgeName = neighborInfoForNode.edge.className
+      val direction = neighborInfoForNode.direction.toString
+       s"_${camelCase(neighborNodeName)}Via$edgeName${camelCaseCaps(direction)}"
+    }
+  }
+
+  def docAnnotationMaybe(customStepDoc: Option[String]): String = {
+    customStepDoc match {
+      case Some(doc) => s"""\n@overflowdb.traversal.help.Doc(info = "$doc")"""
+      case None => ""
+    }
+  }
+
   def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
     nodeName == DefaultNodeTypes.AbstractNodeName || baseTraits.map(_.name).contains(nodeName)
 
@@ -165,7 +181,7 @@ object Helpers {
        |      $propertyDefaultValueCases
        |      case _ => super.propertyDefaultValue(propertyKey)
        |  }
-       |""".stripMargin
+       |""".stripMargin.replaceAll("\n", "\n  ")
   }
 
   def propertyDefaultCases(properties: Seq[Property[_]]): String =
