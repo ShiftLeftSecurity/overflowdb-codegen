@@ -8,9 +8,11 @@ import scala.collection.mutable
 
 /**
  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
+ * @param additionalTraversalsPackages: additional packages that contain your traversals - used for `.help` to find @Doc annotations via reflection
  */
 class Schema(val domainShortName: String,
              val basePackage: String,
+             val additionalTraversalsPackages: Seq[String],
              val properties: Seq[Property[_]],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
