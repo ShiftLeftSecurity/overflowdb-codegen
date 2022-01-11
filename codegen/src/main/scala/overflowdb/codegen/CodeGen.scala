@@ -51,6 +51,12 @@ class CodeGen(schema: Schema) {
     baseDir.createDirectories()
     val domainShortName = schema.domainShortName
 
+    def registerAdditionalSearchPackages: String = {
+      schema.additionalTraversalsPackages.map { packageName =>
+        s""".registerAdditionalSearchPackage("$packageName")"""
+      }.mkString("")
+    }
+
     val domainMain = baseDir.createChild(s"$domainShortName.scala").write(
       s"""package $basePackage
          |
@@ -108,7 +114,7 @@ class CodeGen(schema: Schema) {
          |class $domainShortName(val graph: Graph = $domainShortName.emptyGraph) extends AutoCloseable {
          |
          |  lazy val help: String =
-         |    new TraversalHelp("$basePackage").forTraversalSources
+         |    new TraversalHelp("$basePackage")$registerAdditionalSearchPackages.forTraversalSources
          |
          |  override def close(): Unit =
          |    graph.close
