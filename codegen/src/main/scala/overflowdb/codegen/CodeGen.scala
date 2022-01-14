@@ -61,11 +61,12 @@ class CodeGen(schema: Schema) {
       s"""package $basePackage
          |
          |import java.nio.file.{Path, Paths}
-         |import overflowdb.traversal.help.TraversalHelp
+         |import overflowdb.traversal.help.{DocSearchPackages, TraversalHelp}
          |import overflowdb.{Config, Graph}
          |import scala.jdk.javaapi.CollectionConverters.asJava
          |
          |object $domainShortName {
+         |  implicit val defaultDocSearchPackage: DocSearchPackages = DocSearchPackages(getClass.getPackage.getName)
          |
          |  /**
          |    * Syntactic sugar for `new $domainShortName(graph)`.
@@ -113,8 +114,8 @@ class CodeGen(schema: Schema) {
          |  */
          |class $domainShortName(val graph: Graph = $domainShortName.emptyGraph) extends AutoCloseable {
          |
-         |  lazy val help: String =
-         |    new TraversalHelp("$basePackage")$registerAdditionalSearchPackages.forTraversalSources
+         |  def help(implicit searchPackageNames: DocSearchPackages): String =
+         |    new TraversalHelp(searchPackageNames).forTraversalSources
          |
          |  override def close(): Unit =
          |    graph.close
