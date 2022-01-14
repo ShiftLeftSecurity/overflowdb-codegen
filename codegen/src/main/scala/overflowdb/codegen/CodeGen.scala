@@ -67,7 +67,6 @@ class CodeGen(schema: Schema) {
          |
          |object $domainShortName {
          |  implicit val defaultDocSearchPackage: DocSearchPackages = DocSearchPackages(getClass.getPackage.getName)
-         |  lazy val help = new TraversalHelp(defaultDocSearchPackage)
          |
          |  /**
          |    * Syntactic sugar for `new $domainShortName(graph)`.
@@ -115,7 +114,8 @@ class CodeGen(schema: Schema) {
          |  */
          |class $domainShortName(val graph: Graph = $domainShortName.emptyGraph) extends AutoCloseable {
          |
-         |  lazy val help: String = $domainShortName.help.forTraversalSources
+         |  def help(implicit searchPackageNames: DocSearchPackages): String =
+         |    new TraversalHelp(searchPackageNames).forTraversalSources
          |
          |  override def close(): Unit =
          |    graph.close
