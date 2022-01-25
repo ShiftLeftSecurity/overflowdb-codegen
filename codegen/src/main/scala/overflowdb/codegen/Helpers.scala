@@ -68,7 +68,7 @@ object Helpers {
     customStepDoc match {
       case Some(doc) =>
         s"""$indent/** $doc */
-           |$indent@overflowdb.traversal.help.Doc(info = "$doc")""".stripMargin
+           |$indent@overflowdb.traversal.help.Doc(info = \"\"\"$doc\"\"\")""".stripMargin
       case None => ""
     }
   }
