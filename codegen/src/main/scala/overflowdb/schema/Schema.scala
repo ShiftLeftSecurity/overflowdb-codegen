@@ -127,8 +127,11 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   def containedNodes: Seq[ContainedNode] =
     _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
 
-  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Property.Cardinality): NodeType = {
-    _containedNodes.add(ContainedNode(node, localName, cardinality))
+  def addContainedNode(node: AbstractNodeType,
+                       localName: String,
+                       cardinality: Property.Cardinality,
+                       comment: String = ""): NodeType = {
+    _containedNodes.add(ContainedNode(node, localName, cardinality, stringToOption(comment)))
     this
   }
 
@@ -151,7 +154,10 @@ case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinali
                         customStepName: Option[String] = None,
                         customStepDoc: Option[String] = None)
 
-case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Property.Cardinality)
+case class ContainedNode(nodeType: AbstractNodeType,
+                         localName: String,
+                         cardinality: Property.Cardinality,
+                         comment: Option[String])
 
 class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
   extends HasClassName with HasProperties with HasOptionalProtoId with HasSchemaInfo {

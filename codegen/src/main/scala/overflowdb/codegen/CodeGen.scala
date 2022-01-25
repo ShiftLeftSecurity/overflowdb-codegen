@@ -880,14 +880,19 @@ class CodeGen(schema: Schema) {
 
       val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         import Property.Cardinality
-        containedNode.cardinality match {
+
+        val src = containedNode.cardinality match {
           case Cardinality.One(_) =>
-            s"""  def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
+            s"""def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
           case Cardinality.ZeroOrOne =>
-            s"""  def ${containedNode.localName}: Option[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
+            s"""def ${containedNode.localName}: Option[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.List =>
-            s"""  def ${containedNode.localName}: collection.immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
+            s"""def ${containedNode.localName}: collection.immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
         }
+
+        s"""${docAnnotationMaybe(containedNode.comment, indent = "    ")}
+           |    $src
+           |""".stripMargin
       }.mkString("\n  ")
 
       val nodeBaseImpl =
