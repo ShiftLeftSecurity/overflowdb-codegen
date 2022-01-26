@@ -1,11 +1,11 @@
 package overflowdb.codegen
 
 import better.files._
+import java.lang.System.lineSeparator
 import overflowdb.codegen.CodeGen.ConstantContext
 import overflowdb.schema.EdgeType.Cardinality
 import overflowdb.schema.Property.ValueType
 import overflowdb.schema._
-
 import scala.collection.mutable
 
 /** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
@@ -335,6 +335,14 @@ class CodeGen(schema: Schema) {
         accessor = neighborAccessorNameForEdge(edgeType, direction)
       } yield s"def _$accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
 
+      val markerTraits =
+        schema.allNodeTypes
+          .flatMap(_.markerTraits)
+          .distinct
+          .map { case MarkerTrait(name) => s"trait $name" }
+          .sorted
+          .mkString(lineSeparator)
+
       val keyBasedTraits =
         schema.nodeProperties.map { property =>
           val camelCaseName = camelCase(property.name)
@@ -401,6 +409,8 @@ class CodeGen(schema: Schema) {
          |}
          |
          |  $keyBasedTraits
+         |  $markerTraits
+         |
          |  $factories
          |""".stripMargin
     }
@@ -434,6 +444,10 @@ class CodeGen(schema: Schema) {
 
       val mixinsForBaseTypes2 = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}Base"
+      }.mkString(" ")
+
+      val mixinsForMarkerTraits = nodeBaseType.markerTraits.map { case MarkerTrait(name) =>
+        s"with $name"
       }.mkString(" ")
 
       def abstractEdgeAccessors(nodeBaseType: NodeBaseType, direction: Direction.Value) = {
@@ -533,6 +547,7 @@ class CodeGen(schema: Schema) {
          |trait ${className}Base extends AbstractNode
          |$mixinsForPropertyAccessorsReadOnly
          |$mixinsForBaseTypes2
+         |$mixinsForMarkerTraits
          |
          |trait ${className}New extends NewNode
          |$mixinsForPropertyAccessorsMutable
@@ -661,19 +676,20 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      val mixinTraits: String =
-        nodeType.extendz
-          .map { traitName =>
-            s"with ${traitName.className}"
-          }
-          .mkString(" ")
+      val mixinsForExtendedNodes: String =
+        nodeType.extendz.map { traitName =>
+          s"with ${traitName.className}"
+        }.mkString(" ")
 
-      val mixinTraitsForBase: String =
-        nodeType.extendz
-          .map { traitName =>
-            s"with ${traitName.className}Base"
-          }
-          .mkString(" ")
+      val mixinsForExtendedNodesBase: String =
+        nodeType.extendz.map { traitName =>
+          s"with ${traitName.className}Base"
+        }.mkString(" ")
+
+      val mixinsForMarkerTraits: String =
+        nodeType.markerTraits.map { case MarkerTrait(name) =>
+          s"with $name"
+        }.mkString(" ")
 
       val propertyBasedTraits = properties.map(p => s"with Has${p.className}").mkString(" ")
 
@@ -896,7 +912,7 @@ class CodeGen(schema: Schema) {
       }.mkString("\n  ")
 
       val nodeBaseImpl =
-        s"""trait ${className}Base extends AbstractNode $mixinTraitsForBase $propertyBasedTraits {
+        s"""trait ${className}Base extends AbstractNode $mixinsForExtendedNodesBase $mixinsForMarkerTraits $propertyBasedTraits {
            |  def asStored : StoredNode = this.asInstanceOf[StoredNode]
            |
            |  $abstractContainedNodeAccessors
@@ -932,7 +948,7 @@ class CodeGen(schema: Schema) {
         s"""class $className(graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
            |  with ${className}Base
            |  with StoredNode
-           |  $mixinTraits {
+           |  $mixinsForExtendedNodes {
            |  $propertyDelegators
            |  $propertyDefaultValues
            |  $delegatingContainedNodeAccessors
@@ -1064,7 +1080,7 @@ class CodeGen(schema: Schema) {
 
       val classImpl =
         s"""class $classNameDb(ref: NodeRef[NodeDb]) extends NodeDb(ref) with StoredNode
-           |  $mixinTraits with ${className}Base {
+           |  $mixinsForExtendedNodes with ${className}Base {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |
