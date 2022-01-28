@@ -1,11 +1,11 @@
 package overflowdb.codegen
 
 import better.files._
+import java.lang.System.lineSeparator
 import overflowdb.codegen.CodeGen.ConstantContext
 import overflowdb.schema.EdgeType.Cardinality
 import overflowdb.schema.Property.ValueType
 import overflowdb.schema._
-
 import scala.collection.mutable
 
 /** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
@@ -51,15 +51,22 @@ class CodeGen(schema: Schema) {
     baseDir.createDirectories()
     val domainShortName = schema.domainShortName
 
+    def registerAdditionalSearchPackages: String = {
+      schema.additionalTraversalsPackages.map { packageName =>
+        s""".registerAdditionalSearchPackage("$packageName")"""
+      }.mkString("")
+    }
+
     val domainMain = baseDir.createChild(s"$domainShortName.scala").write(
       s"""package $basePackage
          |
          |import java.nio.file.{Path, Paths}
-         |import overflowdb.traversal.help.TraversalHelp
+         |import overflowdb.traversal.help.{DocSearchPackages, TraversalHelp}
          |import overflowdb.{Config, Graph}
          |import scala.jdk.javaapi.CollectionConverters.asJava
          |
          |object $domainShortName {
+         |  implicit val defaultDocSearchPackage: DocSearchPackages = DocSearchPackages(getClass.getPackage.getName)
          |
          |  /**
          |    * Syntactic sugar for `new $domainShortName(graph)`.
@@ -107,8 +114,8 @@ class CodeGen(schema: Schema) {
          |  */
          |class $domainShortName(val graph: Graph = $domainShortName.emptyGraph) extends AutoCloseable {
          |
-         |  lazy val help: String =
-         |    new TraversalHelp("$basePackage").forTraversalSources
+         |  def help(implicit searchPackageNames: DocSearchPackages): String =
+         |    new TraversalHelp(searchPackageNames).forTraversalSources
          |
          |  override def close(): Unit =
          |    graph.close
@@ -328,6 +335,14 @@ class CodeGen(schema: Schema) {
         accessor = neighborAccessorNameForEdge(edgeType, direction)
       } yield s"def _$accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
 
+      val markerTraits =
+        schema.allNodeTypes
+          .flatMap(_.markerTraits)
+          .distinct
+          .map { case MarkerTrait(name) => s"trait $name" }
+          .sorted
+          .mkString(lineSeparator)
+
       val keyBasedTraits =
         schema.nodeProperties.map { property =>
           val camelCaseName = camelCase(property.name)
@@ -394,6 +409,8 @@ class CodeGen(schema: Schema) {
          |}
          |
          |  $keyBasedTraits
+         |  $markerTraits
+         |
          |  $factories
          |""".stripMargin
     }
@@ -427,6 +444,10 @@ class CodeGen(schema: Schema) {
 
       val mixinsForBaseTypes2 = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}Base"
+      }.mkString(" ")
+
+      val mixinsForMarkerTraits = nodeBaseType.markerTraits.map { case MarkerTrait(name) =>
+        s"with $name"
       }.mkString(" ")
 
       def abstractEdgeAccessors(nodeBaseType: NodeBaseType, direction: Direction.Value) = {
@@ -526,6 +547,7 @@ class CodeGen(schema: Schema) {
          |trait ${className}Base extends AbstractNode
          |$mixinsForPropertyAccessorsReadOnly
          |$mixinsForBaseTypes2
+         |$mixinsForMarkerTraits
          |
          |trait ${className}New extends NewNode
          |$mixinsForPropertyAccessorsMutable
@@ -654,19 +676,20 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      val mixinTraits: String =
-        nodeType.extendz
-          .map { traitName =>
-            s"with ${traitName.className}"
-          }
-          .mkString(" ")
+      val mixinsForExtendedNodes: String =
+        nodeType.extendz.map { traitName =>
+          s"with ${traitName.className}"
+        }.mkString(" ")
 
-      val mixinTraitsForBase: String =
-        nodeType.extendz
-          .map { traitName =>
-            s"with ${traitName.className}Base"
-          }
-          .mkString(" ")
+      val mixinsForExtendedNodesBase: String =
+        nodeType.extendz.map { traitName =>
+          s"with ${traitName.className}Base"
+        }.mkString(" ")
+
+      val mixinsForMarkerTraits: String =
+        nodeType.markerTraits.map { case MarkerTrait(name) =>
+          s"with $name"
+        }.mkString(" ")
 
       val propertyBasedTraits = properties.map(p => s"with Has${p.className}").mkString(" ")
 
@@ -873,18 +896,23 @@ class CodeGen(schema: Schema) {
 
       val delegatingContainedNodeAccessors = nodeType.containedNodes.map { containedNode =>
         import Property.Cardinality
-        containedNode.cardinality match {
+
+        val src = containedNode.cardinality match {
           case Cardinality.One(_) =>
-            s"""  def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
+            s"""def ${containedNode.localName}: ${containedNode.nodeType.className} = get().${containedNode.localName}"""
           case Cardinality.ZeroOrOne =>
-            s"""  def ${containedNode.localName}: Option[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
+            s"""def ${containedNode.localName}: Option[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
           case Cardinality.List =>
-            s"""  def ${containedNode.localName}: collection.immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
+            s"""def ${containedNode.localName}: collection.immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
         }
+
+        s"""${docAnnotationMaybe(containedNode.comment, indent = "    ")}
+           |    $src
+           |""".stripMargin
       }.mkString("\n  ")
 
       val nodeBaseImpl =
-        s"""trait ${className}Base extends AbstractNode $mixinTraitsForBase $propertyBasedTraits {
+        s"""trait ${className}Base extends AbstractNode $mixinsForExtendedNodesBase $mixinsForMarkerTraits $propertyBasedTraits {
            |  def asStored : StoredNode = this.asInstanceOf[StoredNode]
            |
            |  $abstractContainedNodeAccessors
@@ -920,7 +948,7 @@ class CodeGen(schema: Schema) {
         s"""class $className(graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
            |  with ${className}Base
            |  with StoredNode
-           |  $mixinTraits {
+           |  $mixinsForExtendedNodes {
            |  $propertyDelegators
            |  $propertyDefaultValues
            |  $delegatingContainedNodeAccessors
@@ -1052,7 +1080,7 @@ class CodeGen(schema: Schema) {
 
       val classImpl =
         s"""class $classNameDb(ref: NodeRef[NodeDb]) extends NodeDb(ref) with StoredNode
-           |  $mixinTraits with ${className}Base {
+           |  $mixinsForExtendedNodes with ${className}Base {
            |
            |  override def layoutInformation: NodeLayoutInformation = $className.layoutInformation
            |

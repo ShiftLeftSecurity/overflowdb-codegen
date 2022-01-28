@@ -161,4 +161,14 @@ class Schema02Test extends AnyWordSpec with Matchers {
       node1Traversal.orderLte(4).size shouldBe 1
     }
   }
+
+  "marker traits" in {
+    classOf[MarkerTrait1].isAssignableFrom(classOf[BaseNode]) shouldBe true
+    classOf[MarkerTrait1].isAssignableFrom(classOf[Node1]) shouldBe true
+    classOf[MarkerTrait2].isAssignableFrom(classOf[Node2]) shouldBe true
+
+    classOf[MarkerTrait1].isAssignableFrom(classOf[Node2]) shouldBe false
+    classOf[MarkerTrait2].isAssignableFrom(classOf[BaseNode]) shouldBe false
+    classOf[MarkerTrait2].isAssignableFrom(classOf[Node1]) shouldBe false
+  }
 }

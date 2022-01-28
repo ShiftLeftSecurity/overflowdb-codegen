@@ -8,9 +8,11 @@ import scala.collection.mutable
 
 /**
  * @param basePackage: specific for your domain, e.g. `com.example.mydomain`
+ * @param additionalTraversalsPackages: additional packages that contain your traversals - used for `.help` to find @Doc annotations via reflection
  */
 class Schema(val domainShortName: String,
              val basePackage: String,
+             val additionalTraversalsPackages: Seq[String],
              val properties: Seq[Property[_]],
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
@@ -41,6 +43,7 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
+  protected val _markerTraits: mutable.Set[MarkerTrait] = mutable.Set.empty
 
   /** all node types that extend this node */
   def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType]
@@ -111,6 +114,14 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
   def edges: Seq[AdjacentNode] =
     outEdges ++ inEdges
+
+  def addMarkerTrait(name: String): this.type = {
+    _markerTraits.add(MarkerTrait(name))
+    this
+  }
+
+  def markerTraits: Seq[MarkerTrait] =
+    _markerTraits.toSeq
 }
 
 class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
@@ -125,8 +136,11 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   def containedNodes: Seq[ContainedNode] =
     _containedNodes.toSeq.sortBy(_.localName.toLowerCase)
 
-  def addContainedNode(node: AbstractNodeType, localName: String, cardinality: Property.Cardinality): NodeType = {
-    _containedNodes.add(ContainedNode(node, localName, cardinality))
+  def addContainedNode(node: AbstractNodeType,
+                       localName: String,
+                       cardinality: Property.Cardinality,
+                       comment: String = ""): NodeType = {
+    _containedNodes.add(ContainedNode(node, localName, cardinality, stringToOption(comment)))
     this
   }
 
@@ -149,7 +163,13 @@ case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinali
                         customStepName: Option[String] = None,
                         customStepDoc: Option[String] = None)
 
-case class ContainedNode(nodeType: AbstractNodeType, localName: String, cardinality: Property.Cardinality)
+case class ContainedNode(nodeType: AbstractNodeType,
+                         localName: String,
+                         cardinality: Property.Cardinality,
+                         comment: Option[String])
+
+/** An empty trait without any implementation, e.g. to mark a semantic relationship between certain types */
+case class MarkerTrait(name: String)
 
 class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
   extends HasClassName with HasProperties with HasOptionalProtoId with HasSchemaInfo {
