@@ -65,12 +65,20 @@ object Helpers {
   }
 
   def docAnnotationMaybe(customStepDoc: Option[String], indent: String = ""): String = {
-    customStepDoc match {
+    customStepDoc.map(escapeJava) match {
       case Some(doc) =>
         s"""$indent/** $doc */
-           |$indent@overflowdb.traversal.help.Doc(info = "$doc")""".stripMargin
+           |$indent@overflowdb.traversal.help.Doc(info = \"\"\"$doc\"\"\")""".stripMargin
       case None => ""
     }
+  }
+
+  /** escape things like quotes, backslashes, end of comment ('* /' without the space) etc. */
+  def escapeJava(src: String): String = {
+    src
+      .replace("\"", "\\\"")
+      .replace("/*", "\\/\\*")
+      .replace("*/", "\\*\\/")
   }
 
   def isNodeBaseTrait(baseTraits: Seq[NodeBaseType], nodeName: String): Boolean =
