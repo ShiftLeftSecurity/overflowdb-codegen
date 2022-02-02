@@ -5,7 +5,7 @@ object Versions {
   val overflowdb = "1.106"
   val scala_2_12 = "2.12.15"
   val scala_2_13 = "2.13.8"
-  val scala_3 = "3.1.0"
+  val scala_3 = "3.1.1"
 }
 
 object Projects {
