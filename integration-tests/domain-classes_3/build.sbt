@@ -7,7 +7,7 @@ val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain class
 libraryDependencies ++= Seq(
   "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
   "org.scalatest" %% "scalatest" % "3.2.10" % Test,
-  "org.slf4j" % "slf4j-simple" % "1.7.35" % Test,
+  "org.slf4j" % "slf4j-simple" % "1.7.36" % Test,
 )
 
 Compile/sourceGenerators += Projects.integrationTestSchemas_3 / generateDomainClasses
