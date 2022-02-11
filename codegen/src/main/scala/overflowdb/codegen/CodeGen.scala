@@ -1255,8 +1255,7 @@ class CodeGen(schema: Schema) {
              |    if(!Misc.isRegex(pattern)){
              |      traversal.filter{node => node.${nameCamelCase} != pattern}
              |    } else {
-             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
-             |    traversal.filter{node =>  matcher.reset(node.$nameCamelCase); !matcher.matches()}
+             |      overflowdb.traversal.filter.StringPropertyFilter.regexpNot(traversal)(_.$nameCamelCase, pattern)
              |    }
              |  }
              |
@@ -1264,8 +1263,7 @@ class CodeGen(schema: Schema) {
              |    * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
              |    * */
              |  def ${nameCamelCase}Not(patterns: $baseType*): Traversal[NodeType] = {
-             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
-             |    traversal.filter{node => !matchers.exists{ matcher => matcher.reset(node.$nameCamelCase); matcher.matches()}}
+             |      overflowdb.traversal.filter.StringPropertyFilter.regexpNotMultiple(traversal)(_.$nameCamelCase, patterns)
              |   }
              |
              |""".stripMargin

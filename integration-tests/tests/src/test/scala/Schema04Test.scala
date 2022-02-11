@@ -199,8 +199,13 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1Traversal.str(".*").size shouldBe 3
     node1Traversal.str(".*name.*").size shouldBe 2
     node1Traversal.str(".*node1.*").size shouldBe 1
-    node1Traversal.str(".*line 2.*").size shouldBe 1
-    node1Traversal.str("nomatch", ".*node1.*").size shouldBe 1
+    node1Traversal.str(".*line 2.*").size shouldBe 1 // testing multi line matcher
+    node1Traversal.str("nomatch", ".*line 2.*").size shouldBe 1
+    node1Traversal.strExact("node1 name").size shouldBe 1
+    node1Traversal.strExact("nomatch", "node1 name").size shouldBe 1
+    node1Traversal.strNot(".*node1.*").size shouldBe 2
+    node1Traversal.strNot(".*line 2.*").size shouldBe 2 // testing multi line matcher
+    node1Traversal.strNot("nomatch", ".*line 2.*").size shouldBe 2
   }
 
 }
