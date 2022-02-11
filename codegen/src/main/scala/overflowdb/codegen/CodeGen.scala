@@ -1224,18 +1224,15 @@ class CodeGen(schema: Schema) {
              |    if(!Misc.isRegex(pattern)){
              |      traversal.filter{node => node.${nameCamelCase} == pattern}
              |    } else {
-             |    val matcher = java.util.regex.Pattern.compile(pattern).matcher("")
-             |    traversal.filter{node =>  matcher.reset(node.$nameCamelCase); matcher.matches()}
+             |      overflowdb.traversal.filter.StringPropertyFilter.regexp(traversal)(_.$nameCamelCase, pattern)
              |    }
              |  }
              |
              |  /**
              |    * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
              |    * */
-             |  def $nameCamelCase(patterns: $baseType*): Traversal[NodeType] = {
-             |    val matchers = patterns.map{pattern => java.util.regex.Pattern.compile(pattern).matcher("")}.toArray
-             |    traversal.filter{node => matchers.exists{ matcher => matcher.reset(node.$nameCamelCase); matcher.matches()}}
-             |   }
+             |  def $nameCamelCase(patterns: $baseType*): Traversal[NodeType] =
+             |    overflowdb.traversal.filter.StringPropertyFilter.regexpMultiple(traversal)(_.$nameCamelCase, patterns)
              |
              |  /**
              |    * Traverse to nodes where $nameCamelCase matches `value` exactly.

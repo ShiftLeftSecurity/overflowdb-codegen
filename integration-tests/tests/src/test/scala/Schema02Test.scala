@@ -160,6 +160,23 @@ class Schema02Test extends AnyWordSpec with Matchers {
       node1Traversal.orderLt(4).size shouldBe 0
       node1Traversal.orderLte(4).size shouldBe 1
     }
+
+  }
+
+  "generated string property filters" in {
+    val graph = TestSchema.empty.graph
+    val node1 = graph.addNode(Node1.Label, Node1.PropertyNames.Name, "node1 name")
+    val node2 = graph.addNode(Node1.Label, Node1.PropertyNames.Name,
+      """node2 name line 1
+        |node2 name line 2""")
+    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
+
+    node1Traversal.size shouldBe 2
+    node1Traversal.name(".*").size shouldBe 2
+    node1Traversal.name(".*name.*").size shouldBe 2
+    node1Traversal.name(".*line 2.*").size shouldBe 1
+    node1Traversal.name(".*node1.*").size shouldBe 1
+    node1Traversal.name("nomatch", ".*node1.*").size shouldBe 1
   }
 
   "marker traits" in {
