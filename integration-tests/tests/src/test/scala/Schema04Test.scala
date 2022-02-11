@@ -185,4 +185,22 @@ class Schema04Test extends AnyWordSpec with Matchers {
     val node2Copy = node2.copy
     node2Copy.node1Inner shouldBe node1
   }
+
+  "generated string property filters" in {
+    val graph = TestSchema.empty.graph
+    val node1 = graph.addNode(Node1.Label, Node1.PropertyNames.Str, "node1 name")
+    val node2 = graph.addNode(Node1.Label, Node1.PropertyNames.Str,
+      """node2 name line 1
+        |node2 name line 2""")
+    val node3 = graph.addNode(Node1.Label)
+    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
+
+    node1Traversal.size shouldBe 3
+    node1Traversal.str(".*").size shouldBe 3
+    node1Traversal.str(".*name.*").size shouldBe 2
+    node1Traversal.str(".*node1.*").size shouldBe 1
+    node1Traversal.str(".*line 2.*").size shouldBe 1
+    node1Traversal.str("nomatch", ".*node1.*").size shouldBe 1
+  }
+
 }
