@@ -482,18 +482,24 @@ class CodeGen(schema: Schema) {
               val accessorName = adjacentNode.customStepName.getOrElse(
                 s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
               )
+              val accessorImpl0 = s"$edgeAccessorName.collectAll[${neighbor.className}]"
               val cardinality = adjacentNode.cardinality
-              val appendix = cardinality match {
-                case EdgeType.Cardinality.One => ".next()"
-                case EdgeType.Cardinality.ZeroOrOne => s".nextOption()"
-                case _ => ""
+              val accessorImpl1 = cardinality match {
+                case EdgeType.Cardinality.One =>
+                  s"""try { $accessorImpl0.next() } catch {
+                     |  case e: java.util.NoSuchElementException =>
+                     |    throw new overflowdb.SchemaViolationException("$direction edge with label ${adjacentNode.viaEdge.name} to an adjacent ${neighbor.name} is mandatory, but not defined for this ${nodeBaseType.name} node with id=" + id, e)
+                     |}""".stripMargin
+                case EdgeType.Cardinality.ZeroOrOne => s"$accessorImpl0.nextOption()"
+                case _ => accessorImpl0
               }
 
               s"""/** ${adjacentNode.customStepDoc.getOrElse("")}
                  |  * Traverse to ${neighbor.name} via ${adjacentNode.viaEdge.name} $direction edge.
                  |  */ ${docAnnotationMaybe(adjacentNode.customStepDoc)}
                  |def $accessorName: ${fullScalaType(neighbor, cardinality)} =
-                 |  $edgeAccessorName.collectAll[${neighbor.className}]$appendix""".stripMargin
+                 |  $accessorImpl1
+                 |  """.stripMargin
             }
           }.distinct.mkString("\n\n")
 
@@ -983,12 +989,17 @@ class CodeGen(schema: Schema) {
 
         val nodeAccessors = neighborInfo.nodeInfos.collect {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
-            val appendix = neighborNodeInfo.consolidatedCardinality match {
-              case EdgeType.Cardinality.One => ".next()"
-              case EdgeType.Cardinality.ZeroOrOne => s".nextOption()"
-              case _ => ""
+            val accessorImpl0 = s"$edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]"
+            val accessorImpl1 = neighborNodeInfo.consolidatedCardinality match {
+              case EdgeType.Cardinality.One =>
+                s"""try { $accessorImpl0.next() } catch {
+                   |  case e: java.util.NoSuchElementException =>
+                   |    throw new overflowdb.SchemaViolationException("$direction edge with label ${neighborNodeInfo.edge.name} to an adjacent ${neighborNodeInfo.neighborNode.name} is mandatory, but not defined for this ${nodeType.name} node with id=" + id, e)
+                   |}""".stripMargin
+              case EdgeType.Cardinality.ZeroOrOne => s"$accessorImpl0.nextOption()"
+              case _ => accessorImpl0
             }
-            s"def ${accessorName(neighborNodeInfo)}: ${neighborNodeInfo.returnType} = $edgeAccessorName.collectAll[${neighborNodeInfo.neighborNode.className}]$appendix"
+            s"def ${accessorName(neighborNodeInfo)}: ${neighborNodeInfo.returnType} = $accessorImpl1"
         }.mkString("\n")
 
         s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborType] = overflowdb.traversal.Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
