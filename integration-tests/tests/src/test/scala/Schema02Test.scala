@@ -160,6 +160,7 @@ class Schema02Test extends AnyWordSpec with Matchers {
       node1Traversal.orderLt(4).size shouldBe 0
       node1Traversal.orderLte(4).size shouldBe 1
     }
+
   }
 
   "marker traits" in {
