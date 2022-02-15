@@ -1,5 +1,6 @@
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import overflowdb.SchemaViolationException
 import overflowdb.traversal._
 import testschema02._
 import testschema02.edges._
@@ -160,7 +161,29 @@ class Schema02Test extends AnyWordSpec with Matchers {
       node1Traversal.orderLt(4).size shouldBe 0
       node1Traversal.orderLte(4).size shouldBe 1
     }
+  }
 
+  "provide detailed error message for schema violation" in {
+    val graph = TestSchema.empty.graph
+    def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
+    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
+    def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
+
+    val node1 = graph.addNode(Node1.Label)
+    val node2 = graph.addNode(Node2.Label)
+    // no edge between these two nodes, which is a schema violation
+
+    the[SchemaViolationException].thrownBy {
+      node2Traversal.customStepName2.next()
+    }.getMessage should include ("OUT edge with label EDGE2 to an adjacent BASE_NODE is mandatory")
+
+    the[SchemaViolationException].thrownBy {
+      node1Traversal.customStepName2Inverse.next()
+    }.getMessage should include ("IN edge with label EDGE2 to an adjacent NODE2 is mandatory")
+
+    the[SchemaViolationException].thrownBy {
+      baseNodeTraversal.customStepName2Inverse.next()
+    }.getMessage should include ("IN edge with label EDGE2 to an adjacent NODE2 is mandatory")
   }
 
   "marker traits" in {
