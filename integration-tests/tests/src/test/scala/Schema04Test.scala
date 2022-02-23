@@ -198,6 +198,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
     node1Traversal.size shouldBe 3
     node1Traversal.str(".*").size shouldBe 3
     node1Traversal.str(".*name.*").size shouldBe 2
+    node1Traversal.str(".*NAME.*").size shouldBe 0 // case sensitive by default
+    node1Traversal.str(".*(?i)NAME.*").size shouldBe 2 // case insensitive on request
     node1Traversal.str(".*node1.*").size shouldBe 1
     node1Traversal.str(".*line 2.*").size shouldBe 1 // testing multi line matcher
     node1Traversal.str("nomatch", ".*line 2.*").size shouldBe 1
