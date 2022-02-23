@@ -28,7 +28,9 @@ class CodeGen(schema: Schema) {
       writeNewNodeFile(_outputDir)
     println(s"generated ${results.size} files in ${_outputDir}")
 
-    results.map(_.toJava)
+    val resultsAsJava = results.map(_.toJava)
+    Formatter.apply(resultsAsJava)
+    resultsAsJava
   }
 
   /* to provide feedback for potential schema optimisation: no need to redefine properties if they are already
