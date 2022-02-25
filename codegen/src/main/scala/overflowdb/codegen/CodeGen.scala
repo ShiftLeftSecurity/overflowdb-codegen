@@ -16,6 +16,20 @@ class CodeGen(schema: Schema) {
   val edgesPackage = s"$basePackage.edges"
   val traversalsPackage = s"$basePackage.traversal"
 
+  private var enableScalafmt = true
+  private var scalafmtConfig: Option[java.io.File] = None
+
+  def disableScalafmt: this.type = {
+    enableScalafmt = false
+    this
+  }
+
+  /** replace entire default scalafmt config (from Formatter.defaultScalafmtConfig) with custom config */
+  def withScalafmtConfig(config: java.io.File): this.type = {
+    this.scalafmtConfig = Option(config)
+    this
+  }
+
   def run(outputDir: java.io.File): Seq[java.io.File] = {
     warnForDuplicatePropertyDefinitions()
     val _outputDir = outputDir.toScala
@@ -29,7 +43,7 @@ class CodeGen(schema: Schema) {
     println(s"generated ${results.size} files in ${_outputDir}")
 
     val resultsAsJava = results.map(_.toJava)
-    Formatter.apply(resultsAsJava)
+    if (enableScalafmt) Formatter.apply(resultsAsJava)
     resultsAsJava
   }
 

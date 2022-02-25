@@ -1,5 +1,6 @@
 package overflowdb.codegen.sbt
 
+import org.scalafmt.sbt.ScalafmtPlugin.autoImport.scalafmtConfig
 import sbt._
 import sbt.Keys._
 import scala.util.Try
@@ -10,11 +11,13 @@ object CodegenSbtPlugin extends AutoPlugin {
     val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for our schema")
     val classWithSchema = settingKey[String]("class with schema field, e.g. `org.example.MyDomain$`")
     val fieldName = settingKey[String]("(static) field name for schema within the specified `classWithSchema` with schema field, e.g. `org.example.MyDomain$`")
+    val disableFormatting = settingKey[Boolean]("disable scalafmt formatting")
 
     lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
       generateDomainClasses := generateDomainClassesTask.value,
       generateDomainClasses/classWithSchema := "undefined",
       generateDomainClasses/fieldName := "undefined",
+      generateDomainClasses/disableFormatting := false,
     )
   }
   import autoImport._
@@ -33,6 +36,12 @@ object CodegenSbtPlugin extends AutoPlugin {
       val fieldName_ = (generateDomainClasses/fieldName).value
       val outputDir = sourceManaged.value / "overflowdb-codegen"
 
+      val disableFormattingParamMaybe =
+        if ((generateDomainClasses/disableFormatting).value) "--noformat"
+        else ""
+
+      val scalafmtConfigFile = (generateDomainClasses/scalafmtConfig).value
+
       val schemaMd5File = target.value / "overflowdb-schema.md5"
       lazy val currentSchemaMd5 = FileUtils.md5(sourceDirectory.value, baseDirectory.value/"build.sbt")
       lazy val lastSchemaMd5: Option[String] =
@@ -49,7 +58,7 @@ object CodegenSbtPlugin extends AutoPlugin {
         Def.task {
           FileUtils.deleteRecursively(outputDir)
           (Compile/runMain).toTask(
-            s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir"
+            s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir $disableFormattingParamMaybe --scalafmtConfig=$scalafmtConfigFile"
           ).value
           persistLastSchemaMd5(currentSchemaMd5)
           FileUtils.listFilesRecursively(outputDir)
