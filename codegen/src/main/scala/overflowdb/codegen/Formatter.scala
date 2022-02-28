@@ -25,7 +25,10 @@ object Formatter {
     val scalafmt = Scalafmt.create(getClass.getClassLoader)
     val scalafmtSession = scalafmt.createSession(configFile.toPath)
 
-    sourceFiles.map(_.toScala).foreach { file =>
+    sourceFiles
+      .map(_.toScala)
+      .filter(_.extension == Some(".scala"))
+      .foreach { file =>
       val originalSource = file.lines.mkString("\n")
       val formattedSource = scalafmtSession.format(file.path, originalSource)
       file.writeText(formattedSource)
