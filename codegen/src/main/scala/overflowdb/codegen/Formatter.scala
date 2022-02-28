@@ -15,7 +15,7 @@ object Formatter {
   def run(sourceFiles: Seq[File], scalafmtConfig: Option[File]): Unit = {
     val configFile: File = scalafmtConfig.getOrElse(
       Files
-        .createTempFile("overflowdb-scalafmt", "conf")
+        .createTempFile("overflowdb-scalafmt", ".conf")
         .toFile
         .toScala
         .write(defaultScalafmtConfig)
