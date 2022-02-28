@@ -43,6 +43,7 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   protected val _extendz: mutable.Set[NodeBaseType] = mutable.Set.empty
   protected val _outEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
   protected val _inEdges: mutable.Set[AdjacentNode] = mutable.Set.empty
+  protected val _markerTraits: mutable.Set[MarkerTrait] = mutable.Set.empty
 
   /** all node types that extend this node */
   def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType]
@@ -113,6 +114,14 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
   def edges: Seq[AdjacentNode] =
     outEdges ++ inEdges
+
+  def addMarkerTrait(name: String): this.type = {
+    _markerTraits.add(MarkerTrait(name))
+    this
+  }
+
+  def markerTraits: Seq[MarkerTrait] =
+    _markerTraits.toSeq
 }
 
 class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
@@ -158,6 +167,9 @@ case class ContainedNode(nodeType: AbstractNodeType,
                          localName: String,
                          cardinality: Property.Cardinality,
                          comment: Option[String])
+
+/** An empty trait without any implementation, e.g. to mark a semantic relationship between certain types */
+case class MarkerTrait(name: String)
 
 class EdgeType(val name: String, val comment: Option[String], val schemaInfo: SchemaInfo)
   extends HasClassName with HasProperties with HasOptionalProtoId with HasSchemaInfo {

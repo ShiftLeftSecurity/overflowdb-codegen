@@ -5,10 +5,16 @@ import overflowdb.schema.Schema
 import scopt.OParser
 
 object Main {
-  case class Config(classWithSchema: String, fieldName: String, outputDir: File)
+  case class Config(
+    classWithSchema: String,
+    fieldName: String,
+    outputDir: File,
+    disableScalafmt: Boolean = false,
+    scalafmtConfig: Option[File] = None)
+
   def main(args: Array[String]) = {
     val builder = OParser.builder[Config]
-    val parser1 = {
+    val parser = {
       import builder._
       OParser.sequence(
         programName("codegen"),
@@ -24,13 +30,20 @@ object Main {
           .required()
           .action((x, c) => c.copy(outputDir = x))
           .text("output directory"),
+        opt[Unit]("noformat")
+          .action((x, c) => c.copy(disableScalafmt = true))
+          .text("disable scalafmt formatting"),
+        opt[File]("scalafmtConfig")
+          .valueName(".scalafmt")
+          .action((x, c) => c.copy(scalafmtConfig = Option(x)))
+          .text("path to scalafmt config file (e.g. .scalafmt)"),
       )
     }
 
-    OParser.parse(parser1, args, Config("", "", null)).foreach(execute)
+    OParser.parse(parser, args, Config("", "", null)).foreach(execute)
 
     def execute(config: Config): Seq[File] = config match {
-      case Config(classWithSchema, fieldName, outputDir) =>
+      case Config(classWithSchema, fieldName, outputDir, disableScalafmt, scalafmtConfig) =>
         val classLoader = getClass.getClassLoader
         val clazz = classLoader.loadClass(classWithSchema)
         val field = clazz.getDeclaredField(fieldName)
@@ -38,7 +51,10 @@ object Main {
         field.setAccessible(true)
         val schema = field.get(clazz).asInstanceOf[Schema]
 
-        new CodeGen(schema).run(outputDir)
+        val codegen = new CodeGen(schema)
+        if (disableScalafmt) codegen.disableScalafmt
+        scalafmtConfig.foreach(codegen.withScalafmtConfig)
+        codegen.run(outputDir)
     }
   }
 }

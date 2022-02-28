@@ -29,7 +29,11 @@ class TestSchema01 extends TestSchema {
     node = node3,
     localName = "node3",
     cardinality = Property.Cardinality.ZeroOrOne,
-    comment = "node 3 documentation foo bar")
+    comment =
+      """node 3 documentation line 1
+        | /* ecape me */
+        |line 3
+        |""".stripMargin)
 
   val edge1 = builder.addEdgeType(
     name = "EDGE1",
