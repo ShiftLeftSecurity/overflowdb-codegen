@@ -64,11 +64,11 @@ object Helpers {
     }
   }
 
-  def docAnnotationMaybe(customStepDoc: Option[String], indent: String = ""): String = {
+  def docAnnotationMaybe(customStepDoc: Option[String]): String = {
     customStepDoc.map(escapeJava) match {
       case Some(doc) =>
-        s"""$indent/** $doc */
-           |$indent@overflowdb.traversal.help.Doc(info = \"\"\"$doc\"\"\")""".stripMargin
+        s"""/** $doc */
+           |@overflowdb.traversal.help.Doc(info = \"\"\"$doc\"\"\")""".stripMargin
       case None => ""
     }
   }

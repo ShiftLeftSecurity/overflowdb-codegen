@@ -930,7 +930,7 @@ class CodeGen(schema: Schema) {
             s"""def ${containedNode.localName}: collection.immutable.IndexedSeq[${containedNode.nodeType.className}] = get().${containedNode.localName}"""
         }
 
-        s"""${docAnnotationMaybe(containedNode.comment, indent = "    ")}
+        s"""${docAnnotationMaybe(containedNode.comment)}
            |    $src
            |""".stripMargin
       }.mkString("\n  ")
