@@ -1,5 +1,6 @@
 package overflowdb.codegen
 
+import java.lang.System.lineSeparator
 import overflowdb.algorithm.LowestCommonAncestors
 import overflowdb.schema._
 import overflowdb.schema.Property.ValueType
@@ -183,15 +184,14 @@ object Helpers {
     val propertyDefaultValueCases = properties.collect {
       case property if property.hasDefault =>
         s"""case "${property.name}" => $propertyDefaultsPath.${property.className}"""
-    }.mkString("\n|    ")
+    }.mkString(lineSeparator)
 
-    s"""
-       |  override def propertyDefaultValue(propertyKey: String) =
-       |    propertyKey match {
-       |      $propertyDefaultValueCases
-       |      case _ => super.propertyDefaultValue(propertyKey)
-       |  }
-       |""".stripMargin.replaceAll("\n", "\n  ")
+    s"""override def propertyDefaultValue(propertyKey: String) =
+       |  propertyKey match {
+       |    $propertyDefaultValueCases
+       |    case _ => super.propertyDefaultValue(propertyKey)
+       |}
+       |""".stripMargin
   }
 
   def propertyDefaultCases(properties: Seq[Property[_]]): String =

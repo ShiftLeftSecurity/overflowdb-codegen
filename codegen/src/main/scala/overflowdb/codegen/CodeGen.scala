@@ -17,7 +17,7 @@ class CodeGen(schema: Schema) {
   val traversalsPackage = s"$basePackage.traversal"
 
   private var enableScalafmt = true
-  private var scalafmtConfig: Option[java.io.File] = None
+  private var scalafmtConfig: Option[File] = None
 
   def disableScalafmt: this.type = {
     enableScalafmt = false
@@ -25,8 +25,8 @@ class CodeGen(schema: Schema) {
   }
 
   /** replace entire default scalafmt config (from Formatter.defaultScalafmtConfig) with custom config */
-  def withScalafmtConfig(config: java.io.File): this.type = {
-    this.scalafmtConfig = Option(config)
+  def withScalafmtConfig(file: java.io.File): this.type = {
+    this.scalafmtConfig = Option(file.toScala)
     this
   }
 
@@ -42,11 +42,11 @@ class CodeGen(schema: Schema) {
       writeNewNodeFile(_outputDir)
     println(s"generated ${results.size} files in ${_outputDir}")
 
-    val resultsAsJava = results.map(_.toJava)
     if (enableScalafmt) {
-      Formatter.run(resultsAsJava, scalafmtConfig)
+      val scalaSourceFiles = results.filter(_.extension == Some(".scala"))
+      Formatter.run(scalaSourceFiles, scalafmtConfig)
     }
-    resultsAsJava
+    results.map(_.toJava)
   }
 
   /* to provide feedback for potential schema optimisation: no need to redefine properties if they are already

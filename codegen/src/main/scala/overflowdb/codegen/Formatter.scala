@@ -1,9 +1,6 @@
 package overflowdb.codegen
 
-import better.files.File.temporaryFile
-import better.files.{Dispose, FileExtensions}
-
-import java.io.File
+import better.files._
 import java.nio.file.{Files, Path}
 import org.scalafmt.interfaces.Scalafmt
 
@@ -15,20 +12,19 @@ object Formatter {
       |maxColumn=120
       |""".stripMargin
 
-  def run(sourceFiles: Seq[java.io.File], scalafmtConfig: Option[File]): Unit = {
-    val configFile = scalafmtConfig.getOrElse {
-      val tmpFile = Files.createTempFile("overflowdb-scalafmt", "conf").toFile
-      tmpFile.toScala.write(defaultScalafmtConfig)
-      tmpFile
-    }
+  def run(sourceFiles: Seq[File], scalafmtConfig: Option[File]): Unit = {
+    val configFile: File = scalafmtConfig.getOrElse(
+      Files
+        .createTempFile("overflowdb-scalafmt", "conf")
+        .toFile
+        .toScala
+        .write(defaultScalafmtConfig)
+    )
     
     val scalafmt = Scalafmt.create(getClass.getClassLoader)
-    val scalafmtSession = scalafmt.createSession(configFile.toPath)
+    val scalafmtSession = scalafmt.createSession(configFile.path)
 
-    sourceFiles
-      .map(_.toScala)
-      .filter(_.extension == Some(".scala"))
-      .foreach { file =>
+    sourceFiles.foreach { file =>
       val originalSource = file.lines.mkString("\n")
       val formattedSource = scalafmtSession.format(file.path, originalSource)
       file.writeText(formattedSource)
