@@ -1,5 +1,6 @@
 package overflowdb.codegen
 
+import java.lang.System.lineSeparator
 import overflowdb.algorithm.LowestCommonAncestors
 import overflowdb.schema._
 import overflowdb.schema.Property.ValueType
@@ -64,11 +65,11 @@ object Helpers {
     }
   }
 
-  def docAnnotationMaybe(customStepDoc: Option[String], indent: String = ""): String = {
+  def docAnnotationMaybe(customStepDoc: Option[String]): String = {
     customStepDoc.map(escapeJava) match {
       case Some(doc) =>
-        s"""$indent/** $doc */
-           |$indent@overflowdb.traversal.help.Doc(info = \"\"\"$doc\"\"\")""".stripMargin
+        s"""/** $doc */
+           |@overflowdb.traversal.help.Doc(info = \"\"\"$doc\"\"\")""".stripMargin
       case None => ""
     }
   }
@@ -183,15 +184,14 @@ object Helpers {
     val propertyDefaultValueCases = properties.collect {
       case property if property.hasDefault =>
         s"""case "${property.name}" => $propertyDefaultsPath.${property.className}"""
-    }.mkString("\n|    ")
+    }.mkString(lineSeparator)
 
-    s"""
-       |  override def propertyDefaultValue(propertyKey: String) =
-       |    propertyKey match {
-       |      $propertyDefaultValueCases
-       |      case _ => super.propertyDefaultValue(propertyKey)
-       |  }
-       |""".stripMargin.replaceAll("\n", "\n  ")
+    s"""override def propertyDefaultValue(propertyKey: String) =
+       |  propertyKey match {
+       |    $propertyDefaultValueCases
+       |    case _ => super.propertyDefaultValue(propertyKey)
+       |}
+       |""".stripMargin
   }
 
   def propertyDefaultCases(properties: Seq[Property[_]]): String =
