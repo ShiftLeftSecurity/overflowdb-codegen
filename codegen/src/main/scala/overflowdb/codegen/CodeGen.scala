@@ -43,7 +43,9 @@ class CodeGen(schema: Schema) {
     println(s"generated ${results.size} files in ${_outputDir}")
 
     val resultsAsJava = results.map(_.toJava)
-    if (enableScalafmt) Formatter.apply(resultsAsJava)
+    if (enableScalafmt) {
+      Formatter.run(resultsAsJava, scalafmtConfig)
+    }
     resultsAsJava
   }
 
