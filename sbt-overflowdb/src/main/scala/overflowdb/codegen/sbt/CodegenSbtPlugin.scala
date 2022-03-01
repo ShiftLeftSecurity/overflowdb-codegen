@@ -1,6 +1,8 @@
 package overflowdb.codegen.sbt
 
+import org.scalafmt.sbt.ScalafmtPlugin
 import org.scalafmt.sbt.ScalafmtPlugin.autoImport.scalafmtConfig
+import sbt.plugins.JvmPlugin
 import sbt._
 import sbt.Keys._
 import scala.util.Try
@@ -22,7 +24,7 @@ object CodegenSbtPlugin extends AutoPlugin {
   }
   import autoImport._
 
-  override def requires = sbt.plugins.JvmPlugin
+  override def requires = JvmPlugin && ScalafmtPlugin
 
   // This plugin is automatically enabled for projects which are JvmPlugin.
   override def trigger = allRequirements
