@@ -40,7 +40,11 @@ object CodegenSbtPlugin extends AutoPlugin {
         if ((generateDomainClasses/disableFormatting).value) "--noformat"
         else ""
 
-      val scalafmtConfigFile = (generateDomainClasses/scalafmtConfig).value
+      val scalafmtConfigFileMaybe = {
+        val file = (generateDomainClasses/scalafmtConfig).value
+        if (file.exists) s"--scalafmtConfig=$file"
+        else ""
+      }
 
       val schemaMd5File = target.value / "overflowdb-schema.md5"
       lazy val currentSchemaMd5 = FileUtils.md5(sourceDirectory.value, baseDirectory.value/"build.sbt")
@@ -58,7 +62,7 @@ object CodegenSbtPlugin extends AutoPlugin {
         Def.task {
           FileUtils.deleteRecursively(outputDir)
           (Compile/runMain).toTask(
-            s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir $disableFormattingParamMaybe --scalafmtConfig=$scalafmtConfigFile"
+            s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
           ).value
           persistLastSchemaMd5(currentSchemaMd5)
           FileUtils.listFilesRecursively(outputDir)
