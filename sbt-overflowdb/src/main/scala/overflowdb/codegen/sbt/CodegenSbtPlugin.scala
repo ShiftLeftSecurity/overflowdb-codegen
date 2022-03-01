@@ -5,6 +5,8 @@ import org.scalafmt.sbt.ScalafmtPlugin.autoImport.scalafmtConfig
 import sbt.plugins.JvmPlugin
 import sbt._
 import sbt.Keys._
+import sbt.plugins.DependencyTreeKeys.dependencyDot
+
 import scala.util.Try
 
 object CodegenSbtPlugin extends AutoPlugin {
@@ -48,14 +50,13 @@ object CodegenSbtPlugin extends AutoPlugin {
         else ""
       }
 
-      val schemaMd5File = target.value / "overflowdb-schema.md5"
-      lazy val currentSchemaMd5 = FileUtils.md5(sourceDirectory.value, baseDirectory.value/"build.sbt")
-      lazy val lastSchemaMd5: Option[String] =
-        Try(IO.read(schemaMd5File)).toOption
-      def persistLastSchemaMd5(value: String) =
-        IO.write(schemaMd5File, value)
+      val schemaAndDependenciesHashFile = target.value / "overflowdb-schema-and-dependencies.md5"
+      lazy val currentSchemaAndDependenciesHash =
+        FileUtils.md5(sourceDirectory.value, baseDirectory.value/"build.sbt", dependencyDot.value)
+      lazy val lastSchemaAndDependenciesHash: Option[String] =
+        Try(IO.read(schemaAndDependenciesHashFile)).toOption
 
-      if (outputDir.exists && lastSchemaMd5 == Some(currentSchemaMd5)) {
+      if (outputDir.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
         // inputs did not change, don't regenerate
         Def.task {
           FileUtils.listFilesRecursively(outputDir)
@@ -66,7 +67,7 @@ object CodegenSbtPlugin extends AutoPlugin {
           (Compile/runMain).toTask(
             s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
           ).value
-          persistLastSchemaMd5(currentSchemaMd5)
+          IO.write(schemaAndDependenciesHashFile, currentSchemaAndDependenciesHash)
           FileUtils.listFilesRecursively(outputDir)
         }
       }
