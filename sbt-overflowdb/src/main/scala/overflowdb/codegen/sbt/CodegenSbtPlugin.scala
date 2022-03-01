@@ -5,7 +5,6 @@ import org.scalafmt.sbt.ScalafmtPlugin.autoImport.scalafmtConfig
 import sbt.plugins.JvmPlugin
 import sbt._
 import sbt.Keys._
-import sbt.plugins.DependencyTreeKeys.dependencyDot
 
 import scala.util.Try
 
@@ -51,8 +50,10 @@ object CodegenSbtPlugin extends AutoPlugin {
       }
 
       val schemaAndDependenciesHashFile = target.value / "overflowdb-schema-and-dependencies.md5"
+      val dependenciesFile = target.value / "dependenciesCP.txt"
+      IO.write(dependenciesFile, dependencyClasspath.value.mkString(System.lineSeparator))
       lazy val currentSchemaAndDependenciesHash =
-        FileUtils.md5(sourceDirectory.value, baseDirectory.value/"build.sbt", dependencyDot.value)
+        FileUtils.md5(sourceDirectory.value, baseDirectory.value/"build.sbt", dependenciesFile)
       lazy val lastSchemaAndDependenciesHash: Option[String] =
         Try(IO.read(schemaAndDependenciesHashFile)).toOption
 
