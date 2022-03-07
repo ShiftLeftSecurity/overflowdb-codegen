@@ -399,7 +399,7 @@ class CodeGen(schema: Schema) {
          |}
          |
          |/** Abstract supertype for overflowdb.Node and NewNode */
-         |trait AbstractNode {
+         |trait AbstractNode extends overflowdb.NodeOrDetachedNode {
          |  def label: String
          |}
          |
