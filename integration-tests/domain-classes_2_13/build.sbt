@@ -12,6 +12,7 @@ libraryDependencies ++= Seq(
 
 Compile/sourceGenerators += Projects.integrationTestSchemas_2_13 / generateDomainClasses
 scalacOptions -= "-Xfatal-warnings"
+scalacOptions += "-deprecation"
 
 publish/skip := true
 

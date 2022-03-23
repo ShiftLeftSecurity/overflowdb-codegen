@@ -498,7 +498,7 @@ class CodeGen(schema: Schema) {
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
             entireNodeHierarchy.map { neighbor =>
               val accessorName = adjacentNode.customStepName.getOrElse(
-                s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+                s"/* X1 */ _${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
               )
               val accessorImpl0 = s"$edgeAccessorName.collectAll[${neighbor.className}]"
               val cardinality = adjacentNode.cardinality
@@ -954,7 +954,22 @@ class CodeGen(schema: Schema) {
                |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString(lineSeparator)
 
+        val deprecatedMaybe: String = {
+          val nodeDelegators = neighborInfo.nodeInfos.collect {
+//            case neighborNodeInfo if !neighborNodeInfo.isInherited => neighborNodeInfo.customStepName
+            case neighborNodeInfo => neighborNodeInfo.customStepName
+          }.flatten
+
+          if (nodeDelegators.size == 1) {
+            s"""@deprecated("${nodeDelegators.head}")"""
+          } else {
+            ""
+          }
+        }
+
         s"""def $edgeAccessorName: overflowdb.traversal.Traversal[${neighborInfo.deriveNeighborNodeType}] = get().$edgeAccessorName
+           |
+           |$deprecatedMaybe
            |override def _$edgeAccessorName = get()._$edgeAccessorName
            |
            |$nodeDelegators

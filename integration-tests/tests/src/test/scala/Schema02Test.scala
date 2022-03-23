@@ -140,6 +140,8 @@ class Schema02Test extends AnyWordSpec with Matchers {
       node1TraversalToNode2ViaEdge2.l shouldBe Seq(node2)
 
       val node2ToBaseNodeViaEdge2: BaseNode = node2.customStepName2
+      node2._edge2Out
+
       node2ToBaseNodeViaEdge2 shouldBe node1
       val node2TraversalToBaseNodeViaEdge2: Traversal[BaseNode] = node2Traversal.customStepName2
       node2TraversalToBaseNodeViaEdge2.l shouldBe Seq(node1)
