@@ -130,7 +130,8 @@ class CodeGen(schema: Schema) {
          |  * Domain-specific wrapper for graph, starting point for traversals.
          |  * @param graph the underlying graph. An empty graph is created if this parameter is omitted.
          |  */
-         |class $domainShortName(val graph: Graph = $domainShortName.emptyGraph) extends AutoCloseable {
+         |class $domainShortName(private val _graph: Graph = $domainShortName.emptyGraph) extends AutoCloseable {
+         |  def graph: Graph = _graph
          |
          |  def help(implicit searchPackageNames: DocSearchPackages): String =
          |    new TraversalHelp(searchPackageNames).forTraversalSources
