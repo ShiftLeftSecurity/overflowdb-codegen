@@ -13,7 +13,7 @@ class SchemaBuilder(domainShortName: String,
   val nodeBaseTypes = mutable.ListBuffer.empty[NodeBaseType]
   val nodeTypes = mutable.ListBuffer.empty[NodeType]
   val edgeTypes = mutable.ListBuffer.empty[EdgeType]
-  val constantsByCategory = mutable.Map.empty[String, Seq[Constant]]
+  val constantsByCategory = mutable.Map.empty[String, Seq[Constant[_]]]
   var protoOptions: Option[ProtoOptions] = None
   val noWarnList: mutable.Set[(AbstractNodeType, Property[_])] = mutable.Set.empty
 
@@ -55,7 +55,7 @@ class SchemaBuilder(domainShortName: String,
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): NodeType =
     addAndReturn(nodeTypes, new NodeType(name, stringToOption(comment), schemaInfo))
 
-  def addConstants(category: String, constants: Constant*): Seq[Constant] = {
+  def addConstants(category: String, constants: Constant[_]*): Seq[Constant[_]] = {
     val previousEntries = constantsByCategory.getOrElse(category, Seq.empty)
     constantsByCategory.put(category, previousEntries ++ constants)
     constants
