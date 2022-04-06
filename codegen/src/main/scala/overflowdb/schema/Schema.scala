@@ -1,6 +1,5 @@
 package overflowdb.schema
 
-import overflowdb.NodeRef
 import overflowdb.codegen.Helpers._
 import overflowdb.schema.Property.Default
 
@@ -17,7 +16,7 @@ class Schema(val domainShortName: String,
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
-             val constantsByCategory: Map[String, Seq[Constant]],
+             val constantsByCategory: Map[String, Seq[Constant[_]]],
              val protoOptions: Option[ProtoOptions],
              val noWarnList: Set[(AbstractNodeType, Property[_])]) {
 
@@ -227,24 +226,23 @@ class Property[A](val name: String,
 
 object Property {
 
-  abstract class ValueType[A](val odbStorageType: overflowdb.storage.ValueTypes)
+  sealed trait ValueType[A]
   object ValueType {
-    import overflowdb.storage.ValueTypes._
-    object Boolean extends ValueType[Boolean](BOOLEAN)
-    object String extends ValueType[String](STRING)
-    object Byte extends ValueType[Byte](BYTE)
-    object Short extends ValueType[Short](SHORT)
-    object Int extends ValueType[Int](INTEGER)
-    object Long extends ValueType[Long](LONG)
-    object Float extends ValueType[Float](FLOAT)
-    object Double extends ValueType[Double](DOUBLE)
-    object List extends ValueType[Seq[_]](LIST)
-    object Char extends ValueType[Char](CHARACTER)
-    object NodeRef extends ValueType[NodeRef[_]](NODE_REF)
-    object Unknown extends ValueType[Any](UNKNOWN)
+    object Boolean extends ValueType[Boolean]
+    object String extends ValueType[String]
+    object Byte extends ValueType[Byte]
+    object Short extends ValueType[Short]
+    object Int extends ValueType[Int]
+    object Long extends ValueType[Long]
+    object Float extends ValueType[Float]
+    object Double extends ValueType[Double]
+    object List extends ValueType[Seq[_]]
+    object Char extends ValueType[Char]
+    object NodeRef extends ValueType[Any]
+    object Unknown extends ValueType[Any]
   }
 
-  sealed abstract class Cardinality
+  sealed trait Cardinality
   object Cardinality {
     case object ZeroOrOne extends Cardinality
     case object List extends Cardinality
@@ -254,18 +252,18 @@ object Property {
   case class Default[A](value: A)
 }
 
-class Constant(val name: String,
+class Constant[A](val name: String,
                val value: String,
-               val valueType: overflowdb.storage.ValueTypes,
+               val valueType: Property.ValueType[A],
                val comment: Option[String],
                val schemaInfo: SchemaInfo) extends HasOptionalProtoId with HasSchemaInfo {
   override def toString = s"Constant($name)"
 }
 
 object Constant {
-  def apply(name: String, value: String, valueType: overflowdb.storage.ValueTypes, comment: String = "")(
-    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Constant =
-    new Constant(name, value, valueType, stringToOption(comment), schemaInfo)
+  def apply[A](name: String, value: String, valueType: Property.ValueType[A], comment: String = "")(
+    implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Constant[A] =
+    new Constant[A](name, value, valueType, stringToOption(comment), schemaInfo)
 }
 
 case class NeighborInfoForEdge(edge: EdgeType, nodeInfos: Seq[NeighborInfoForNode], offsetPosition: Int) {
