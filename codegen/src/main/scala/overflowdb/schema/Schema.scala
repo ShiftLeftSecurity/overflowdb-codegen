@@ -305,11 +305,6 @@ object Direction extends Enumeration {
   val all = List(IN, OUT)
 }
 
-object DefaultEdgeTypes {
-  // TODO define this in actual schema, not here
-  val ContainsNode = new EdgeType("CONTAINS_NODE", None, SchemaInfo.forClass(getClass)).protoId(9)
-}
-
 case class ProductElement(name: String, accessorSrc: String, index: Int)
 
 case class ProtoOptions(pkg: String,
