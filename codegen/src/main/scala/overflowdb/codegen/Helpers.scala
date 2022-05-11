@@ -19,11 +19,6 @@ object DefaultNodeTypes {
   lazy val AllClassNames = Set(AbstractNodeClassname, StoredNodeClassname)
 }
 
-// TODO drop
-object DefaultEdgeTypes {
-  val ContainsNode = "CONTAINS_NODE"
-}
-
 object Helpers {
 
   /* surrounds input with `"` */
