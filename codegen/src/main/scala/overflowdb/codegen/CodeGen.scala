@@ -659,7 +659,7 @@ class CodeGen(schema: Schema) {
 
       val companionObject =
         s"""object $className {
-           |  def apply(graph: Graph, id: Long) = new $className(graph, id)
+           |  def apply(graph: Graph, id: Long) = new ${className}_Ref[AnyRef](graph, id)
            |
            |  val Label = "${nodeType.name}"
            |
@@ -970,7 +970,7 @@ class CodeGen(schema: Schema) {
 
         val propertyDefaultValues = propertyDefaultValueImpl(s"$className.PropertyDefaults", properties)
 
-        s"""class $className(graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
+        s"""class ${className}_Ref[+SubType](graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
            |  with ${className}Base
            |  with StoredNode
            |  $mixinsForExtendedNodes {
@@ -1185,7 +1185,17 @@ class CodeGen(schema: Schema) {
       val srcFile = nodeType.className + ".scala"
       results.append(baseDir.createChild(srcFile).write(src))
     }
+    results.append(baseDir.createChild("package.scala").write(generatePackageFile()))
     results.toSeq
+  }
+
+  def generatePackageFile():String = {
+    val items = schema.nodeTypes.map{nodeType => s"type ${nodeType.className} = ${nodeType.className}_Ref[Any]"}
+    s"""package $basePackage
+       |package object nodes {
+       |  ${items.mkString("\n  ")}
+       |}
+       |""".stripMargin
   }
 
   protected def writeNodeTraversalFiles(outputDir: File): Seq[File] = {
