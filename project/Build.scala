@@ -16,6 +16,9 @@ object Projects {
   lazy val codegen_2_13 = codegen(Versions.scala_2_13)
   lazy val codegen_3 = codegen(Versions.scala_3)
 
+  lazy val schemaGenerator = BaseProject(project.in(file("schema-generator"))).cross.dependsOn(codegen)
+  lazy val schemaGenerator_2_13 = schemaGenerator(Versions.scala_2_13)
+
   lazy val integrationTestSchemas = BaseProject(project.in(file("integration-tests/schemas"))).cross.dependsOn(codegen)
   lazy val integrationTestSchemas_2_13 = integrationTestSchemas(Versions.scala_2_13)
   lazy val integrationTestSchemas_3 = integrationTestSchemas(Versions.scala_3)

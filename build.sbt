@@ -7,6 +7,7 @@ ThisBuild/organization := "io.shiftleft"
 lazy val codegen_2_12 = Projects.codegen_2_12
 lazy val codegen_2_13 = Projects.codegen_2_13
 lazy val codegen_3 = Projects.codegen_3
+lazy val schemaGenerator_2_13 = Projects.schemaGenerator_2_13
 lazy val integrationTestSchemas_3 = Projects.integrationTestSchemas_3
 lazy val integrationTestSchemas_2_13 = Projects.integrationTestSchemas_2_13
 lazy val integrationTestDomainClasses_2_13 = Projects.integrationTestDomainClasses_2_13
