@@ -138,6 +138,9 @@ class CodeGen(schema: Schema) {
          |
          |  override def close(): Unit =
          |    graph.close
+         |
+         |  override def toString(): String =
+         |    String.format("$domainShortName (%s)", graph)
          |}
          |
          |""".stripMargin
