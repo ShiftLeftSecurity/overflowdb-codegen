@@ -4,6 +4,7 @@ import overflowdb.BatchedUpdate._
 import overflowdb.DetachedNodeGeneric
 
 import java.lang.System.lineSeparator
+import scala.collection.immutable.{AbstractSeq, LinearSeq}
 import scala.collection.mutable
 
 /**
@@ -49,8 +50,12 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 
     val nodes = nodeTypes.map { case (label,  NodeTypeDetails(propertyNames)) =>
       val schemaNodeName = camelCase(label)
-      val maybeAddProperties = "" // TODO
-//      val maybeAddProperties = propertyNames.toSeq.sorted
+      val maybeAddProperties = propertyNames.toSeq.sorted match {
+        case seq if seq.isEmpty => ""
+        case seq =>
+          val properties = seq.mkString(", ")
+          s".addProperties($properties)"
+      }
       s"""val $schemaNodeName = builder.addNodeType(name = "$label")$maybeAddProperties
          |""".stripMargin
     }.mkString(s"$lineSeparator$lineSeparator")

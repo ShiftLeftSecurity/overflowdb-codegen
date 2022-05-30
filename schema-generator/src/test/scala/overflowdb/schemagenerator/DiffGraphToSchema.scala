@@ -22,10 +22,11 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     result should include(s"""val name = builder.addProperty(name = "name")""")
     result should include(s"""val length = builder.addProperty(name = "length")""")
     result should include(s"""val original = builder.addProperty(name = "original")""")
-    result should include("""val artist = builder.addNodeType(name = "Artist")""")
-    result should include("""val song = builder.addNodeType(name = "Song")""")
+    result should include("""val artist = builder.addNodeType(name = "Artist").addProperties(name)""")
+    result should include("""val song = builder.addNodeType(name = "Song").addProperties(length, original)""")
 
-    println(result)
+    // TODO rm
+//    println(result)
   }
 
 //  "schema with ambiguities in property names from diffgraph" in {
