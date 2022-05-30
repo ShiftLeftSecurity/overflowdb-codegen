@@ -30,8 +30,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     }
 
     val nodes = nodeTypes.map { nodeType =>
-      // TODO use scala names, i.e. lowercase etc. -> reuse codegen utils?
-      val schemaNodeName = nodeType.toLowerCase
+      val schemaNodeName = camelCase(nodeType)
       s"""val $schemaNodeName = builder.addNodeType(name = "$nodeType")
          |""".stripMargin
     }.mkString(s"$lineSeparator$lineSeparator")
@@ -54,4 +53,10 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        |""".stripMargin
   }
 
+  private def camelCase(SNAKE_CASE: String): String = {
+    (SNAKE_CASE.split("_").map(_.toLowerCase).toList match {
+      case head :: tail => head :: tail.map(_.capitalize) // capitalise all but first element
+      case Nil => Nil
+    }).mkString
+  }
 }

@@ -10,19 +10,18 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
   val targetPackage = "odb.sample"
   val builder = new DiffGraphToSchema(domainName = domainName, schemaPackage = schemaPackage, targetPackage = targetPackage)
 
-  val NodeTypeA = "NODE_TYPE_A"
-//  val NodePropertyA = "nodePropertyA"
+  val NodeA = "NODE_A"
+  val PropertyA = "PropertyA"
 
   "generate schema from diffgraph" in {
     val diffGraph = new DiffGraphBuilder()
-      .addNode(NodeTypeA)
-//      .addNode(NodeLabel1, NodeProperty1, "prop1Value")
+      .addNode(NodeA)
+//      .addNode(NodeA, PropertyA, "propertyAValue1")
       .build()
 
     val result = builder.build(diffGraph)
     result should startWith(s"package $schemaPackage")
-    result should include("""val nodeTypeA = builder.addNodeType(name = "NODE_TYPE_A")""")
-
+    result should include("""val nodeA = builder.addNodeType(name = "NODE_A")""")
   }
 
 }
