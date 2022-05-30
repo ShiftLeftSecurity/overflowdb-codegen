@@ -53,10 +53,25 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        |""".stripMargin
   }
 
-  private def camelCase(SNAKE_CASE: String): String = {
-    (SNAKE_CASE.split("_").map(_.toLowerCase).toList match {
-      case head :: tail => head :: tail.map(_.capitalize) // capitalise all but first element
-      case Nil => Nil
-    }).mkString
+  /** convert various raw inputs to somewhat standardized scala names, e.g.
+    * CamelCase -> camelCase
+    * SNAKE_CASE -> snakeCase
+    * This is by no means complete and failsafe.
+    **/
+  private def camelCase(raw: String): String = {
+    if (raw.contains('_')) {
+      (raw.split("_").map(_.toLowerCase).toList match {
+        case head :: tail => head :: tail.map(_.capitalize) // capitalise all but first element
+        case Nil => Nil
+      }).mkString
+    } else {
+      decapitalize(raw)
+    }
   }
+
+  /** inversion of StringOps::capitalize - doesn't the name say it all? :) */
+  private def decapitalize(s: String): String =
+    if (s == null || s.length == 0 || !s.charAt(0).isUpper) s
+    else s.updated(0, s.charAt(0).toLower)
+
 }
