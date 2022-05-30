@@ -11,8 +11,10 @@ import scala.collection.mutable
   * This will give you a baseline for creating an overflowdb schema, so you can generate domain types etc.
   *
   * You will need to fill in some gaps later, e.g.
-  * - properties: cardinalities, potentially reuse across different nodes/edges, comments
-  * - relationships: cardinalities, comments
+  * - properties: cardinalities: defaults is `optional - you can make it `.mandatory(someDefaultValue)` or `.asList`
+  * - properties: reuse across different nodes/edges, comments
+  * - edges: cardinalities, comments
+  * - nodes: hierarchy: introduce node base types
   * - refactor for readability: order, split into files etc.
   * - many more
   *
@@ -21,17 +23,35 @@ import scala.collection.mutable
 class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage: String) {
 
   def build(diffGraph: DiffGraph): String = {
-    val nodeTypes = mutable.Set.empty[String]
+    val nodeTypes = mutable.Map.empty[String, NodeTypeDetails]
 
     diffGraph.iterator().forEachRemaining {
       case node: DetachedNodeGeneric =>
-        nodeTypes.addOne(node.label)
-        // TODO add node properties, their types etc.
+        val nodeDetails = nodeTypes.getOrElse(node.label, NodeTypeDetails(Set.empty))
+        val additionalProperties = node.keyvalues.sliding(2).collect {
+          case Array(key: String, value) if !nodeDetails.propertyNames.contains(key) =>
+            key
+        }
+        nodeTypes.addOne(node.label, nodeDetails.copy(propertyNames = nodeDetails.propertyNames ++ additionalProperties))
     }
 
-    val nodes = nodeTypes.map { nodeType =>
-      val schemaNodeName = camelCase(nodeType)
-      s"""val $schemaNodeName = builder.addNodeType(name = "$nodeType")
+    val properties = nodeTypes.values.flatMap(_.propertyNames).toSeq.distinct.map { name =>
+      val schemaPropertyName = camelCase(name)
+      s"""val $schemaPropertyName = builder.addProperty(name = "$name")"""
+    }.mkString(s"$lineSeparator$lineSeparator")
+
+    // TODO disambiguate between everything: nodes, properties, edges
+    //   val ambiguousNames: Set[String] = {
+    //     val alreadySeen = mutable.Set.empty[String]
+    //     TODO use Set.newBuilder?
+    //     TODO walk nodes and edges ...
+    //  }
+
+    val nodes = nodeTypes.map { case (label,  NodeTypeDetails(propertyNames)) =>
+      val schemaNodeName = camelCase(label)
+      val maybeAddProperties = "" // TODO
+//      val maybeAddProperties = propertyNames.toSeq.sorted
+      s"""val $schemaNodeName = builder.addNodeType(name = "$label")$maybeAddProperties
          |""".stripMargin
     }.mkString(s"$lineSeparator$lineSeparator")
 
@@ -45,13 +65,22 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        |      basePackage = "$targetPackage"
        |  )
        |
+       |  /* <properties start> */
+       |  $properties
+       |  /* <properties end> */
+       |
+       |  /* <nodes start> */
        |  $nodes
+       |  /* <nodes end> */
        |
        |  val instance: Schema = builder.build()
        |}
        |
        |""".stripMargin
   }
+
+  // TODO add property types
+  private case class NodeTypeDetails(propertyNames: Set[String])
 
   /** convert various raw inputs to somewhat standardized scala names, e.g.
     * CamelCase -> camelCase
