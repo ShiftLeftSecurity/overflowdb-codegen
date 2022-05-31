@@ -10,23 +10,40 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
   val targetPackage = "odb.sample"
   val builder = new DiffGraphToSchema(domainName = domainName, schemaPackage = schemaPackage, targetPackage = targetPackage)
 
-  "simple schema with no ambiguities" in {
+  "simple schema" in {
     val diffGraph = new DiffGraphBuilder()
       .addNode("Artist", "name", "Bob Dylan")
-      .addNode("Song", "length", 195, "original", true)
-//      .addEdge()
+      .addNode("Song", "name", "The times they are a changin'")
       .build()
 
     val result = builder.build(diffGraph)
     result should startWith(s"package $schemaPackage")
     result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String)""")
-    result should include(s"""val length = builder.addProperty(name = "length", valueType = ValueType.Int)""")
-    result should include(s"""val original = builder.addProperty(name = "original", valueType = ValueType.Boolean)""")
     result should include("""val artist = builder.addNodeType(name = "Artist").addProperties(name)""")
-    result should include("""val song = builder.addNodeType(name = "Song").addProperties(length, original)""")
+    result should include("""val song = builder.addNodeType(name = "Song").addProperties(name)""")
+  }
 
-    // TODO rm
-//    println(result)
+  "testing all property value types" in {
+    val diffGraph = new DiffGraphBuilder()
+      .addNode("Thing",
+        "stringProp", "stringValue",
+        "boolProp1", true,
+        "boolProp2", true: java.lang.Boolean,
+        "byteProp1", 1: Byte,
+        "byteProp2", java.lang.Byte.valueOf(2: Byte),
+      )
+      .build()
+
+    val result = builder.build(diffGraph)
+    result should startWith(s"package $schemaPackage")
+    result should include(s"""val stringProp = builder.addProperty(name = "stringProp", valueType = ValueType.String)""")
+    result should include(s"""val boolProp1 = builder.addProperty(name = "boolProp1", valueType = ValueType.Boolean)""")
+    result should include(s"""val boolProp2 = builder.addProperty(name = "boolProp2", valueType = ValueType.Boolean)""")
+    result should include(s"""val byteProp1 = builder.addProperty(name = "byteProp1", valueType = ValueType.Byte)""")
+    result should include(s"""val byteProp2 = builder.addProperty(name = "byteProp2", valueType = ValueType.Byte)""")
+    result should include("""val thing = builder.addNodeType(name = "Thing").addProperties(boolProp1, boolProp2, byteProp1, byteProp2, stringProp)""")
+    result should include("""val thing = builder.addNodeType(name = "Thing").addProperties(boolProp1, boolProp2, byteProp1, byteProp2, stringProp)""")
+
   }
 
 //  "schema with ambiguities in property names from diffgraph" in {

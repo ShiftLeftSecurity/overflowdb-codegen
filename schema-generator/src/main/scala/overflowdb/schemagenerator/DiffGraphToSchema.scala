@@ -29,7 +29,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     diffGraph.iterator().forEachRemaining {
       case node: DetachedNodeGeneric =>
         val nodeDetails = nodeTypes.getOrElse(node.label, NodeTypeDetails(Set.empty))
-        val additionalProperties = node.keyvalues.sliding(2).collect {
+        val additionalProperties = node.keyvalues.sliding(2, 2).collect {
           case Array(key: String, value) if !nodeDetails.propertyNames.contains(key) =>
             if (!propertyValueTypeByName.contains(key)) {
               propertyValueTypeByName.update(key, valueTypeByRuntimeClass(value.getClass))
