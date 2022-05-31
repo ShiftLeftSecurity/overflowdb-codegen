@@ -70,9 +70,9 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     result should include(s"""val doubleProp2 = builder.addProperty(name = "doubleProp2", valueType = ValueType.Double)""")
     result should include(s"""val charProp1 = builder.addProperty(name = "charProp1", valueType = ValueType.Char)""")
     result should include(s"""val charProp2 = builder.addProperty(name = "charProp2", valueType = ValueType.Char)""")
-    result should include(s"""val listProp1 = builder.addProperty(name = "listProp1", valueType = ValueType.List)""")
-    result should include(s"""val listProp2 = builder.addProperty(name = "listProp2", valueType = ValueType.List)""")
-    result should include(s"""val listProp3 = builder.addProperty(name = "listProp3", valueType = ValueType.List)""")
+    result should include(s"""val listProp1 = builder.addProperty(name = "listProp1", valueType = ValueType.String).asList()""")
+    result should include(s"""val listProp2 = builder.addProperty(name = "listProp2", valueType = ValueType.String).asList()""")
+    result should include(s"""val listProp3 = builder.addProperty(name = "listProp3", valueType = ValueType.String).asList()""")
     result should include("""val thing = builder.addNodeType(name = "Thing").addProperties(boolProp1, boolProp2, byteProp1, byteProp2, charProp1, charProp2, doubleProp1, doubleProp2, floatProp1, floatProp2, intProp1, intProp2, listProp1, listProp2, listProp3, longProp1, longProp2, shortProp1, shortProp2, stringProp)""")
   }
 
