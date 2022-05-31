@@ -4,7 +4,6 @@ import overflowdb.BatchedUpdate._
 import overflowdb.DetachedNodeGeneric
 
 import java.lang.System.lineSeparator
-import scala.collection.immutable.{AbstractSeq, LinearSeq}
 import scala.collection.mutable
 
 /**
@@ -25,12 +24,16 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 
   def build(diffGraph: DiffGraph): String = {
     val nodeTypes = mutable.Map.empty[String, NodeTypeDetails]
+    val propertyValueTypeByName = mutable.Map.empty[String, String]
 
     diffGraph.iterator().forEachRemaining {
       case node: DetachedNodeGeneric =>
         val nodeDetails = nodeTypes.getOrElse(node.label, NodeTypeDetails(Set.empty))
         val additionalProperties = node.keyvalues.sliding(2).collect {
           case Array(key: String, value) if !nodeDetails.propertyNames.contains(key) =>
+            if (!propertyValueTypeByName.contains(key)) {
+              propertyValueTypeByName.update(key, valueTypeByRuntimeClass(value.getClass))
+            }
             key
         }
         nodeTypes.addOne(node.label, nodeDetails.copy(propertyNames = nodeDetails.propertyNames ++ additionalProperties))
@@ -38,7 +41,8 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 
     val properties = nodeTypes.values.flatMap(_.propertyNames).toSeq.distinct.map { name =>
       val schemaPropertyName = camelCase(name)
-      s"""val $schemaPropertyName = builder.addProperty(name = "$name")"""
+      val valueType = propertyValueTypeByName.getOrElse(name, throw new AssertionError(s"no ValueType determined for property with name=$name"))
+      s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType)"""
     }.mkString(s"$lineSeparator$lineSeparator")
 
     // TODO disambiguate between everything: nodes, properties, edges
@@ -63,6 +67,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     s"""package $schemaPackage
        |
        |import overflowdb.schema.{Schema, SchemaBuilder}
+       |import overflowdb.schema.Property.ValueType
        |
        |object ${domainName}Schema {
        |  val builder = new SchemaBuilder(
@@ -107,5 +112,35 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
   private def decapitalize(s: String): String =
     if (s == null || s.length == 0 || !s.charAt(0).isUpper) s
     else s.updated(0, s.charAt(0).toLower)
+
+  /** choose one of `overflowdb.schema.Property.ValueType` based on the runtime class */
+  private def valueTypeByRuntimeClass(clazz: Class[_]): String = {
+    if (clazz.isAssignableFrom(classOf[Boolean]) || clazz.isAssignableFrom(classOf[java.lang.Boolean]))
+      "ValueType.Boolean"
+    else if (clazz.isAssignableFrom(classOf[String]))
+      "ValueType.String"
+    else if (clazz.isAssignableFrom(classOf[Byte]) || clazz.isAssignableFrom(classOf[java.lang.Byte]))
+      "ValueType.Byte"
+    else if (clazz.isAssignableFrom(classOf[Short]) || clazz.isAssignableFrom(classOf[java.lang.Short]))
+      "ValueType.Short"
+    else if (clazz.isAssignableFrom(classOf[Int]) || clazz.isAssignableFrom(classOf[Integer]))
+      "ValueType.Int"
+    else if (clazz.isAssignableFrom(classOf[Long]) || clazz.isAssignableFrom(classOf[java.lang.Long]))
+      "ValueType.Long"
+    else if (clazz.isAssignableFrom(classOf[Float]) || clazz.isAssignableFrom(classOf[java.lang.Float]))
+      "ValueType.Float"
+    else if (clazz.isAssignableFrom(classOf[Double]) || clazz.isAssignableFrom(classOf[java.lang.Double]))
+      "ValueType.Double"
+    else if (clazz.isAssignableFrom(classOf[Char]) || clazz.isAssignableFrom(classOf[Character]))
+      "ValueType.Char"
+    else if (clazz.isArray || classOf[java.lang.Iterable[_]].isAssignableFrom(clazz) || classOf[IterableOnce[_]].isAssignableFrom(clazz))
+      "ValueType.List"
+    else {
+      System.err.println(s"warning: unable to derive a ValueType for runtime class $clazz - defaulting to `Unknown`")
+      "ValueType.Unknown"
+    }
+
+
+  }
 
 }

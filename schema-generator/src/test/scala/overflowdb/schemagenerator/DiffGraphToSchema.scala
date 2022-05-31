@@ -19,9 +19,9 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
 
     val result = builder.build(diffGraph)
     result should startWith(s"package $schemaPackage")
-    result should include(s"""val name = builder.addProperty(name = "name")""")
-    result should include(s"""val length = builder.addProperty(name = "length")""")
-    result should include(s"""val original = builder.addProperty(name = "original")""")
+    result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String)""")
+    result should include(s"""val length = builder.addProperty(name = "length", valueType = ValueType.Int)""")
+    result should include(s"""val original = builder.addProperty(name = "original", valueType = ValueType.Boolean)""")
     result should include("""val artist = builder.addNodeType(name = "Artist").addProperties(name)""")
     result should include("""val song = builder.addNodeType(name = "Song").addProperties(length, original)""")
 
