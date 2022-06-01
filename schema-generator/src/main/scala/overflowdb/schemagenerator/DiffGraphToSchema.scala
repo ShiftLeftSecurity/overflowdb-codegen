@@ -98,7 +98,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 
   private def handleNode(node: DetachedNodeGeneric, context: DiffGraphToSchema.Context): Unit = {
     val nodeDetails = context.nodeTypes.getOrElseUpdate(node.label, new NodeTypeDetails)
-    node.keyvalues.sliding(2, 2).collect {
+    node.keyvalues.sliding(2, 2).foreach {
       case Array(key: String, value) if !nodeDetails.propertyNames.contains(key) =>
         nodeDetails.propertyNames.addOne(key)
         if (!context.propertyValueTypeByName.contains(key)) {
@@ -111,7 +111,6 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
           }
         }
     }
-//    context.nodeTypes.addOne(node.label, nodeDetails.copy(propertyNames = nodeDetails.propertyNames ++ additionalProperties))
   }
 
   private def handleEdge(edge: CreateEdge, context: DiffGraphToSchema.Context): Unit = {
