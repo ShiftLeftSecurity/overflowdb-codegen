@@ -3,6 +3,7 @@ package overflowdb.schemagenerator
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import overflowdb.BatchedUpdate._
+import overflowdb.DetachedNodeGeneric
 
 import scala.jdk.CollectionConverters.IterableHasAsJava
 
@@ -13,9 +14,14 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
   val builder = new DiffGraphToSchema(domainName = domainName, schemaPackage = schemaPackage, targetPackage = targetPackage)
 
   "simple schema" in {
+    // TODO diffgraph API feels a bit ugly - it seems wrong to have to know about DetachedNodeGeneric - asked Bernhard about it
+    val artist = new DetachedNodeGeneric("Artist", "name", "Bob Dylan")
+    val song = new DetachedNodeGeneric("Song", "name", "The times they are a changin'")
+
     val diffGraph = new DiffGraphBuilder()
-      .addNode("Artist", "name", "Bob Dylan")
-      .addNode("Song", "name", "The times they are a changin'")
+      .addNode(artist)
+      .addNode(song)
+//      .addEdge(artist, song, "sung")
       .build()
 
     val result = builder.build(diffGraph)
@@ -23,6 +29,8 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String)""")
     result should include("""val artist = builder.addNodeType(name = "Artist").addProperties(name)""")
     result should include("""val song = builder.addNodeType(name = "Song").addProperties(name)""")
+//    result should include("""val sung = builder.addEdgeType(name = "sung")""")
+//    result should include("""artist.addOutEdge(edge = sung, inNode = artist, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)""")
   }
 
   "testing all property value types" in {

@@ -23,34 +23,18 @@ import scala.jdk.CollectionConverters.IterableHasAsScala
   * Note: this isn't optimised for performance and not tested on large input diffgraphs.
   */
 class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage: String) {
+  import DiffGraphToSchema._
 
   def build(diffGraph: DiffGraph): String = {
-    val nodeTypes = mutable.Map.empty[String, NodeTypeDetails]
-    val propertyValueTypeByName = mutable.Map.empty[String, PropertyDetails]
+    val context = new Context // contains some mutable collections which will be filled based on what we find
 
     diffGraph.iterator().forEachRemaining {
-      case node: DetachedNodeGeneric =>
-        val nodeDetails = nodeTypes.getOrElse(node.label, NodeTypeDetails(Set.empty))
-        val additionalProperties = node.keyvalues.sliding(2, 2).collect {
-          case Array(key: String, value) if !nodeDetails.propertyNames.contains(key) =>
-            if (!propertyValueTypeByName.contains(key)) {
-              if (isList(value.getClass)) {
-                // TODO store the fact that it's a list... we want to store the type information elsewhere anyway, no?
-                iterableForList(value).headOption.map { value =>
-                  propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
-                }
-              } else {
-                propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
-              }
-            }
-            key
-        }
-        nodeTypes.addOne(node.label, nodeDetails.copy(propertyNames = nodeDetails.propertyNames ++ additionalProperties))
+      case node: DetachedNodeGeneric => handleNode(node, context)
     }
 
-    val properties = nodeTypes.values.flatMap(_.propertyNames).toSeq.distinct.map { name =>
+    val properties = context.nodeTypes.values.flatMap(_.propertyNames).toSeq.distinct.map { name =>
       val schemaPropertyName = camelCase(name)
-      val PropertyDetails(valueType, isList) = propertyValueTypeByName.getOrElse(name, throw new AssertionError(s"no ValueType determined for property with name=$name"))
+      val PropertyDetails(valueType, isList) = context.propertyValueTypeByName.getOrElse(name, throw new AssertionError(s"no ValueType determined for property with name=$name"))
       val asListAppendixMaybe = if (isList) ".asList()" else ""
       s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType)$asListAppendixMaybe"""
     }.mkString(s"$lineSeparator$lineSeparator")
@@ -62,7 +46,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     //     TODO walk nodes and edges ...
     //  }
 
-    val nodes = nodeTypes.map { case (label,  NodeTypeDetails(propertyNames)) =>
+    val nodes = context.nodeTypes.map { case (label,  NodeTypeDetails(propertyNames)) =>
       val schemaNodeName = camelCase(label)
       val maybeAddProperties = propertyNames.toSeq.sorted match {
         case seq if seq.isEmpty => ""
@@ -77,6 +61,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     s"""package $schemaPackage
        |
        |import overflowdb.schema.{Schema, SchemaBuilder}
+       |import overflowdb.schema.EdgeType.Cardinality
        |import overflowdb.schema.Property.ValueType
        |
        |object ${domainName}Schema {
@@ -99,8 +84,23 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        |""".stripMargin
   }
 
-  private case class NodeTypeDetails(propertyNames: Set[String])
-  private case class PropertyDetails(valueType: String, isList: Boolean)
+  private def handleNode(node: DetachedNodeGeneric, context: DiffGraphToSchema.Context): Unit = {
+    val nodeDetails = context.nodeTypes.getOrElse(node.label, NodeTypeDetails(Set.empty))
+    val additionalProperties = node.keyvalues.sliding(2, 2).collect {
+      case Array(key: String, value) if !nodeDetails.propertyNames.contains(key) =>
+        if (!context.propertyValueTypeByName.contains(key)) {
+          if (isList(value.getClass)) {
+            iterableForList(value).headOption.map { value =>
+              context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
+            }
+          } else {
+            context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
+          }
+        }
+        key
+    }
+    context.nodeTypes.addOne(node.label, nodeDetails.copy(propertyNames = nodeDetails.propertyNames ++ additionalProperties))
+  }
 
   /** convert various raw inputs to somewhat standardized scala names, e.g.
     * CamelCase -> camelCase
@@ -167,6 +167,13 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       case other => throw new NotImplementedError(s"unhandled list of type ${other.getClass}")
     }
   }
+}
 
-
+object DiffGraphToSchema {
+  private class Context {
+    val nodeTypes = mutable.Map.empty[String, NodeTypeDetails]
+    val propertyValueTypeByName = mutable.Map.empty[String, PropertyDetails]
+  }
+  private case class NodeTypeDetails(propertyNames: Set[String])
+  private case class PropertyDetails(valueType: String, isList: Boolean)
 }
