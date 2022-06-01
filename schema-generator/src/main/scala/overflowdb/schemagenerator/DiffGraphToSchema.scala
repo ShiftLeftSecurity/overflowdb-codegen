@@ -30,6 +30,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 
     diffGraph.iterator().forEachRemaining {
       case node: DetachedNodeGeneric => handleNode(node, context)
+      case edge: CreateEdge => handleEdge(edge, context)
     }
 
     val properties = context.nodeTypes.values.flatMap(_.propertyNames).toSeq.distinct.map { name =>
@@ -46,9 +47,9 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     //     TODO walk nodes and edges ...
     //  }
 
-    val nodes = context.nodeTypes.map { case (label,  NodeTypeDetails(propertyNames)) =>
+    val nodes = context.nodeTypes.map { case (label,  nodeTypeDetails) =>
       val schemaNodeName = camelCase(label)
-      val maybeAddProperties = propertyNames.toSeq.sorted match {
+      val maybeAddProperties = nodeTypeDetails.propertyNames.toSeq.sorted match {
         case seq if seq.isEmpty => ""
         case seq =>
           val properties = seq.mkString(", ")
@@ -57,6 +58,9 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       s"""val $schemaNodeName = builder.addNodeType(name = "$label")$maybeAddProperties
          |""".stripMargin
     }.mkString(s"$lineSeparator$lineSeparator")
+
+    val edges = "TODO"
+    val relationships = "TODO"
 
     s"""package $schemaPackage
        |
@@ -78,6 +82,14 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        |  $nodes
        |  /* <nodes end> */
        |
+       |  /* <edges start> */
+       |  $edges
+       |  /* <edges end> */
+       |
+       |  /* <relationships start> */
+       |  $relationships
+       |  /* <relationships end> */
+       |
        |  val instance: Schema = builder.build()
        |}
        |
@@ -85,9 +97,10 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
   }
 
   private def handleNode(node: DetachedNodeGeneric, context: DiffGraphToSchema.Context): Unit = {
-    val nodeDetails = context.nodeTypes.getOrElse(node.label, NodeTypeDetails(Set.empty))
-    val additionalProperties = node.keyvalues.sliding(2, 2).collect {
+    val nodeDetails = context.nodeTypes.getOrElseUpdate(node.label, new NodeTypeDetails)
+    node.keyvalues.sliding(2, 2).collect {
       case Array(key: String, value) if !nodeDetails.propertyNames.contains(key) =>
+        nodeDetails.propertyNames.addOne(key)
         if (!context.propertyValueTypeByName.contains(key)) {
           if (isList(value.getClass)) {
             iterableForList(value).headOption.map { value =>
@@ -97,9 +110,15 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
             context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
           }
         }
-        key
     }
-    context.nodeTypes.addOne(node.label, nodeDetails.copy(propertyNames = nodeDetails.propertyNames ++ additionalProperties))
+//    context.nodeTypes.addOne(node.label, nodeDetails.copy(propertyNames = nodeDetails.propertyNames ++ additionalProperties))
+  }
+
+  private def handleEdge(edge: CreateEdge, context: DiffGraphToSchema.Context): Unit = {
+    val edgeDetails = context.edgeTypes.getOrElseUpdate(edge.label, new EdgeTypeDetails)
+    val srcDstCombination = (edge.src.label, edge.dst.label)
+    edgeDetails.srcDstNodes.addOne(srcDstCombination)
+    // TODO handle properties: edge.propertiesAndKeys, just like above for nodes
   }
 
   /** convert various raw inputs to somewhat standardized scala names, e.g.
@@ -172,8 +191,13 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 object DiffGraphToSchema {
   private class Context {
     val nodeTypes = mutable.Map.empty[String, NodeTypeDetails]
+    val edgeTypes = mutable.Map.empty[String, EdgeTypeDetails]
     val propertyValueTypeByName = mutable.Map.empty[String, PropertyDetails]
   }
-  private case class NodeTypeDetails(propertyNames: Set[String])
+  private class NodeTypeDetails(val propertyNames: mutable.Set[String] = mutable.Set.empty)
+
+  private class EdgeTypeDetails(val srcDstNodes: mutable.Set[(String, String)] = mutable.Set.empty,
+                                val propertyNames: mutable.Set[String] = mutable.Set.empty)
+
   private case class PropertyDetails(valueType: String, isList: Boolean)
 }
