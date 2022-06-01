@@ -55,12 +55,28 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
           val properties = seq.mkString(", ")
           s".addProperties($properties)"
       }
-      s"""val $schemaNodeName = builder.addNodeType(name = "$label")$maybeAddProperties
-         |""".stripMargin
+      s"""val $schemaNodeName = builder.addNodeType(name = "$label")$maybeAddProperties"""
     }.mkString(s"$lineSeparator$lineSeparator")
 
-    val edges = "TODO"
-    val relationships = "TODO"
+    val edges = context.edgeTypes.map { case (label, edgeTypeDetails) =>
+      val schemaEdgeName = camelCase(label)
+      val maybeAddProperties = edgeTypeDetails.propertyNames.toSeq.sorted match {
+        case seq if seq.isEmpty => ""
+        case seq =>
+          val properties = seq.mkString(", ")
+          s".addProperties($properties)"
+      }
+      s"""val $schemaEdgeName = builder.addEdgeType(name = "$label")$maybeAddProperties"""
+    }.mkString(s"$lineSeparator$lineSeparator")
+
+    val relationships = context.edgeTypes.flatMap { case (label, edgeTypeDetails) =>
+      val schemaEdgeName = camelCase(label)
+      edgeTypeDetails.srcDstNodes.toSeq.sorted.map { case (src, dst) =>
+        val schemaSrcName = camelCase(src)
+        val schemaDstName = camelCase(dst)
+        s"$schemaSrcName.addOutEdge(edge = $schemaEdgeName, inNode = $schemaDstName, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)"
+      }
+    }.mkString(s"$lineSeparator$lineSeparator")
 
     s"""package $schemaPackage
        |
