@@ -33,7 +33,8 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       case edge: CreateEdge => handleEdge(edge, context)
     }
 
-    val properties = context.nodeTypes.values.flatMap(_.propertyNames).toSeq.distinct.map { name =>
+    val propertyNames = context.nodeTypes.values.flatMap(_.propertyNames) ++ context.edgeTypes.values.flatMap(_.propertyNames)
+    val properties = propertyNames.toSeq.distinct.sorted.map { name =>
       val schemaPropertyName = camelCase(name)
       val PropertyDetails(valueType, isList) = context.propertyValueTypeByName.getOrElse(name, throw new AssertionError(s"no ValueType determined for property with name=$name"))
       val asListAppendixMaybe = if (isList) ".asList()" else ""
@@ -133,7 +134,20 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     val edgeDetails = context.edgeTypes.getOrElseUpdate(edge.label, new EdgeTypeDetails)
     val srcDstCombination = (edge.src.label, edge.dst.label)
     edgeDetails.srcDstNodes.addOne(srcDstCombination)
-    // TODO handle properties: edge.propertiesAndKeys, just like above for nodes
+
+    edge.propertiesAndKeys.sliding(2, 2).foreach {
+      case Array(key: String, value) if !edgeDetails.propertyNames.contains(key) =>
+        edgeDetails.propertyNames.addOne(key)
+        if (!context.propertyValueTypeByName.contains(key)) {
+          if (isList(value.getClass)) {
+            iterableForList(value).headOption.map { value =>
+              context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
+            }
+          } else {
+            context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
+          }
+        }
+    }
   }
 
   /** convert various raw inputs to somewhat standardized scala names, e.g.

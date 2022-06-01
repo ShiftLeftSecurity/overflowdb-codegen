@@ -21,15 +21,16 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     val diffGraph = new DiffGraphBuilder()
       .addNode(artist)
       .addNode(song)
-      .addEdge(artist, song, "sung")
+      .addEdge(artist, song, "sung", "edgeProperty", "someValue")
       .build()
 
     val result = builder.build(diffGraph)
     result should startWith(s"package $schemaPackage")
     result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String)""")
+    result should include(s"""val edgeProperty = builder.addProperty(name = "edgeProperty", valueType = ValueType.String)""")
     result should include("""val artist = builder.addNodeType(name = "Artist").addProperties(name)""")
     result should include("""val song = builder.addNodeType(name = "Song").addProperties(name)""")
-    result should include("""val sung = builder.addEdgeType(name = "sung")""")
+    result should include("""val sung = builder.addEdgeType(name = "sung").addProperties(edgeProperty)""")
     result should include("""artist.addOutEdge(edge = sung, inNode = song, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)""")
   }
 
