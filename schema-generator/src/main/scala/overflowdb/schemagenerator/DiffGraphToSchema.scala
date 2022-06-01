@@ -38,7 +38,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       val schemaPropertyName = camelCase(name)
       val PropertyDetails(valueType, isList) = context.propertyValueTypeByName.getOrElse(name, throw new AssertionError(s"no ValueType determined for property with name=$name"))
       val asListAppendixMaybe = if (isList) ".asList()" else ""
-      s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType)$asListAppendixMaybe"""
+      s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType, comment = "")$asListAppendixMaybe"""
     }.mkString(s"$lineSeparator$lineSeparator")
 
     // TODO disambiguate between everything: nodes, properties, edges
@@ -56,7 +56,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
           val properties = seq.mkString(", ")
           s".addProperties($properties)"
       }
-      s"""val $schemaNodeName = builder.addNodeType(name = "$label")$maybeAddProperties"""
+      s"""val $schemaNodeName = builder.addNodeType(name = "$label", comment = "")$maybeAddProperties"""
     }.mkString(s"$lineSeparator$lineSeparator")
 
     val edges = context.edgeTypes.map { case (label, edgeTypeDetails) =>
@@ -67,7 +67,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
           val properties = seq.mkString(", ")
           s".addProperties($properties)"
       }
-      s"""val $schemaEdgeName = builder.addEdgeType(name = "$label")$maybeAddProperties"""
+      s"""val $schemaEdgeName = builder.addEdgeType(name = "$label", comment = "")$maybeAddProperties"""
     }.mkString(s"$lineSeparator$lineSeparator")
 
     val relationships = context.edgeTypes.flatMap { case (label, edgeTypeDetails) =>
@@ -75,7 +75,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       edgeTypeDetails.srcDstNodes.toSeq.sorted.map { case (src, dst) =>
         val schemaSrcName = camelCase(src)
         val schemaDstName = camelCase(dst)
-        s"$schemaSrcName.addOutEdge(edge = $schemaEdgeName, inNode = $schemaDstName, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List)"
+        s"""$schemaSrcName.addOutEdge(edge = $schemaEdgeName, inNode = $schemaDstName, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")"""
       }
     }.mkString(s"$lineSeparator$lineSeparator")
 
