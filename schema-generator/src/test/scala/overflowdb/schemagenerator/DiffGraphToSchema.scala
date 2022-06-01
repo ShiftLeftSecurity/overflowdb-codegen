@@ -14,7 +14,6 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
   val builder = new DiffGraphToSchema(domainName = domainName, schemaPackage = schemaPackage, targetPackage = targetPackage)
 
   "simple schema" in {
-    // TODO diffgraph API feels a bit ugly - it seems wrong to have to know about DetachedNodeGeneric - asked Bernhard about it
     val artist = new DetachedNodeGeneric("Artist", "name", "Bob Dylan")
     val song = new DetachedNodeGeneric("Song", "name", "The times they are a changin'")
 
@@ -24,7 +23,7 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
       .addEdge(artist, song, "sung", "edgeProperty", "someValue")
       .build()
 
-    val result = builder.build(diffGraph)
+    val result = builder.asSourceString(diffGraph)
     result should startWith(s"package $schemaPackage")
     result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String, comment = "")""")
     result should include(s"""val edgeProperty = builder.addProperty(name = "edgeProperty", valueType = ValueType.String, comment = "")""")
@@ -32,6 +31,27 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     result should include("""val song = builder.addNodeType(name = "Song", comment = "").addProperties(name)""")
     result should include("""val sung = builder.addEdgeType(name = "sung", comment = "").addProperties(edgeProperty)""")
     result should include("""artist.addOutEdge(edge = sung, inNode = song, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
+  }
+
+  "camel case for given label/property names" in {
+    val artist = new DetachedNodeGeneric("SINGER_SONGWRITER", "FULL_NAME", "Bob Dylan")
+    val song = new DetachedNodeGeneric("SONG", "name", "The times they are a changin'")
+
+    val diffGraph = new DiffGraphBuilder()
+      .addNode(artist)
+      .addNode(song)
+      .addEdge(song, artist, "SUNG_BY", "EDGE_PROPERTY", "someValue")
+      .build()
+
+    val result = builder.asSourceString(diffGraph)
+    result should startWith(s"package $schemaPackage")
+    result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String, comment = "")""")
+    result should include(s"""val fullName = builder.addProperty(name = "FULL_NAME", valueType = ValueType.String, comment = "")""")
+    result should include(s"""val edgeProperty = builder.addProperty(name = "EDGE_PROPERTY", valueType = ValueType.String, comment = "")""")
+    result should include("""val singerSongwriter = builder.addNodeType(name = "SINGER_SONGWRITER", comment = "").addProperties(fullName)""")
+    result should include("""val song = builder.addNodeType(name = "SONG", comment = "").addProperties(name)""")
+    result should include("""val sungBy = builder.addEdgeType(name = "SUNG_BY", comment = "").addProperties(edgeProperty)""")
+    result should include("""song.addOutEdge(edge = sungBy, inNode = singerSongwriter, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
   }
 
   "testing all property value types" in {
@@ -60,7 +80,7 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
       )
       .build()
 
-    val result = builder.build(diffGraph)
+    val result = builder.asSourceString(diffGraph)
     result should startWith(s"package $schemaPackage")
     result should include(s"""val stringProp = builder.addProperty(name = "stringProp", valueType = ValueType.String)""")
     result should include(s"""val boolProp1 = builder.addProperty(name = "boolProp1", valueType = ValueType.Boolean)""")
@@ -85,7 +105,8 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     result should include("""val thing = builder.addNodeType(name = "Thing").addProperties(boolProp1, boolProp2, byteProp1, byteProp2, charProp1, charProp2, doubleProp1, doubleProp2, floatProp1, floatProp2, intProp1, intProp2, listProp1, listProp2, listProp3, longProp1, longProp2, shortProp1, shortProp2, stringProp)""")
   }
 
-//  "schema with ambiguities in property names from diffgraph" in {
+
+  //  "schema with ambiguities in property names from diffgraph" in {
 //    val diffGraph = new DiffGraphBuilder()
 //      .addNode("Artist")
 //      .addNode("Artist", "name", "Bob Dylan")

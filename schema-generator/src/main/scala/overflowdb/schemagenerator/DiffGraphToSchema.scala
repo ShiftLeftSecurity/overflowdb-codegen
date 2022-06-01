@@ -4,6 +4,8 @@ import overflowdb.BatchedUpdate._
 import overflowdb.DetachedNodeGeneric
 
 import java.lang.System.lineSeparator
+import java.nio.charset.Charset
+import java.nio.file.{Files, Path}
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.IterableHasAsScala
@@ -25,7 +27,12 @@ import scala.jdk.CollectionConverters.IterableHasAsScala
 class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage: String) {
   import DiffGraphToSchema._
 
-  def build(diffGraph: DiffGraph): String = {
+  def toFile(diffGraph: DiffGraph, outFile: Path): Unit = {
+    val sourceString = asSourceString(diffGraph)
+    Files.write(outFile, sourceString.getBytes(Charset.forName("UTF-8")))
+  }
+
+  def asSourceString(diffGraph: DiffGraph): String = {
     val context = new Context // contains some mutable collections which will be filled based on what we find
 
     diffGraph.iterator().forEachRemaining {
@@ -53,7 +60,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       val maybeAddProperties = nodeTypeDetails.propertyNames.toSeq.sorted match {
         case seq if seq.isEmpty => ""
         case seq =>
-          val properties = seq.mkString(", ")
+          val properties = seq.map(camelCase).mkString(", ")
           s".addProperties($properties)"
       }
       s"""val $schemaNodeName = builder.addNodeType(name = "$label", comment = "")$maybeAddProperties"""
@@ -64,7 +71,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       val maybeAddProperties = edgeTypeDetails.propertyNames.toSeq.sorted match {
         case seq if seq.isEmpty => ""
         case seq =>
-          val properties = seq.mkString(", ")
+          val properties = seq.map(camelCase).mkString(", ")
           s".addProperties($properties)"
       }
       s"""val $schemaEdgeName = builder.addEdgeType(name = "$label", comment = "")$maybeAddProperties"""
@@ -161,6 +168,8 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
         case head :: tail => head :: tail.map(_.capitalize) // capitalise all but first element
         case Nil => Nil
       }).mkString
+    } else if (raw.forall(_.isUpper)) {
+      raw.toLowerCase
     } else {
       decapitalize(raw)
     }
