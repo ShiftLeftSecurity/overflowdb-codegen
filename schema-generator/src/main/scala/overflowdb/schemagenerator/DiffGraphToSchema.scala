@@ -40,24 +40,16 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       case edge: CreateEdge => handleEdge(edge, context)
     }
 
-    val propertyNames = context.nodeTypes.values.flatMap(_.propertyNames) ++ context.edgeTypes.values.flatMap(_.propertyNames)
-    val properties = propertyNames.toSeq.distinct.sorted.map { name =>
+    val propertyNameAndValueTypes = context.nodeTypes.values.flatMap(_.propertyValueTypeByName.toSeq) ++ context.edgeTypes.values.flatMap(_.propertyValueTypeByName.toSeq)
+    val properties = propertyNameAndValueTypes.toSeq.distinct.sortBy(_._1).map { case (name, PropertyDetails(valueType, isList)) =>
       val schemaPropertyName = camelCase(name)
-      val PropertyDetails(valueType, isList) = context.propertyValueTypeByName.getOrElse(name, throw new AssertionError(s"no ValueType determined for property with name=$name"))
       val asListAppendixMaybe = if (isList) ".asList()" else ""
       s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType, comment = "")$asListAppendixMaybe"""
     }.mkString(s"$lineSeparator$lineSeparator")
 
-    // TODO disambiguate between everything: nodes, properties, edges
-    //   val ambiguousNames: Set[String] = {
-    //     val alreadySeen = mutable.Set.empty[String]
-    //     TODO use Set.newBuilder?
-    //     TODO walk nodes and edges ...
-    //  }
-
     val nodes = context.nodeTypes.map { case (label,  nodeTypeDetails) =>
       val schemaNodeName = camelCase(label)
-      val maybeAddProperties = nodeTypeDetails.propertyNames.toSeq.sorted match {
+      val maybeAddProperties = nodeTypeDetails.propertyValueTypeByName.keys.toSeq.sorted match {
         case seq if seq.isEmpty => ""
         case seq =>
           val properties = seq.map(camelCase).mkString(", ")
@@ -68,7 +60,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 
     val edges = context.edgeTypes.map { case (label, edgeTypeDetails) =>
       val schemaEdgeName = camelCase(label)
-      val maybeAddProperties = edgeTypeDetails.propertyNames.toSeq.sorted match {
+      val maybeAddProperties = edgeTypeDetails.propertyValueTypeByName.keys.toSeq.sorted match {
         case seq if seq.isEmpty => ""
         case seq =>
           val properties = seq.map(camelCase).mkString(", ")
@@ -123,16 +115,13 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
   private def handleNode(node: DetachedNodeGeneric, context: DiffGraphToSchema.Context): Unit = {
     val nodeDetails = context.nodeTypes.getOrElseUpdate(node.label, new NodeTypeDetails)
     node.keyvalues.sliding(2, 2).foreach {
-      case Array(key: String, value) if !nodeDetails.propertyNames.contains(key) =>
-        nodeDetails.propertyNames.addOne(key)
-        if (!context.propertyValueTypeByName.contains(key)) {
-          if (isList(value.getClass)) {
-            iterableForList(value).headOption.map { value =>
-              context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
-            }
-          } else {
-            context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
+      case Array(key: String, value) if !nodeDetails.propertyValueTypeByName.contains(key) =>
+        if (isList(value.getClass)) {
+          iterableForList(value).headOption.map { value =>
+            nodeDetails.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
           }
+        } else {
+          nodeDetails.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
         }
     }
   }
@@ -143,16 +132,13 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     edgeDetails.srcDstNodes.addOne(srcDstCombination)
 
     edge.propertiesAndKeys.sliding(2, 2).foreach {
-      case Array(key: String, value) if !edgeDetails.propertyNames.contains(key) =>
-        edgeDetails.propertyNames.addOne(key)
-        if (!context.propertyValueTypeByName.contains(key)) {
-          if (isList(value.getClass)) {
-            iterableForList(value).headOption.map { value =>
-              context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
-            }
-          } else {
-            context.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
+      case Array(key: String, value) if !edgeDetails.propertyValueTypeByName.contains(key) =>
+        if (isList(value.getClass)) {
+          iterableForList(value).headOption.map { value =>
+            edgeDetails.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
           }
+        } else {
+          edgeDetails.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
         }
     }
   }
@@ -227,15 +213,24 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 }
 
 object DiffGraphToSchema {
+  private class NodeTypeDetails(val propertyValueTypeByName: mutable.Map[String, PropertyDetails] = mutable.Map.empty)
+
+  private class EdgeTypeDetails(val srcDstNodes: mutable.Set[(String, String)] = mutable.Set.empty,
+                                val propertyValueTypeByName: mutable.Map[String, PropertyDetails] = mutable.Map.empty)
+
+  private case class PropertyDetails(valueType: String, isList: Boolean)
+
   private class Context {
     val nodeTypes = mutable.Map.empty[String, NodeTypeDetails]
     val edgeTypes = mutable.Map.empty[String, EdgeTypeDetails]
-    val propertyValueTypeByName = mutable.Map.empty[String, PropertyDetails]
+
+    /** disambiguated name for schema */
+    def getNodePropertySchemaName(name: String, nodeLabel: String): String = ???
+
+    /** disambiguated name for schema */
+    def getEdgePropertySchemaName(name: String, edgeLabel: String): String = ???
+
+
   }
-  private class NodeTypeDetails(val propertyNames: mutable.Set[String] = mutable.Set.empty)
 
-  private class EdgeTypeDetails(val srcDstNodes: mutable.Set[(String, String)] = mutable.Set.empty,
-                                val propertyNames: mutable.Set[String] = mutable.Set.empty)
-
-  private case class PropertyDetails(valueType: String, isList: Boolean)
 }
