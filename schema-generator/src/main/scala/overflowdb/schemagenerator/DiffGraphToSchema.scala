@@ -40,8 +40,15 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       case edge: CreateEdge => handleEdge(edge, context)
     }
 
-    // building up as we go
-    val properties = mutable.Set.empty[PropertyDetails]
+    // TODO - first collect all from nodes/edges, disambiguate
+    val properties = ???
+    //    val properties = mutable.Set.empty[PropertyDetails]
+    //    val propertyNameAndValueTypes = context.nodeTypes.values.flatMap(_.propertyValueTypeByName.toSeq) ++ context.edgeTypes.values.flatMap(_.propertyValueTypeByName.toSeq)
+    //    val propertiesSrc = propertyNameAndValueTypes.toSeq.distinct.sortBy(_._1).map { case (name, PropertyDetails(valueType, isList)) =>
+    //      val schemaPropertyName = camelCase(name)
+    //      val asListAppendixMaybe = if (isList) ".asList()" else ""
+    //      s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType, comment = "")$asListAppendixMaybe"""
+    //    }
 
     val nodes = context.nodeTypes.map { case (label,  nodeTypeDetails) =>
       val schemaNodeName = camelCase(label)
@@ -66,16 +73,6 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       s"""val $schemaEdgeName = builder.addEdgeType(name = "$label", comment = "")$maybeAddProperties"""
     }.mkString(s"$lineSeparator$lineSeparator")
 
-    // TODO - based on built up `properties` - disambiguate
-    val propertiesSrc = ???
-    //    val propertyNameAndValueTypes = context.nodeTypes.values.flatMap(_.propertyValueTypeByName.toSeq) ++ context.edgeTypes.values.flatMap(_.propertyValueTypeByName.toSeq)
-    //    val propertiesSrc = propertyNameAndValueTypes.toSeq.distinct.sortBy(_._1).map { case (name, PropertyDetails(valueType, isList)) =>
-    //      val schemaPropertyName = camelCase(name)
-    //      val asListAppendixMaybe = if (isList) ".asList()" else ""
-    //      s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType, comment = "")$asListAppendixMaybe"""
-    //    }
-    //
-
     val relationships = context.edgeTypes.flatMap { case (label, edgeTypeDetails) =>
       val schemaEdgeName = camelCase(label)
       edgeTypeDetails.srcDstNodes.toSeq.sorted.map { case (src, dst) =>
@@ -98,7 +95,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        |  )
        |
        |  /* <properties start> */
-       |  $propertiesSrc
+       |  $properties
        |  /* <properties end> */
        |
        |  /* <nodes start> */
