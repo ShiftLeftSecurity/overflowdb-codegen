@@ -40,16 +40,13 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       case edge: CreateEdge => handleEdge(edge, context)
     }
 
-    val propertyNameAndValueTypes = context.nodeTypes.values.flatMap(_.propertyValueTypeByName.toSeq) ++ context.edgeTypes.values.flatMap(_.propertyValueTypeByName.toSeq)
-    val properties = propertyNameAndValueTypes.toSeq.distinct.sortBy(_._1).map { case (name, PropertyDetails(valueType, isList)) =>
-      val schemaPropertyName = camelCase(name)
-      val asListAppendixMaybe = if (isList) ".asList()" else ""
-      s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType, comment = "")$asListAppendixMaybe"""
-    }.mkString(s"$lineSeparator$lineSeparator")
+    // building up as we go
+    val properties = mutable.Set.empty[PropertyDetails]
 
     val nodes = context.nodeTypes.map { case (label,  nodeTypeDetails) =>
       val schemaNodeName = camelCase(label)
-      val maybeAddProperties = nodeTypeDetails.propertyValueTypeByName.keys.toSeq.sorted match {
+      val nodeProperties = nodeTypeDetails.propertyValueTypeByName.values.toSeq
+      val maybeAddProperties = nodeProperties.sortBy(_.name) match {
         case seq if seq.isEmpty => ""
         case seq =>
           val properties = seq.map(camelCase).mkString(", ")
@@ -68,6 +65,16 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       }
       s"""val $schemaEdgeName = builder.addEdgeType(name = "$label", comment = "")$maybeAddProperties"""
     }.mkString(s"$lineSeparator$lineSeparator")
+
+    // TODO - based on built up `properties` - disambiguate
+    val propertiesSrc = ???
+    //    val propertyNameAndValueTypes = context.nodeTypes.values.flatMap(_.propertyValueTypeByName.toSeq) ++ context.edgeTypes.values.flatMap(_.propertyValueTypeByName.toSeq)
+    //    val propertiesSrc = propertyNameAndValueTypes.toSeq.distinct.sortBy(_._1).map { case (name, PropertyDetails(valueType, isList)) =>
+    //      val schemaPropertyName = camelCase(name)
+    //      val asListAppendixMaybe = if (isList) ".asList()" else ""
+    //      s"""val $schemaPropertyName = builder.addProperty(name = "$name", valueType = $valueType, comment = "")$asListAppendixMaybe"""
+    //    }
+    //
 
     val relationships = context.edgeTypes.flatMap { case (label, edgeTypeDetails) =>
       val schemaEdgeName = camelCase(label)
@@ -91,7 +98,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        |  )
        |
        |  /* <properties start> */
-       |  $properties
+       |  $propertiesSrc
        |  /* <properties end> */
        |
        |  /* <nodes start> */
@@ -114,14 +121,15 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 
   private def handleNode(node: DetachedNodeGeneric, context: DiffGraphToSchema.Context): Unit = {
     val nodeDetails = context.nodeTypes.getOrElseUpdate(node.label, new NodeTypeDetails)
+    val elementReference = ElementReference(ElementType.Node, node.label)
     node.keyvalues.sliding(2, 2).foreach {
       case Array(key: String, value) if !nodeDetails.propertyValueTypeByName.contains(key) =>
         if (isList(value.getClass)) {
           iterableForList(value).headOption.map { value =>
-            nodeDetails.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
+            nodeDetails.propertyValueTypeByName.update(key, PropertyDetails(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
           }
         } else {
-          nodeDetails.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
+          nodeDetails.propertyValueTypeByName.update(key, PropertyDetails(key, valueTypeByRuntimeClass(value.getClass),  isList = false, elementReference))
         }
     }
   }
@@ -130,41 +138,19 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     val edgeDetails = context.edgeTypes.getOrElseUpdate(edge.label, new EdgeTypeDetails)
     val srcDstCombination = (edge.src.label, edge.dst.label)
     edgeDetails.srcDstNodes.addOne(srcDstCombination)
+    val elementReference = ElementReference(ElementType.Edge, edge.label)
 
     edge.propertiesAndKeys.sliding(2, 2).foreach {
       case Array(key: String, value) if !edgeDetails.propertyValueTypeByName.contains(key) =>
         if (isList(value.getClass)) {
           iterableForList(value).headOption.map { value =>
-            edgeDetails.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass), isList = true))
+            edgeDetails.propertyValueTypeByName.update(key, PropertyDetails(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
           }
         } else {
-          edgeDetails.propertyValueTypeByName.update(key, PropertyDetails(valueTypeByRuntimeClass(value.getClass),  isList = false))
+          edgeDetails.propertyValueTypeByName.update(key, PropertyDetails(key, valueTypeByRuntimeClass(value.getClass),  isList = false, elementReference))
         }
     }
   }
-
-  /** convert various raw inputs to somewhat standardized scala names, e.g.
-    * CamelCase -> camelCase
-    * SNAKE_CASE -> snakeCase
-    * This is by no means complete and failsafe.
-    **/
-  private def camelCase(raw: String): String = {
-    if (raw.contains('_')) {
-      (raw.split("_").map(_.toLowerCase).toList match {
-        case head :: tail => head :: tail.map(_.capitalize) // capitalise all but first element
-        case Nil => Nil
-      }).mkString
-    } else if (raw.forall(_.isUpper)) {
-      raw.toLowerCase
-    } else {
-      decapitalize(raw)
-    }
-  }
-
-  /** inversion of StringOps::capitalize - doesn't the name say it all? :) */
-  private def decapitalize(s: String): String =
-    if (s == null || s.length == 0 || !s.charAt(0).isUpper) s
-    else s.updated(0, s.charAt(0).toLower)
 
   /** choose one of `overflowdb.schema.Property.ValueType` based on the runtime class of a scalar (non-list) value */
   private def valueTypeByRuntimeClass(clazz: Class[_]): String = {
@@ -218,19 +204,48 @@ object DiffGraphToSchema {
   private class EdgeTypeDetails(val srcDstNodes: mutable.Set[(String, String)] = mutable.Set.empty,
                                 val propertyValueTypeByName: mutable.Map[String, PropertyDetails] = mutable.Map.empty)
 
-  private case class PropertyDetails(valueType: String, isList: Boolean)
+  private case class PropertyDetails(name: String, valueType: String, isList: Boolean, on: ElementReference)
+
+  case class ElementReference(elementType: ElementType.Value, label: String)
+  object ElementType extends Enumeration {
+    val Node, Edge = Value
+  }
 
   private class Context {
     val nodeTypes = mutable.Map.empty[String, NodeTypeDetails]
     val edgeTypes = mutable.Map.empty[String, EdgeTypeDetails]
 
     /** disambiguated name for schema */
-    def getNodePropertySchemaName(name: String, nodeLabel: String): String = ???
+    def getNodePropertySchemaName(propertyName: String, nodeLabel: String): String = {
+      camelCase(propertyName)
+    }
 
     /** disambiguated name for schema */
-    def getEdgePropertySchemaName(name: String, edgeLabel: String): String = ???
-
-
+    def getEdgePropertySchemaName(propertyName: String, edgeLabel: String): String = {
+      camelCase(propertyName)
+    }
   }
 
+  /** convert various raw inputs to somewhat standardized scala names, e.g.
+    * CamelCase -> camelCase
+    * SNAKE_CASE -> snakeCase
+    * This is by no means complete and failsafe.
+    **/
+  private def camelCase(raw: String): String = {
+    if (raw.contains('_')) {
+      (raw.split("_").map(_.toLowerCase).toList match {
+        case head :: tail => head :: tail.map(_.capitalize) // capitalise all but first element
+        case Nil => Nil
+      }).mkString
+    } else if (raw.forall(_.isUpper)) {
+      raw.toLowerCase
+    } else {
+      decapitalize(raw)
+    }
+  }
+
+  /** inversion of StringOps::capitalize - doesn't the name say it all? :) */
+  private def decapitalize(s: String): String =
+    if (s == null || s.length == 0 || !s.charAt(0).isUpper) s
+    else s.updated(0, s.charAt(0).toLower)
 }
