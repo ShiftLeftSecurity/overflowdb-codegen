@@ -14,16 +14,13 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
   val builder = new DiffGraphToSchema(domainName = domainName, schemaPackage = schemaPackage, targetPackage = targetPackage)
 
   "simple schema" in {
-    val artist = new DetachedNodeGeneric("Artist", "name", "Bob Dylan")
-    val song = new DetachedNodeGeneric("Song", "name", "The times they are a changin'")
-
     val diffGraph = new DiffGraphBuilder()
-      .addNode(artist)
-      .addNode(song)
-      .addEdge(artist, song, "sung", "edgeProperty", "someValue")
-      .build()
+    val artist = diffGraph.addAndReturnNode("Artist", "name", "Bob Dylan")
+    val song   = diffGraph.addAndReturnNode("Song", "name", "The times they are a changin'")
 
-    val result = builder.asSourceString(diffGraph)
+    diffGraph.addEdge(artist, song, "sung", "edgeProperty", "someValue")
+
+    val result = builder.asSourceString(diffGraph.build())
     result should startWith(s"package $schemaPackage")
     result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String, comment = "")""")
     result should include(s"""val edgeProperty = builder.addProperty(name = "edgeProperty", valueType = ValueType.String, comment = "")""")
@@ -34,16 +31,13 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
   }
 
   "camel case for given label/property names" in {
-    val artist = new DetachedNodeGeneric("SINGER_SONGWRITER", "FULL_NAME", "Bob Dylan")
-    val song = new DetachedNodeGeneric("SONG", "name", "The times they are a changin'")
-
     val diffGraph = new DiffGraphBuilder()
-      .addNode(artist)
-      .addNode(song)
-      .addEdge(song, artist, "SUNG_BY", "EDGE_PROPERTY", "someValue")
-      .build()
 
-    val result = builder.asSourceString(diffGraph)
+    val artist = diffGraph.addAndReturnNode("SINGER_SONGWRITER", "FULL_NAME", "Bob Dylan")
+    val song   = diffGraph.addAndReturnNode("SONG", "name", "The times they are a changin'")
+    diffGraph.addEdge(song, artist, "SUNG_BY", "EDGE_PROPERTY", "someValue")
+
+    val result = builder.asSourceString(diffGraph.build())
     result should startWith(s"package $schemaPackage")
     result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String, comment = "")""")
     result should include(s"""val fullName = builder.addProperty(name = "FULL_NAME", valueType = ValueType.String, comment = "")""")
@@ -78,9 +72,8 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
         "listProp2", Seq("string1", "string2"),
         "listProp3", Seq("string1", "string2").asJava,
       )
-      .build()
 
-    val result = builder.asSourceString(diffGraph)
+    val result = builder.asSourceString(diffGraph.build())
     result should startWith(s"package $schemaPackage")
     result should include(s"""val stringProp = builder.addProperty(name = "stringProp", valueType = ValueType.String)""")
     result should include(s"""val boolProp1 = builder.addProperty(name = "boolProp1", valueType = ValueType.Boolean)""")
