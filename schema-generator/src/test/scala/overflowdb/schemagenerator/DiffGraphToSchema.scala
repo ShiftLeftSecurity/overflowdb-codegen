@@ -3,7 +3,6 @@ package overflowdb.schemagenerator
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import overflowdb.BatchedUpdate._
-import overflowdb.DetachedNodeGeneric
 
 import scala.jdk.CollectionConverters.IterableHasAsJava
 
@@ -38,7 +37,6 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     diffGraph.addEdge(song, artist, "SUNG_BY", "EDGE_PROPERTY", "someValue")
 
     val result = builder.asSourceString(diffGraph.build())
-    result should startWith(s"package $schemaPackage")
     result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String, comment = "")""")
     result should include(s"""val fullName = builder.addProperty(name = "FULL_NAME", valueType = ValueType.String, comment = "")""")
     result should include(s"""val edgeProperty = builder.addProperty(name = "EDGE_PROPERTY", valueType = ValueType.String, comment = "")""")
@@ -74,47 +72,42 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
       )
 
     val result = builder.asSourceString(diffGraph.build())
-    result should startWith(s"package $schemaPackage")
-    result should include(s"""val stringProp = builder.addProperty(name = "stringProp", valueType = ValueType.String)""")
-    result should include(s"""val boolProp1 = builder.addProperty(name = "boolProp1", valueType = ValueType.Boolean)""")
-    result should include(s"""val boolProp2 = builder.addProperty(name = "boolProp2", valueType = ValueType.Boolean)""")
-    result should include(s"""val byteProp1 = builder.addProperty(name = "byteProp1", valueType = ValueType.Byte)""")
-    result should include(s"""val byteProp2 = builder.addProperty(name = "byteProp2", valueType = ValueType.Byte)""")
-    result should include(s"""val shortProp1 = builder.addProperty(name = "shortProp1", valueType = ValueType.Short)""")
-    result should include(s"""val shortProp2 = builder.addProperty(name = "shortProp2", valueType = ValueType.Short)""")
-    result should include(s"""val intProp1 = builder.addProperty(name = "intProp1", valueType = ValueType.Int)""")
-    result should include(s"""val intProp2 = builder.addProperty(name = "intProp2", valueType = ValueType.Int)""")
-    result should include(s"""val longProp1 = builder.addProperty(name = "longProp1", valueType = ValueType.Long)""")
-    result should include(s"""val longProp2 = builder.addProperty(name = "longProp2", valueType = ValueType.Long)""")
-    result should include(s"""val floatProp1 = builder.addProperty(name = "floatProp1", valueType = ValueType.Float)""")
-    result should include(s"""val floatProp2 = builder.addProperty(name = "floatProp2", valueType = ValueType.Float)""")
-    result should include(s"""val doubleProp1 = builder.addProperty(name = "doubleProp1", valueType = ValueType.Double)""")
-    result should include(s"""val doubleProp2 = builder.addProperty(name = "doubleProp2", valueType = ValueType.Double)""")
-    result should include(s"""val charProp1 = builder.addProperty(name = "charProp1", valueType = ValueType.Char)""")
-    result should include(s"""val charProp2 = builder.addProperty(name = "charProp2", valueType = ValueType.Char)""")
-    result should include(s"""val listProp1 = builder.addProperty(name = "listProp1", valueType = ValueType.String).asList()""")
-    result should include(s"""val listProp2 = builder.addProperty(name = "listProp2", valueType = ValueType.String).asList()""")
-    result should include(s"""val listProp3 = builder.addProperty(name = "listProp3", valueType = ValueType.String).asList()""")
-    result should include("""val thing = builder.addNodeType(name = "Thing").addProperties(boolProp1, boolProp2, byteProp1, byteProp2, charProp1, charProp2, doubleProp1, doubleProp2, floatProp1, floatProp2, intProp1, intProp2, listProp1, listProp2, listProp3, longProp1, longProp2, shortProp1, shortProp2, stringProp)""")
+    result should include(s"""val stringProp = builder.addProperty(name = "stringProp", valueType = ValueType.String, comment = "")""")
+    result should include(s"""val boolProp1 = builder.addProperty(name = "boolProp1", valueType = ValueType.Boolean, comment = "")""")
+    result should include(s"""val boolProp2 = builder.addProperty(name = "boolProp2", valueType = ValueType.Boolean, comment = "")""")
+    result should include(s"""val byteProp1 = builder.addProperty(name = "byteProp1", valueType = ValueType.Byte, comment = "")""")
+    result should include(s"""val byteProp2 = builder.addProperty(name = "byteProp2", valueType = ValueType.Byte, comment = "")""")
+    result should include(s"""val shortProp1 = builder.addProperty(name = "shortProp1", valueType = ValueType.Short, comment = "")""")
+    result should include(s"""val shortProp2 = builder.addProperty(name = "shortProp2", valueType = ValueType.Short, comment = "")""")
+    result should include(s"""val intProp1 = builder.addProperty(name = "intProp1", valueType = ValueType.Int, comment = "")""")
+    result should include(s"""val intProp2 = builder.addProperty(name = "intProp2", valueType = ValueType.Int, comment = "")""")
+    result should include(s"""val longProp1 = builder.addProperty(name = "longProp1", valueType = ValueType.Long, comment = "")""")
+    result should include(s"""val longProp2 = builder.addProperty(name = "longProp2", valueType = ValueType.Long, comment = "")""")
+    result should include(s"""val floatProp1 = builder.addProperty(name = "floatProp1", valueType = ValueType.Float, comment = "")""")
+    result should include(s"""val floatProp2 = builder.addProperty(name = "floatProp2", valueType = ValueType.Float, comment = "")""")
+    result should include(s"""val doubleProp1 = builder.addProperty(name = "doubleProp1", valueType = ValueType.Double, comment = "")""")
+    result should include(s"""val doubleProp2 = builder.addProperty(name = "doubleProp2", valueType = ValueType.Double, comment = "")""")
+    result should include(s"""val charProp1 = builder.addProperty(name = "charProp1", valueType = ValueType.Char, comment = "")""")
+    result should include(s"""val charProp2 = builder.addProperty(name = "charProp2", valueType = ValueType.Char, comment = "")""")
+    result should include(s"""val listProp1 = builder.addProperty(name = "listProp1", valueType = ValueType.String, comment = "").asList()""")
+    result should include(s"""val listProp2 = builder.addProperty(name = "listProp2", valueType = ValueType.String, comment = "").asList()""")
+    result should include(s"""val listProp3 = builder.addProperty(name = "listProp3", valueType = ValueType.String, comment = "").asList()""")
+    result should include("""val thing = builder.addNodeType(name = "Thing", comment = "").addProperties(boolProp1, boolProp2, """ +
+      """byteProp1, byteProp2, charProp1, charProp2, doubleProp1, doubleProp2, floatProp1, floatProp2, intProp1, intProp2, """ +
+      """listProp1, listProp2, listProp3, longProp1, longProp2, shortProp1, shortProp2, stringProp)""")
   }
 
+    "schema with ambiguities in property names" in {
+      val diffGraph = new DiffGraphBuilder()
+      // using property with same name on different node and edge types
+      val artist = diffGraph.addAndReturnNode("Artist", "name", "Bob Dylan", "property1", "value1")
+      val song   = diffGraph.addAndReturnNode("Song", "property1", 2f)
+      diffGraph.addEdge(artist, song, "sung", "property1", true)
 
-  //  "schema with ambiguities in property names from diffgraph" in {
-//    val diffGraph = new DiffGraphBuilder()
-//      .addNode("Artist")
-//      .addNode("Artist", "name", "Bob Dylan")
-//      .addNode("Song")
-//      .addNode("Song", "name", "The times they are a changin'")
-//      .build()
-//
-//    val result = builder.build(diffGraph)
-//
-//    result should include("""val artist = builder.addNodeType(name = "Artist")""")
-//    result should include("""val song = builder.addNodeType(name = "Song")""")
-//
-//    /* Properties are defined globally and can be reused across nodes and edges, but when generating a schema based on
-//     * a diffgraph, we can't semantically derive simply based on it's name that it's the same property. */
-//    result should include(s"""val nodeArtistPropertyName = builder.addProperty(name = "$PropertyY")""")
-//  }
-//
+      val result = builder.asSourceString(diffGraph.build())
+      result should include(s"""val artistNodeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.String, comment = "")""")
+      result should include(s"""val songNodeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.Float, comment = "")""")
+      result should include(s"""val sungEdgeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.Boolean, comment = "")""")
+  }
+
 }
