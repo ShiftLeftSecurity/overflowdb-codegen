@@ -14,16 +14,17 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
 
   "simple schema" in {
     val diffGraph = new DiffGraphBuilder()
-    val artist = diffGraph.addAndReturnNode("Artist", "name", "Bob Dylan")
+    val artist = diffGraph.addAndReturnNode("Artist", "fullName", "Bob Dylan")
     val song   = diffGraph.addAndReturnNode("Song", "name", "The times they are a changin'")
 
     diffGraph.addEdge(artist, song, "sung", "edgeProperty", "someValue")
 
     val result = builder.asSourceString(diffGraph.build())
     result should startWith(s"package $schemaPackage")
+    result should include(s"""val fullName = builder.addProperty(name = "fullName", valueType = ValueType.String, comment = "")""")
     result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String, comment = "")""")
     result should include(s"""val edgeProperty = builder.addProperty(name = "edgeProperty", valueType = ValueType.String, comment = "")""")
-    result should include("""val artist = builder.addNodeType(name = "Artist", comment = "").addProperties(name)""")
+    result should include("""val artist = builder.addNodeType(name = "Artist", comment = "").addProperties(fullName)""")
     result should include("""val song = builder.addNodeType(name = "Song", comment = "").addProperties(name)""")
     result should include("""val sung = builder.addEdgeType(name = "sung", comment = "").addProperties(edgeProperty)""")
     result should include("""artist.addOutEdge(edge = sung, inNode = song, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
@@ -97,17 +98,20 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
       """listProp1, listProp2, listProp3, longProp1, longProp2, shortProp1, shortProp2, stringProp)""")
   }
 
-    "schema with ambiguities in property names" in {
-      val diffGraph = new DiffGraphBuilder()
-      // using property with same name on different node and edge types
-      val artist = diffGraph.addAndReturnNode("Artist", "name", "Bob Dylan", "property1", "value1")
-      val song   = diffGraph.addAndReturnNode("Song", "property1", 2f)
-      diffGraph.addEdge(artist, song, "sung", "property1", true)
+  "schema with ambiguities in property names" in {
+    val diffGraph = new DiffGraphBuilder()
+    // using property with same name on different node and edge types
+    val artist = diffGraph.addAndReturnNode("Artist", "name", "Bob Dylan", "property1", "value1")
+    val song   = diffGraph.addAndReturnNode("Song", "property1", 2f)
+    diffGraph.addEdge(artist, song, "sung", "property1", true)
 
-      val result = builder.asSourceString(diffGraph.build())
-      result should include(s"""val artistNodeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.String, comment = "")""")
-      result should include(s"""val songNodeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.Float, comment = "")""")
-      result should include(s"""val sungEdgeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.Boolean, comment = "")""")
+    val result = builder.asSourceString(diffGraph.build())
+    result should include(s"""val artistNodeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.String, comment = "")""")
+    result should include(s"""val songNodeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.Float, comment = "")""")
+    result should include(s"""val sungEdgeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.Boolean, comment = "")""")
+    result should include("""val artist = builder.addNodeType(name = "Artist", comment = "").addProperties(name, artistNodeProperty1)""")
+    result should include("""val song = builder.addNodeType(name = "Song", comment = "").addProperties(songNodeProperty1)""")
+    result should include("""val sung = builder.addEdgeType(name = "sung", comment = "").addProperties(sungEdgeProperty1)""")
   }
 
 }
