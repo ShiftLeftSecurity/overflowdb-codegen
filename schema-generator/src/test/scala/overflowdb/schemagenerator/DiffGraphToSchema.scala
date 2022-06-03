@@ -114,4 +114,19 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     result should include("""val sung = builder.addEdgeType(name = "sung", comment = "").addProperties(sungEdgeProperty1)""")
   }
 
+  "schema with ambiguities in element names" in {
+    val diffGraph = new DiffGraphBuilder()
+    // using the same property between nodes and edges
+    val node1 = diffGraph.addAndReturnNode("UniqueThing")
+    val node2 = diffGraph.addAndReturnNode("DuplicateThing", "DuplicateThing", "someValue")
+    diffGraph.addEdge(node1, node2, "DuplicateThing", "DuplicateThing", "someValue")
+
+    val result = builder.asSourceString(diffGraph.build())
+    result should include("""val uniqueThing = builder.addNodeType(name = "UniqueThing", comment = "")""")
+    result should include("""val duplicateThingProperty = builder.addNodeType(name = "DuplicateThing", comment = "")""")
+    result should include("""val duplicateThingNode = builder.addNodeType(name = "DuplicateThing", comment = "")""")
+    result should include("""val duplicateThingEdge = builder.addEdgeType(name = "DuplicateThing", comment = "")""")
+    result should include("""uniqueThing.addOutEdge(edge = duplicateThingEdge, inNode = duplicateThingNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
+  }
+
 }
