@@ -16,8 +16,8 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     val diffGraph = new DiffGraphBuilder()
     val artist = diffGraph.addAndReturnNode("Artist", "fullName", "Bob Dylan")
     val song   = diffGraph.addAndReturnNode("Song", "name", "The times they are a changin'")
-
     diffGraph.addEdge(artist, song, "sung", "edgeProperty", "someValue")
+    diffGraph.addNode("Artist") // some other artist - should not affect any of the below...
 
     val result = builder.asSourceString(diffGraph.build())
     result should startWith(s"package $schemaPackage")
@@ -116,17 +116,43 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
 
   "schema with ambiguities in element names" in {
     val diffGraph = new DiffGraphBuilder()
-    // using the same property between nodes and edges
-    val node1 = diffGraph.addAndReturnNode("UniqueThing")
-    val node2 = diffGraph.addAndReturnNode("DuplicateThing", "DuplicateThing", "someValue")
+    val node1 = diffGraph.addAndReturnNode("Thing")
+    val node2 = diffGraph.addAndReturnNode("DuplicateThing")
+    diffGraph.addEdge(node1, node2, "DuplicateThing")
+
+    val result = builder.asSourceString(diffGraph.build())
+    result should include("""val thing = builder.addNodeType(name = "Thing", comment = "")""")
+    result should include("""val duplicateThingNode = builder.addNodeType(name = "DuplicateThing", comment = "")""")
+    result should include("""val duplicateThingEdge = builder.addEdgeType(name = "DuplicateThing", comment = "")""")
+    result should include("""thing.addOutEdge(edge = duplicateThingEdge, inNode = duplicateThingNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
+  }
+
+  "schema with ambiguities in node and property names" in {
+    val diffGraph = new DiffGraphBuilder()
+    val node1 = diffGraph.addAndReturnNode("Thing", "DuplicateThing", "someValue")
+    val node2 = diffGraph.addAndReturnNode("DuplicateThing")
+    diffGraph.addEdge(node1, node2, "Relation")
+
+    val result = builder.asSourceString(diffGraph.build())
+    result should include("""val duplicateThingProperty = builder.addProperty(name = "DuplicateThing", valueType = ValueType.String, comment = "")""")
+    result should include("""val Thing = builder.addNodeType(name = "Thing", comment = "").addProperties(duplicateThingProperty)""")
+    result should include("""val duplicateThingNode = builder.addNodeType(name = "DuplicateThing", comment = "")""")
+    result should include("""val relation = builder.addEdgeType(name = "Relation", comment = "")""")
+    result should include("""thing.addOutEdge(edge = relation, inNode = duplicateThingNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
+  }
+
+  "schema with ambiguities in edge and property names" in {
+    val diffGraph = new DiffGraphBuilder()
+    val node1 = diffGraph.addAndReturnNode("Thing1")
+    val node2 = diffGraph.addAndReturnNode("Thing2")
     diffGraph.addEdge(node1, node2, "DuplicateThing", "DuplicateThing", "someValue")
 
     val result = builder.asSourceString(diffGraph.build())
-    result should include("""val uniqueThing = builder.addNodeType(name = "UniqueThing", comment = "")""")
-    result should include("""val duplicateThingProperty = builder.addNodeType(name = "DuplicateThing", comment = "")""")
-    result should include("""val duplicateThingNode = builder.addNodeType(name = "DuplicateThing", comment = "")""")
+    result should include("""val duplicateThingProperty = builder.addProperty(name = "DuplicateThing", valueType = ValueType.String, comment = "")""")
+    result should include("""val thing1 = builder.addNodeType(name = "Thing1", comment = "")""")
+    result should include("""val thing2 = builder.addNodeType(name = "Thing2", comment = "")""")
     result should include("""val duplicateThingEdge = builder.addEdgeType(name = "DuplicateThing", comment = "")""")
-    result should include("""uniqueThing.addOutEdge(edge = duplicateThingEdge, inNode = duplicateThingNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
+    result should include("""thing1.addOutEdge(edge = duplicateThingEdge, inNode = thing2, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
   }
 
 }
