@@ -59,17 +59,12 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        case seq if seq.isEmpty => ""
        case properties =>
          // TODO extract as method
-         val propertySchemaNames = properties.map { case Property(name, valueType, isList, _) =>
-           val propertySchemaName = {
-             val disambiguatedName = if (scope.nameHasAmbiguities(name)) {
-               s"${label}_node_$name"
-             } else name
-             camelCase(disambiguatedName)
-           }
+         val propertySchemaNames = properties.map { property =>
+           val propertySchemaName = scope.schemaName(property)
            // TODO extract to method, again...
-           val asListAppendixMaybe = if (isList) ".asList()" else ""
+           val asListAppendixMaybe = if (property.isList) ".asList()" else ""
            propertiesSrcs.addOne(
-             s"""val $propertySchemaName = builder.addProperty(name = "$name", valueType = $valueType, comment = "")$asListAppendixMaybe"""
+             s"""val $propertySchemaName = builder.addProperty(name = "${property.name}", valueType = ${property.valueType}, comment = "")$asListAppendixMaybe"""
            )
            propertySchemaName
          }.mkString(", ")
@@ -85,17 +80,12 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        case seq if seq.isEmpty => ""
        case properties =>
          // TODO extract as method
-         val propertySchemaNames = properties.map { case Property(name, valueType, isList, _) =>
-           val propertySchemaName = {
-             val disambiguatedName = if (scope.nameHasAmbiguities(name)) {
-               s"${edgeType.label}_edge_$name"
-             } else name
-             camelCase(disambiguatedName)
-           }
+         val propertySchemaNames = properties.map { property =>
+           val propertySchemaName = scope.schemaName(property)
            // TODO extract to method, again...
-           val asListAppendixMaybe = if (isList) ".asList()" else ""
+           val asListAppendixMaybe = if (property.isList) ".asList()" else ""
            propertiesSrcs.addOne(
-             s"""val $propertySchemaName = builder.addProperty(name = "$name", valueType = $valueType, comment = "")$asListAppendixMaybe"""
+             s"""val $propertySchemaName = builder.addProperty(name = "${property.name}", valueType = ${property.valueType}, comment = "")$asListAppendixMaybe"""
            )
            propertySchemaName
          }.mkString(", ")
@@ -105,9 +95,9 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
      s"""val $schemaEdgeName = builder.addEdgeType(name = "${edgeType.label}", comment = "")$maybeAddProperties"""
    }.mkString(s"$lineSeparator$lineSeparator")
 
-   val relationships = scope.edgeTypes.flatMap { edgeTypeDetails =>
-     val schemaEdgeName = camelCase(edgeTypeDetails.label)
-     edgeTypeDetails.srcDstNodes.toSeq.sortBy(_.toString).map { case (src, dst) =>
+   val relationships = scope.edgeTypes.flatMap { edgeType =>
+     val schemaEdgeName = scope.schemaName(edgeType)
+     edgeType.srcDstNodes.toSeq.sortBy(_.toString).map { case (src, dst) =>
        val schemaSrcName = scope.schemaName(src)
        val schemaDstName = scope.schemaName(dst)
        s"""$schemaSrcName.addOutEdge(edge = $schemaEdgeName, inNode = $schemaDstName, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")"""
@@ -151,35 +141,35 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
   }
 
   private def parseNode(node: DetachedNodeGeneric, scope: ScopeBuilder): Unit = {
-    val nodeDetails = scope.nodeTypesByLabel.getOrElseUpdate(node.label, new NodeType(node.label))
+    val nodes = scope.nodeTypesByLabel.getOrElseUpdate(node.label, new NodeType(node.label))
     val elementReference = ElementReference(ElementType.Node, node.label)
     node.keyvalues.sliding(2, 2).foreach {
-      case Array(key: String, value) if !nodeDetails.propertyByName.contains(key) =>
+      case Array(key: String, value) if !nodes.propertyByName.contains(key) =>
         if (isList(value.getClass)) {
           iterableForList(value).headOption.map { value =>
-            nodeDetails.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
+            nodes.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
           }
         } else {
-          nodeDetails.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass),  isList = false, elementReference))
+          nodes.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass),  isList = false, elementReference))
         }
     }
   }
 
   private def parseEdge(edge: CreateEdge, scope: ScopeBuilder): Unit = {
-    val edgeDetails = scope.edgeTypesByLabel.getOrElseUpdate(edge.label, new EdgeType(edge.label))
+    val edges = scope.edgeTypesByLabel.getOrElseUpdate(edge.label, new EdgeType(edge.label))
     val srcNode = scope.nodeTypesByLabel(edge.src.label)
     val dstNode = scope.nodeTypesByLabel(edge.dst.label)
-    edgeDetails.srcDstNodes.addOne((srcNode, dstNode))
+    edges.srcDstNodes.addOne((srcNode, dstNode))
     val elementReference = ElementReference(ElementType.Edge, edge.label)
 
     edge.propertiesAndKeys.sliding(2, 2).foreach {
-      case Array(key: String, value) if !edgeDetails.propertyByName.contains(key) =>
+      case Array(key: String, value) if !edges.propertyByName.contains(key) =>
         if (isList(value.getClass)) {
           iterableForList(value).headOption.map { value =>
-            edgeDetails.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
+            edges.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
           }
         } else {
-          edgeDetails.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass),  isList = false, elementReference))
+          edges.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass),  isList = false, elementReference))
         }
     }
   }
@@ -262,7 +252,7 @@ object DiffGraphToSchema {
       schemaName(edgeType.label, "Edge")
 
     def schemaName(property: Property): String =
-      schemaName(property.name, s"Property")
+      schemaName(property.name, s"On${property.on.label.capitalize}${property.on.elementType}")
 
     private def schemaName(nameInGraph: String, postfixToDisambiguateMaybe: String): String = {
       val disambiguatedMaybe =

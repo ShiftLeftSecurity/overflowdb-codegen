@@ -106,12 +106,13 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     diffGraph.addEdge(artist, song, "sung", "property1", true)
 
     val result = builder.asSourceString(diffGraph.build())
-    result should include(s"""val artistNodeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.String, comment = "")""")
-    result should include(s"""val songNodeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.Float, comment = "")""")
-    result should include(s"""val sungEdgeProperty1 = builder.addProperty(name = "property1", valueType = ValueType.Boolean, comment = "")""")
-    result should include("""val artist = builder.addNodeType(name = "Artist", comment = "").addProperties(name, artistNodeProperty1)""")
-    result should include("""val song = builder.addNodeType(name = "Song", comment = "").addProperties(songNodeProperty1)""")
-    result should include("""val sung = builder.addEdgeType(name = "sung", comment = "").addProperties(sungEdgeProperty1)""")
+    result should include(s"""val name = builder.addProperty(name = "name", valueType = ValueType.String, comment = "")""")
+    result should include(s"""val property1OnArtistNode = builder.addProperty(name = "property1", valueType = ValueType.String, comment = "")""")
+    result should include(s"""val property1OnSongNode = builder.addProperty(name = "property1", valueType = ValueType.Float, comment = "")""")
+    result should include(s"""val property1OnSungEdge = builder.addProperty(name = "property1", valueType = ValueType.Boolean, comment = "")""")
+    result should include(s"""val artist = builder.addNodeType(name = "Artist", comment = "").addProperties(name, property1OnArtistNode)""")
+    result should include(s"""val song = builder.addNodeType(name = "Song", comment = "").addProperties(property1OnSongNode)""")
+    result should include(s"""val sung = builder.addEdgeType(name = "sung", comment = "").addProperties(property1OnSungEdge)""")
   }
 
   "schema with ambiguities in element names" in {
@@ -134,8 +135,8 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     diffGraph.addEdge(node1, node2, "Relation")
 
     val result = builder.asSourceString(diffGraph.build())
-    result should include("""val duplicateThingProperty = builder.addProperty(name = "DuplicateThing", valueType = ValueType.String, comment = "")""")
-    result should include("""val Thing = builder.addNodeType(name = "Thing", comment = "").addProperties(duplicateThingProperty)""")
+    result should include("""val duplicateThingOnThingNode = builder.addProperty(name = "DuplicateThing", valueType = ValueType.String, comment = "")""")
+    result should include("""val thing = builder.addNodeType(name = "Thing", comment = "").addProperties(duplicateThingOnThingNode)""")
     result should include("""val duplicateThingNode = builder.addNodeType(name = "DuplicateThing", comment = "")""")
     result should include("""val relation = builder.addEdgeType(name = "Relation", comment = "")""")
     result should include("""thing.addOutEdge(edge = relation, inNode = duplicateThingNode, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
@@ -148,10 +149,10 @@ class DiffGraphToSchemaTest extends AnyWordSpec with Matchers {
     diffGraph.addEdge(node1, node2, "DuplicateThing", "DuplicateThing", "someValue")
 
     val result = builder.asSourceString(diffGraph.build())
-    result should include("""val duplicateThingProperty = builder.addProperty(name = "DuplicateThing", valueType = ValueType.String, comment = "")""")
+    result should include("""val duplicateThingOnDuplicateThingEdge = builder.addProperty(name = "DuplicateThing", valueType = ValueType.String, comment = "")""")
     result should include("""val thing1 = builder.addNodeType(name = "Thing1", comment = "")""")
     result should include("""val thing2 = builder.addNodeType(name = "Thing2", comment = "")""")
-    result should include("""val duplicateThingEdge = builder.addEdgeType(name = "DuplicateThing", comment = "")""")
+    result should include("""val duplicateThingEdge = builder.addEdgeType(name = "DuplicateThing", comment = "").addProperties(duplicateThingOnDuplicateThingEdge)""")
     result should include("""thing1.addOutEdge(edge = duplicateThingEdge, inNode = thing2, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")""")
   }
 
