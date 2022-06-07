@@ -1272,7 +1272,7 @@ class CodeGen(schema: Schema) {
              |  * */
              |def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] = {
              |  val fastResult = traversal match {
-             |    case init: overflowdb.traversal.InitialTraversal[NodeType] => init.getByIndex("${property.name}", value)
+             |    case init: overflowdb.traversal.InitialTraversal[NodeType] => init.getByIndex("${property.name}", value).getOrElse(null)
              |    case _ => null
              |  }
              |  if(fastResult != null) fastResult
