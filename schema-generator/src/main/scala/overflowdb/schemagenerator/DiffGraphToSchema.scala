@@ -53,12 +53,8 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       */
     val propertiesSrcs = Seq.newBuilder[String] // added to as we write nodes / edges
 
-   val nodes = scope.nodeTypes.map { nodeTypeDetails =>
-     val label = nodeTypeDetails.label
-     val schemaNodeName =
-       if (scope.nameHasAmbiguities(label)) camelCase(s"${label}Node")
-       else camelCase(label)
-     val nodeProperties = nodeTypeDetails.propertyByName.values.toSeq
+   val nodes = scope.nodeTypes.map { nodeType =>
+     val nodeProperties = nodeType.propertyByName.values.toSeq
      val maybeAddProperties = nodeProperties.sortBy(_.name) match {
        case seq if seq.isEmpty => ""
        case properties =>
@@ -79,15 +75,12 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
          }.mkString(", ")
          s".addProperties($propertySchemaNames)"
      }
-     s"""val $schemaNodeName = builder.addNodeType(name = "$label", comment = "")$maybeAddProperties"""
+     val schemaNodeName = scope.schemaName(nodeType)
+     s"""val $schemaNodeName = builder.addNodeType(name = "${nodeType.label}", comment = "")$maybeAddProperties"""
    }.mkString(s"$lineSeparator$lineSeparator")
 
-   val edges = scope.edgeTypes.map { edgeTypeDetails =>
-     val label = edgeTypeDetails.label
-     val schemaEdgeName =
-       if (scope.nameHasAmbiguities(label)) camelCase(s"${label}Edge")
-       else camelCase(label)
-     val edgeProperties = edgeTypeDetails.propertyByName.values.toSeq
+   val edges = scope.edgeTypes.map { edgeType =>
+     val edgeProperties = edgeType.propertyByName.values.toSeq
      val maybeAddProperties = edgeProperties.sortBy(_.name) match {
        case seq if seq.isEmpty => ""
        case properties =>
@@ -95,7 +88,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
          val propertySchemaNames = properties.map { case Property(name, valueType, isList, _) =>
            val propertySchemaName = {
              val disambiguatedName = if (scope.nameHasAmbiguities(name)) {
-               s"${label}_edge_$name"
+               s"${edgeType.label}_edge_$name"
              } else name
              camelCase(disambiguatedName)
            }
@@ -108,14 +101,15 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
          }.mkString(", ")
          s".addProperties($propertySchemaNames)"
      }
-     s"""val $schemaEdgeName = builder.addEdgeType(name = "$label", comment = "")$maybeAddProperties"""
+     val schemaEdgeName = scope.schemaName(edgeType)
+     s"""val $schemaEdgeName = builder.addEdgeType(name = "${edgeType.label}", comment = "")$maybeAddProperties"""
    }.mkString(s"$lineSeparator$lineSeparator")
 
    val relationships = scope.edgeTypes.flatMap { edgeTypeDetails =>
      val schemaEdgeName = camelCase(edgeTypeDetails.label)
-     edgeTypeDetails.srcDstNodes.toSeq.sorted.map { case (src, dst) =>
-       val schemaSrcName = camelCase(src)
-       val schemaDstName = camelCase(dst)
+     edgeTypeDetails.srcDstNodes.toSeq.sortBy(_.toString).map { case (src, dst) =>
+       val schemaSrcName = scope.schemaName(src)
+       val schemaDstName = scope.schemaName(dst)
        s"""$schemaSrcName.addOutEdge(edge = $schemaEdgeName, inNode = $schemaDstName, cardinalityOut = Cardinality.List, cardinalityIn = Cardinality.List, stepNameOut = "", stepNameIn = "")"""
      }
    }.mkString(s"$lineSeparator$lineSeparator")
@@ -157,7 +151,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
   }
 
   private def parseNode(node: DetachedNodeGeneric, scope: ScopeBuilder): Unit = {
-    val nodeDetails = scope.nodeTypesByLabel.getOrElseUpdate(node.label, new NodeTypeDetails(node.label))
+    val nodeDetails = scope.nodeTypesByLabel.getOrElseUpdate(node.label, new NodeType(node.label))
     val elementReference = ElementReference(ElementType.Node, node.label)
     node.keyvalues.sliding(2, 2).foreach {
       case Array(key: String, value) if !nodeDetails.propertyByName.contains(key) =>
@@ -172,9 +166,10 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
   }
 
   private def parseEdge(edge: CreateEdge, scope: ScopeBuilder): Unit = {
-    val edgeDetails = scope.edgeTypesByLabel.getOrElseUpdate(edge.label, new EdgeTypeDetails(edge.label))
-    val srcDstCombination = (edge.src.label, edge.dst.label)
-    edgeDetails.srcDstNodes.addOne(srcDstCombination)
+    val edgeDetails = scope.edgeTypesByLabel.getOrElseUpdate(edge.label, new EdgeType(edge.label))
+    val srcNode = scope.nodeTypesByLabel(edge.src.label)
+    val dstNode = scope.nodeTypesByLabel(edge.dst.label)
+    edgeDetails.srcDstNodes.addOne((srcNode, dstNode))
     val elementReference = ElementReference(ElementType.Edge, edge.label)
 
     edge.propertiesAndKeys.sliding(2, 2).foreach {
@@ -236,11 +231,11 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
 }
 
 object DiffGraphToSchema {
-  private class NodeTypeDetails(val label: String, val propertyByName: mutable.Map[String, Property] = mutable.Map.empty)
+  private class NodeType(val label: String, val propertyByName: mutable.Map[String, Property] = mutable.Map.empty)
 
-  private class EdgeTypeDetails(val label: String,
-                                val srcDstNodes: mutable.Set[(String, String)] = mutable.Set.empty,
-                                val propertyByName: mutable.Map[String, Property] = mutable.Map.empty)
+  private class EdgeType(val label: String,
+                         val srcDstNodes: mutable.Set[(NodeType, NodeType)] = mutable.Set.empty,
+                         val propertyByName: mutable.Map[String, Property] = mutable.Map.empty)
 
   private case class Property(name: String, valueType: String, isList: Boolean, on: ElementReference)
 
@@ -250,17 +245,32 @@ object DiffGraphToSchema {
   }
 
   private class ScopeBuilder {
-    val nodeTypesByLabel = mutable.Map.empty[String, NodeTypeDetails]
-    val edgeTypesByLabel = mutable.Map.empty[String, EdgeTypeDetails]
+    val nodeTypesByLabel = mutable.Map.empty[String, NodeType]
+    val edgeTypesByLabel = mutable.Map.empty[String, EdgeType]
 
     def build(): Scope =
       new Scope(nodeTypesByLabel.values.toSet, edgeTypesByLabel.values.toSet)
   }
 
-  private class Scope(val nodeTypes: Set[NodeTypeDetails],
-                      val edgeTypes: Set[EdgeTypeDetails]) {
-    // TODO def schemaName(nodeType)...
-    // TODO def schemaName(edgeType)...
+  private class Scope(val nodeTypes: Set[NodeType],
+                      val edgeTypes: Set[EdgeType]) {
+
+    def schemaName(nodeType: NodeType): String =
+      schemaName(nodeType.label, "Node")
+
+    def schemaName(edgeType: EdgeType): String =
+      schemaName(edgeType.label, "Edge")
+
+    def schemaName(property: Property): String =
+      schemaName(property.name, s"Property")
+
+    private def schemaName(nameInGraph: String, postfixToDisambiguateMaybe: String): String = {
+      val disambiguatedMaybe =
+        if (nameHasAmbiguities(nameInGraph)) s"$nameInGraph$postfixToDisambiguateMaybe"
+        else nameInGraph
+      camelCase(disambiguatedMaybe)
+    }
+
     /**
       * checks if property|node|edge name has ambiguities, e.g. instead of
       * ```
@@ -273,7 +283,7 @@ object DiffGraphToSchema {
         val thingNode = builder.addNodeType("Thing")
       * ```
       */
-    def nameHasAmbiguities(name: String): Boolean =
+    private def nameHasAmbiguities(name: String): Boolean =
       namesWithAmbiguities.contains(name)
 
     private lazy val namesWithAmbiguities: Set[String] = {
