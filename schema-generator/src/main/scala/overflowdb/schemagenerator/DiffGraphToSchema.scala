@@ -54,15 +54,12 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
       */
     val propertiesSrcs = Seq.newBuilder[String] // added to as we write nodes / edges
 
-    val nodes = scope.nodeTypes.map { nodeType =>
-      val nodeProperties = nodeType.propertyByName.values.toSeq
-      val maybeAddProperties = nodeProperties.sortBy(_.name) match {
+    def addPropertiesSrc(properties: Seq[Property]): String = {
+      properties.sortBy(_.name) match {
         case seq if seq.isEmpty => ""
         case properties =>
-          // TODO extract as method
           val propertySchemaNames = properties.map { property =>
             val propertySchemaName = scope.schemaName(property)
-            // TODO extract to method, again...
             val asListAppendixMaybe = if (property.isList) ".asList()" else ""
             propertiesSrcs.addOne(
               s"""val $propertySchemaName = builder.addProperty(name = "${property.name}", valueType = ${property.valueType}, comment = "")$asListAppendixMaybe"""
@@ -71,27 +68,16 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
           }.mkString(", ")
           s".addProperties($propertySchemaNames)"
       }
+    }
+
+    val nodes = scope.nodeTypes.map { nodeType =>
+      val maybeAddProperties = addPropertiesSrc(nodeType.propertyByName.values.toSeq)
       val schemaNodeName = scope.schemaName(nodeType)
       s"""val $schemaNodeName = builder.addNodeType(name = "${nodeType.label}", comment = "")$maybeAddProperties"""
     }.mkString(s"$lineSeparator$lineSeparator")
 
     val edges = scope.edgeTypes.map { edgeType =>
-      val edgeProperties = edgeType.propertyByName.values.toSeq
-      val maybeAddProperties = edgeProperties.sortBy(_.name) match {
-        case seq if seq.isEmpty => ""
-        case properties =>
-          // TODO extract as method
-          val propertySchemaNames = properties.map { property =>
-            val propertySchemaName = scope.schemaName(property)
-            // TODO extract to method, again...
-            val asListAppendixMaybe = if (property.isList) ".asList()" else ""
-            propertiesSrcs.addOne(
-              s"""val $propertySchemaName = builder.addProperty(name = "${property.name}", valueType = ${property.valueType}, comment = "")$asListAppendixMaybe"""
-            )
-            propertySchemaName
-          }.mkString(", ")
-          s".addProperties($propertySchemaNames)"
-      }
+      val maybeAddProperties = addPropertiesSrc(edgeType.propertyByName.values.toSeq)
       val schemaEdgeName = scope.schemaName(edgeType)
       s"""val $schemaEdgeName = builder.addEdgeType(name = "${edgeType.label}", comment = "")$maybeAddProperties"""
     }.mkString(s"$lineSeparator$lineSeparator")
