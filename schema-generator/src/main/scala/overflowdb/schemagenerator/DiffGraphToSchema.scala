@@ -259,6 +259,8 @@ object DiffGraphToSchema {
 
   private class Scope(val nodeTypes: Set[NodeTypeDetails],
                       val edgeTypes: Set[EdgeTypeDetails]) {
+    // TODO def schemaName(nodeType)...
+    // TODO def schemaName(edgeType)...
     /**
       * checks if property|node|edge name has ambiguities, e.g. instead of
       * ```
