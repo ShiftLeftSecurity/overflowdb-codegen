@@ -1255,7 +1255,7 @@ class CodeGen(schema: Schema) {
              |  * */
              |def $nameCamelCase(pattern: $baseType): Traversal[NodeType] = {
              |  if(!Misc.isRegex(pattern)){
-             |    traversal.filter{node => node.${nameCamelCase} == pattern}
+             |    ${nameCamelCase}Exact(pattern)
              |  } else {
              |    overflowdb.traversal.filter.StringPropertyFilter.regexp(traversal)(_.$nameCamelCase, pattern)
              |  }
@@ -1270,13 +1270,20 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where $nameCamelCase matches `value` exactly.
              |  * */
-             |def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
-             |  traversal.filter{node => node.${nameCamelCase} == value}
+             |def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] = {
+             |  val fastResult = traversal match {
+             |    case init: overflowdb.traversal.InitialTraversal[NodeType] => init.getByIndex("${property.name}", value)
+             |    case _ => null
+             |  }
+             |  if(fastResult != null) fastResult
+             |  else traversal.filter{node => node.${nameCamelCase} == value}
+             |  }
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
              |  * */
              |def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
+             |  //fixme: use the index
              |  val vset = values.to(Set)
              |  traversal.filter{node => vset.contains(node.${nameCamelCase})}
              |}
