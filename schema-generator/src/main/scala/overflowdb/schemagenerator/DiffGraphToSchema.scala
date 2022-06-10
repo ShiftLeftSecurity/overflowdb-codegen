@@ -130,7 +130,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
   private def parseNode(node: DetachedNodeGeneric, scope: ScopeBuilder): Unit = {
     val nodes = scope.nodeTypesByLabel.getOrElseUpdate(node.label, new NodeType(node.label))
     val elementReference = ElementReference(ElementType.Node, node.label)
-    node.keyvalues.sliding(2, 2).foreach {
+    node.propertiesAsKeyValues.sliding(2, 2).foreach {
       case Array(key: String, value) if !nodes.propertyByName.contains(key) =>
         if (isList(value.getClass)) {
           iterableForList(value).headOption.map { value =>
