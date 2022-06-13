@@ -133,15 +133,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     val elementReference = ElementReference(ElementType.Node, node.label)
     node.propertiesAsKeyValues.sliding(2, 2).foreach {
       case Array(key: String, value) =>
-        if (!nodeType.propertyByName.contains(key)) {
-          if (isList(value.getClass)) {
-            iterableForList(value).headOption.map { value =>
-              nodeType.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
-            }
-          } else {
-            nodeType.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = false, elementReference))
-          }
-        }
+        updatePropertyContextMaybe(nodeType.propertyByName, key, value, elementReference)
     }
   }
 
@@ -150,23 +142,26 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
     val srcNode = scope.nodeTypesByLabel(edge.src.label)
     val dstNode = scope.nodeTypesByLabel(edge.dst.label)
     edgeType.srcDstNodes.addOne((srcNode, dstNode))
-    val elementReference = ElementReference(ElementType.Edge, edge.label)
 
+    val elementReference = ElementReference(ElementType.Edge, edge.label)
     edge.propertiesAndKeys.sliding(2, 2).foreach {
-      case Array(key: String, value) =>
-        if (!edgeType.propertyByName.contains(key)) {
-          if (isList(value.getClass)) {
-            iterableForList(value).headOption.map { value =>
-              edgeType.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
-            }
-          } else {
-            edgeType.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = false, elementReference))
-          }
-        }
+      case Array(key: String, value) => updatePropertyContextMaybe(edgeType.propertyByName, key, value, elementReference)
     }
   }
 
-  /** choose one of `overflowdb.schema.Property.ValueType` based on the runtime class of a scalar (non-list) value */
+  private def updatePropertyContextMaybe(propertyByName: mutable.Map[String, Property], key: String, value: AnyRef, elementReference: ElementReference): Unit = {
+    if (!propertyByName.contains(key)) {
+      if (isList(value.getClass)) {
+        iterableForList(value).headOption.map { value =>
+          propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
+        }
+      } else {
+        propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = false, elementReference))
+      }
+    }
+  }
+
+    /** choose one of `overflowdb.schema.Property.ValueType` based on the runtime class of a scalar (non-list) value */
   private def valueTypeByRuntimeClass(clazz: Class[_]): String = {
     if (clazz.isAssignableFrom(classOf[Boolean]) || clazz.isAssignableFrom(classOf[java.lang.Boolean]))
       "ValueType.Boolean"
