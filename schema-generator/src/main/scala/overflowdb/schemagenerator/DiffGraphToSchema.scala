@@ -1,5 +1,6 @@
 package overflowdb.schemagenerator
 
+import org.slf4j.LoggerFactory
 import overflowdb.BatchedUpdate._
 import overflowdb.DetachedNodeGeneric
 
@@ -25,8 +26,8 @@ import scala.jdk.CollectionConverters.IterableHasAsScala
   * Note: this isn't optimised for performance and not tested on large input diffgraphs.
   */
 class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage: String) {
-
   import DiffGraphToSchema._
+  private val logger = LoggerFactory.getLogger(getClass)
 
   def toFile(diffGraph: DiffGraph, outFile: Path): Unit = {
     val sourceString = asSourceString(diffGraph)
@@ -128,35 +129,39 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
   }
 
   private def parseNode(node: DetachedNodeGeneric, scope: ScopeBuilder): Unit = {
-    val nodes = scope.nodeTypesByLabel.getOrElseUpdate(node.label, new NodeType(node.label))
+    val nodeType = scope.nodeTypesByLabel.getOrElseUpdate(node.label, new NodeType(node.label))
     val elementReference = ElementReference(ElementType.Node, node.label)
     node.propertiesAsKeyValues.sliding(2, 2).foreach {
-      case Array(key: String, value) if !nodes.propertyByName.contains(key) =>
-        if (isList(value.getClass)) {
-          iterableForList(value).headOption.map { value =>
-            nodes.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
+      case Array(key: String, value) =>
+        if (!nodeType.propertyByName.contains(key)) {
+          if (isList(value.getClass)) {
+            iterableForList(value).headOption.map { value =>
+              nodeType.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
+            }
+          } else {
+            nodeType.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = false, elementReference))
           }
-        } else {
-          nodes.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = false, elementReference))
         }
     }
   }
 
   private def parseEdge(edge: CreateEdge, scope: ScopeBuilder): Unit = {
-    val edges = scope.edgeTypesByLabel.getOrElseUpdate(edge.label, new EdgeType(edge.label))
+    val edgeType = scope.edgeTypesByLabel.getOrElseUpdate(edge.label, new EdgeType(edge.label))
     val srcNode = scope.nodeTypesByLabel(edge.src.label)
     val dstNode = scope.nodeTypesByLabel(edge.dst.label)
-    edges.srcDstNodes.addOne((srcNode, dstNode))
+    edgeType.srcDstNodes.addOne((srcNode, dstNode))
     val elementReference = ElementReference(ElementType.Edge, edge.label)
 
     edge.propertiesAndKeys.sliding(2, 2).foreach {
-      case Array(key: String, value) if !edges.propertyByName.contains(key) =>
-        if (isList(value.getClass)) {
-          iterableForList(value).headOption.map { value =>
-            edges.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
+      case Array(key: String, value) =>
+        if (!edgeType.propertyByName.contains(key)) {
+          if (isList(value.getClass)) {
+            iterableForList(value).headOption.map { value =>
+              edgeType.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = true, elementReference))
+            }
+          } else {
+            edgeType.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = false, elementReference))
           }
-        } else {
-          edges.propertyByName.update(key, Property(key, valueTypeByRuntimeClass(value.getClass), isList = false, elementReference))
         }
     }
   }
