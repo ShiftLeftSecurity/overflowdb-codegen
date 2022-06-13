@@ -4,5 +4,7 @@ name := "overflowdb-schema-generator"
 
 libraryDependencies ++= Seq(
   "io.shiftleft" % "overflowdb-core" % Versions.overflowdb,
+  "io.shiftleft" %% "overflowdb-formats" % Versions.overflowdb,
   "org.scalatest" %% "scalatest" % "3.2.12" % Test,
+  "org.slf4j" % "slf4j-simple" % "1.7.36" % Test,
 )
