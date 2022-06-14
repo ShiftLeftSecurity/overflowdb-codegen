@@ -71,7 +71,7 @@ class SchemaBuilder(domainShortName: String,
     this
   }
 
-  def build: Schema = {
+  def build(): Schema = {
     val schema = new Schema(
       domainShortName,
       basePackage,

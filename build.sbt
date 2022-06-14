@@ -16,6 +16,9 @@ lazy val integrationTests_2_13 = Projects.integrationTests_2_13
 lazy val integrationTests_3 = Projects.integrationTests_3
 lazy val sbtPlugin = Projects.sbtPlugin
 
+// TODO delete this manual test again
+lazy val schemaGeneratorTest = project.in(file("schema-generator-test"))
+
 ThisBuild/resolvers += Resolver.mavenLocal
 
 ThisBuild/Compile/scalacOptions ++= Seq(

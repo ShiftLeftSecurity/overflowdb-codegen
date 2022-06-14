@@ -100,7 +100,7 @@ class DiffGraphToSchema(domainName: String, schemaPackage: String, targetPackage
        |import overflowdb.schema.EdgeType.Cardinality
        |import overflowdb.schema.Property.ValueType
        |
-       |object ${domainName}Schema {
+       |object ${domainName.capitalize}Schema {
        |  val builder = new SchemaBuilder(
        |      domainShortName = "$domainName",
        |      basePackage = "$targetPackage"
