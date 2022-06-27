@@ -1,6 +1,6 @@
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import overflowdb.{Config, Graph}
+import overflowdb.{BatchedUpdate, Config, Graph}
 import overflowdb.traversal._
 import testschema01._
 import testschema01.nodes._
@@ -37,13 +37,14 @@ class Schema01Test extends AnyWordSpec with Matchers {
     val edge2 = node2a.addEdge(Edge2.Label, node1a, PropertyNames.NAME, "edge 2", PropertyNames.ORDER, 3)
     val node3 = graph.addNode(Node3.Label).asInstanceOf[Node3]
 
+    // TODO generate node type starters
+    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
+    def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
+
     "lookup and traverse nodes/edges/properties" in {
       // generic traversal
       graph.nodes.property(Properties.NAME).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
       graph.edges.property(Properties.NAME).toSetMutable shouldBe Set("edge 2")
-      // TODO generate node type starters
-      def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
-      def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
       node1Traversal.out.toList shouldBe Seq(node2a)
       node1Traversal.name.toSetMutable shouldBe Set("node 1a", "node 1b")
       node1Traversal.order.l shouldBe Seq(2)
@@ -81,12 +82,21 @@ class Schema01Test extends AnyWordSpec with Matchers {
       // TODO generate domain-specific setters in codegen
     }
 
-    "NewNodes" in {
-      NewNode2()
+    "generate NewNodes" in {
+      val newNode2 = NewNode2()
         .name("name1")
         .node3(node3)
         .options(Seq("one", "two", "three"))
         .placements(Seq(1,2,3): Seq[Integer])
+
+      val builder = new BatchedUpdate.DiffGraphBuilder
+      builder.addNode(newNode2)
+      BatchedUpdate.applyDiff(graph, builder)
+
+      val node2 = node2Traversal.name("name1").head
+      val innerNode: Option[Node3] = node2.node3
+      // ensure inner node is of type StoredNode
+      val innerNodeIsStoredNode: StoredNode = innerNode.get
     }
   }
 
