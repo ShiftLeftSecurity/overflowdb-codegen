@@ -35,6 +35,11 @@ class TestSchema01 extends TestSchema {
         |line 3
         |""".stripMargin)
 
+  node2.addContainedNode(
+    node = builder.anyNode,
+    localName = "containedAnyNode",
+    cardinality = Property.Cardinality.ZeroOrOne)
+
   val edge1 = builder.addEdgeType(
     name = "EDGE1",
     comment = "sample edge 1")
