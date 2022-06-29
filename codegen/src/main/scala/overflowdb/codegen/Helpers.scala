@@ -125,9 +125,13 @@ object Helpers {
     getCompleteType(property.cardinality, typeFor(property))
 
   def typeFor(containedNode: ContainedNode): String = {
-    val className = containedNode.nodeType.className
-    if (DefaultNodeTypes.AllClassNames.contains(className)) className
-    else className + "Base"
+    if (containedNode.nodeType == AnyNodeType) {
+      "AbstractNode"
+    } else {
+      val className = containedNode.nodeType.className
+      if (DefaultNodeTypes.AllClassNames.contains(className)) className
+      else className + "Base"
+    }
   }
 
   def getCompleteType(containedNode: ContainedNode): String =
