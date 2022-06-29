@@ -1,6 +1,5 @@
 package overflowdb.schema
 
-import overflowdb.codegen.DefaultNodeTypes
 import overflowdb.codegen.Helpers._
 import overflowdb.schema.Property.ValueType
 
@@ -17,24 +16,8 @@ class SchemaBuilder(domainShortName: String,
   var protoOptions: Option[ProtoOptions] = None
   val noWarnList: mutable.Set[(AbstractNodeType, Property[_])] = mutable.Set.empty
 
-  /** root node trait for all nodes - use if you want to be explicitly unspecific
-    * n.b. 1: this one allows for StoredNode and NewNode
-    * n.b. 2: this it's not even part of the regular base types, but instead defined in the RootTypes.scala */
-  lazy val anyNode: NodeBaseType =
-    new NodeBaseType(
-      DefaultNodeTypes.AbstractNodeName,
-      Some("generic node base trait - use if you want to be explicitly unspecific"),
-      SchemaInfo.forClass(getClass)
-    )
-
-  /** root node trait for all stored nodes - use if you want to be explicitly unspecific
-    * n.b.: this it's not even part of the regular base types, but instead defined in the RootTypes.scala */
-  lazy val storedNode: NodeBaseType =
-    new NodeBaseType(
-      DefaultNodeTypes.StoredNodeName,
-      Some("generic stored node base trait - use if you want to be explicitly unspecific"),
-      SchemaInfo.forClass(getClass)
-    )
+  /** root node trait for all nodes - use if you want to be explicitly unspecific */
+  lazy val anyNode: AnyNodeType.type = AnyNodeType
 
   def addProperty[A](name: String, valueType: ValueType[A], comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property[A] = {

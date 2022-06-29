@@ -146,6 +146,15 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   override def toString = s"NodeType($name)"
 }
 
+/** root node trait for all nodes - use if you want to be explicitly unspecific */
+object AnyNodeType extends AbstractNodeType(
+  name = "AnyNode",
+  comment = Some("generic node base trait - use if you want to be explicitly unspecific"),
+  SchemaInfo.Unknown) {
+  /** all node types extend this node */
+  override def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType] = allNodes
+}
+
 class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   extends AbstractNodeType(name, comment, schemaInfo) {
 
@@ -165,7 +174,11 @@ case class AdjacentNode(viaEdge: EdgeType, neighbor: AbstractNodeType, cardinali
 case class ContainedNode(nodeType: AbstractNodeType,
                          localName: String,
                          cardinality: Property.Cardinality,
-                         comment: Option[String])
+                         comment: Option[String]) {
+  lazy val classNameForStoredNode =
+    if (nodeType == AnyNodeType) "StoredNode"
+    else nodeType.className
+}
 
 /** An empty trait without any implementation, e.g. to mark a semantic relationship between certain types */
 case class MarkerTrait(name: String)

@@ -86,6 +86,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
       val newNode2 = NewNode2()
         .name("name1")
         .node3(node3)
+        .containedAnyNode(node3) // contained node typed as `anyNode`
         .options(Seq("one", "two", "three"))
         .placements(Seq(1,2,3): Seq[Integer])
 
@@ -94,9 +95,11 @@ class Schema01Test extends AnyWordSpec with Matchers {
       BatchedUpdate.applyDiff(graph, builder)
 
       val node2 = node2Traversal.name("name1").head
+      // ensure contained nodes have the correct types - they should both be StoredNodes
       val innerNode: Option[Node3] = node2.node3
-      // ensure inner node is of type StoredNode
-      val innerNodeIsStoredNode: StoredNode = innerNode.get
+      val innerNodeGeneric: Option[StoredNode] = node2.containedAnyNode
+      innerNode.get shouldBe node3
+      innerNodeGeneric.get shouldBe node3
     }
   }
 
