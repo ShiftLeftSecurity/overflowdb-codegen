@@ -373,9 +373,6 @@ class CodeGen(schema: Schema) {
           s"""trait $traitName {
              |  def $camelCaseName: $tpe
              |}
-             |trait ${traitName}Mutable extends $traitName {
-             |  def ${camelCaseName}_=(value: $tpe): Unit
-             |}
              |""".stripMargin
 
         }.mkString(lineSeparator)
@@ -454,10 +451,6 @@ class CodeGen(schema: Schema) {
 
       val mixinsForBaseTypes = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}"
-      }.mkString(" ")
-
-      val mixinsForPropertyAccessorsMutable = nodeBaseType.properties.map { property =>
-        s"with Has${property.className}Mutable"
       }.mkString(" ")
 
       val mixinForBaseTypesNew = nodeBaseType.extendz.map { baseTrait =>
@@ -578,7 +571,6 @@ class CodeGen(schema: Schema) {
          |$mixinsForMarkerTraits
          |
          |trait ${className}New extends NewNode
-         |$mixinsForPropertyAccessorsMutable
          |$mixinForBaseTypesNew
          |
          |trait $className extends StoredNode with ${className}Base
