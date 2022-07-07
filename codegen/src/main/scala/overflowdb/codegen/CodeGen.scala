@@ -561,6 +561,12 @@ class CodeGen(schema: Schema) {
            |}""".stripMargin
       }
 
+      val newNodePropertySetters = nodeBaseType.properties.map { property =>
+        val camelCaseName = camelCase(property.name)
+        val tpe = getCompleteType(property)
+        s"def ${camelCaseName}_=(value: $tpe): Unit"
+      }.mkString(lineSeparator)
+
       s"""package $nodesPackage
          |
          |$companionObject
@@ -570,8 +576,9 @@ class CodeGen(schema: Schema) {
          |$mixinsForBaseTypes2
          |$mixinsForMarkerTraits
          |
-         |trait ${className}New extends NewNode
-         |$mixinForBaseTypesNew
+         |trait ${className}New extends NewNode $mixinForBaseTypesNew $mixinsForPropertyAccessorsReadOnly {
+         |  $newNodePropertySetters
+         |}
          |
          |trait $className extends StoredNode with ${className}Base
          |$mixinsForBaseTypes {
