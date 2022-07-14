@@ -958,7 +958,7 @@ class CodeGen(schema: Schema) {
                |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString(lineSeparator)
 
-        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[${neighborInfo.deriveNeighborNodeType}] = get().$edgeAccessorName
+        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[${neighborInfo.deriveNeighborNodeType.className}] = get().$edgeAccessorName
            |override def _$edgeAccessorName = get()._$edgeAccessorName
            |
            |$nodeDelegators
@@ -1006,7 +1006,7 @@ class CodeGen(schema: Schema) {
 
       val neighborAccessors = neighborInfos.map { case (neighborInfo, direction) =>
         val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val neighborType = neighborInfo.deriveNeighborNodeType
+        val neighborType = neighborInfo.deriveNeighborNodeType.className
         val offsetPosition = neighborInfo.offsetPosition
 
         val nodeAccessors = neighborInfo.nodeInfos.collect {

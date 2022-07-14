@@ -12,4 +12,19 @@ class TestSchema06 extends TestSchema {
     localName = "containedAnyNode",
     cardinality = Property.Cardinality.ZeroOrOne)
 
+  val edge1 = builder.addEdgeType("edge1")
+  val edge2 = builder.addEdgeType("edge2")
+
+  node1.addOutEdge(
+    edge = edge1,
+    inNode = builder.anyNode,
+    stepNameOut = "edge1OutNamed",
+    stepNameIn = "edge1InNamed")
+
+  // TODO other way around
+  // builder.anyNode.addOutEdge(
+  //   edge = edge2,
+  //   inNode = node2,
+  //   stepNameOut = "edge2OutNamed",
+  //   stepNameIn = "edge2InNamed")
 }

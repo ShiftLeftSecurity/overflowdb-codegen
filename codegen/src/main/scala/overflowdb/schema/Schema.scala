@@ -1,5 +1,6 @@
 package overflowdb.schema
 
+import overflowdb.codegen.DefaultNodeTypes
 import overflowdb.codegen.Helpers._
 import overflowdb.schema.Property.Default
 
@@ -151,6 +152,7 @@ object AnyNodeType extends AbstractNodeType(
   name = "AnyNode",
   comment = Some("generic node base trait - use if you want to be explicitly unspecific"),
   SchemaInfo.Unknown) {
+  override val className = DefaultNodeTypes.StoredNodeClassname
   /** all node types extend this node */
   override def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType] = allNodes
 }
@@ -280,7 +282,7 @@ object Constant {
 }
 
 case class NeighborInfoForEdge(edge: EdgeType, nodeInfos: Seq[NeighborInfoForNode], offsetPosition: Int) {
-  lazy val deriveNeighborNodeType: String =
+  lazy val deriveNeighborNodeType: AbstractNodeType =
     deriveCommonRootType(nodeInfos.map(_.neighborNode).toSet)
 }
 
@@ -329,7 +331,7 @@ case class ProtoOptions(pkg: String,
 
 trait HasClassName {
   def name: String
-  lazy val className = camelCaseCaps(name)
+  def className = camelCaseCaps(name)
 }
 
 trait HasProperties {

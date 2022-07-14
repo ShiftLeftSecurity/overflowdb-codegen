@@ -15,6 +15,7 @@ class Schema06Test extends AnyWordSpec with Matchers {
     val builder = new BatchedUpdate.DiffGraphBuilder
     builder.addNode(node1New)
     builder.addNode(node2aNew)
+    // builder.addEdge(node2aNew, node1New, Edge1.Label)
     val graph = TestSchema.empty.graph
     BatchedUpdate.applyDiff(graph, builder)
 
@@ -27,5 +28,9 @@ class Schema06Test extends AnyWordSpec with Matchers {
     // ensure contained nodes have the correct types - they should both be StoredNodes
     val innerNode: Option[StoredNode] = node2.containedAnyNode
     innerNode.get shouldBe node1
+
+
+
   }
+
 }
