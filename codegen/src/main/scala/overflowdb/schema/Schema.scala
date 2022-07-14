@@ -67,8 +67,12 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
     _extendz.toSeq
 
   def extendzRecursively: Seq[NodeBaseType] = {
+    val results = Seq.newBuilder[NodeBaseType]
     val extendsLevel1 = extendz
-    (extendsLevel1 ++ extendsLevel1.flatMap(_.extendzRecursively)).distinct
+    results ++= extendsLevel1
+    results ++= extendsLevel1.flatMap(_.extendzRecursively)
+    results += AnyNodeType
+    results.result().distinct
   }
 
   /**
@@ -148,13 +152,15 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
 }
 
 /** root node trait for all nodes - use if you want to be explicitly unspecific */
-object AnyNodeType extends AbstractNodeType(
+object AnyNodeType extends NodeBaseType(
   name = "AnyNode",
   comment = Some("generic node base trait - use if you want to be explicitly unspecific"),
   SchemaInfo.Unknown) {
   override val className = DefaultNodeTypes.StoredNodeClassname
   /** all node types extend this node */
   override def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType] = allNodes
+
+  override def toString: String = name
 }
 
 class NodeBaseType(name: String, comment: Option[String], schemaInfo: SchemaInfo)

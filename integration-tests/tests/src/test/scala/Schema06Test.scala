@@ -11,11 +11,12 @@ class Schema06Test extends AnyWordSpec with Matchers {
 
   "working with graph, DiffGraph etc." in {
     val node1New = NewNode1().name("node 1")
-    val node2aNew = NewNode2().containedAnyNode(node1New)
+    val node2New = NewNode2().containedAnyNode(node1New)
     val builder = new BatchedUpdate.DiffGraphBuilder
     builder.addNode(node1New)
-    builder.addNode(node2aNew)
-    // builder.addEdge(node2aNew, node1New, Edge1.Label)
+    builder.addNode(node2New)
+    builder.addEdge(node1New, node2New, Edge1.Label)
+    // builder.addEdge(node2New, node1New, Edge2.Label)
     val graph = TestSchema.empty.graph
     BatchedUpdate.applyDiff(graph, builder)
 
@@ -29,8 +30,8 @@ class Schema06Test extends AnyWordSpec with Matchers {
     val innerNode: Option[StoredNode] = node2.containedAnyNode
     innerNode.get shouldBe node1
 
-
-
+    // TODO verify traversals: node1 <-> node2
+    // ???
   }
 
 }

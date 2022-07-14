@@ -21,10 +21,9 @@ class TestSchema06 extends TestSchema {
     stepNameOut = "edge1OutNamed",
     stepNameIn = "edge1InNamed")
 
-  // TODO other way around
-  // builder.anyNode.addOutEdge(
-  //   edge = edge2,
-  //   inNode = node2,
-  //   stepNameOut = "edge2OutNamed",
-  //   stepNameIn = "edge2InNamed")
+  builder.anyNode.addOutEdge(
+    edge = edge2,
+    inNode = node2,
+    stepNameOut = "edge2OutNamed",
+    stepNameIn = "edge2InNamed")
 }
