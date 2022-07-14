@@ -144,6 +144,7 @@ class Schema02Test extends AnyWordSpec with Matchers {
       baseNodeTraversal.name.l shouldBe Seq("node 01")
       baseNodeTraversal.name(".*").size shouldBe 1
       baseNodeTraversal.nameExact("node 01").size shouldBe 1
+      baseNodeTraversal.nameExact("not found", "node 01").size shouldBe 1
       baseNodeTraversal.nameNot("abc").size shouldBe 1
 
       node1Traversal.order.l shouldBe Seq(4)
