@@ -19,6 +19,7 @@ object CodegenForAllSchemas {
       new TestSchema03c,
       new TestSchema04,
       new TestSchema05,
+      new TestSchema06,
     ).foreach { schema =>
       new CodeGen(schema.instance).run(outputDir)
     }
