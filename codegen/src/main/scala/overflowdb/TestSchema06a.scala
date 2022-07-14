@@ -1,8 +1,13 @@
-import overflowdb.schema.Property.ValueType
-import overflowdb.schema._
+package overflowdb
 
-/** tests related to `AnyNode` */
-class TestSchema06 extends TestSchema {
+import overflowdb.codegen.CodeGen
+import overflowdb.schema.Property.ValueType
+import overflowdb.schema.{Property, SchemaBuilder}
+
+import java.nio.file.Path
+
+object TestSchema06a extends App {
+  val builder = new SchemaBuilder(domainShortName = "TestSchema", basePackage = getClass.getCanonicalName.toLowerCase)
   val name = builder.addProperty("NAME", ValueType.String, "Name of represented object")
   val node1 = builder.addNodeType("NODE1").addProperty(name)
   val node2 = builder.addNodeType("NODE2")
@@ -21,9 +26,13 @@ class TestSchema06 extends TestSchema {
     stepNameOut = "edge1OutNamed",
     stepNameIn = "edge1InNamed")
 
-  builder.anyNode.addOutEdge(
-    edge = edge2,
-    inNode = node1,
-    stepNameOut = "edge2OutNamed",
-    stepNameIn = "edge2InNamed")
+  // builder.anyNode.addOutEdge(
+  //   edge = edge2,
+  //   inNode = node2,
+  //   stepNameOut = "edge2OutNamed",
+  //   stepNameIn = "edge2InNamed")
+
+  val instance = builder.build
+
+  new CodeGen(instance).disableScalafmt.run(Path.of("/tmp/odb-codegen").toFile)
 }
