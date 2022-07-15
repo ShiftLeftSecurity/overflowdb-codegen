@@ -124,12 +124,12 @@ object Helpers {
     getCompleteType(property.cardinality, typeFor(property))
 
   def typeFor(containedNode: ContainedNode): String = {
-    if (containedNode.nodeType == AnyNodeType) {
-      "AbstractNode"
-    } else {
-      val className = containedNode.nodeType.className
-      if (DefaultNodeTypes.AllClassNames.contains(className)) className
-      else className + "Base"
+    containedNode.nodeType match {
+      case anyNode: AnyNodeType => "AbstractNode"
+      case nodeType =>
+        val className = containedNode.nodeType.className
+        if (DefaultNodeTypes.AllClassNames.contains(className)) className
+        else className + "Base"
     }
   }
 
@@ -237,10 +237,9 @@ object Helpers {
     }
   }
 
-  def deriveCommonRootType(neighborNodeInfos: Set[AbstractNodeType]): AbstractNodeType = {
+  def deriveCommonRootType(neighborNodeInfos: Set[AbstractNodeType]): Option[AbstractNodeType] = {
     lowestCommonAncestor(neighborNodeInfos)
       .orElse(findSharedRoot(neighborNodeInfos))
-      .getOrElse(AnyNodeType)
   }
 
   /** in theory there can be multiple candidates - we're just returning one of those for now */

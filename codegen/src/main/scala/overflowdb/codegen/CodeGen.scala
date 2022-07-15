@@ -493,7 +493,7 @@ class CodeGen(schema: Schema) {
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
-            entireNodeHierarchy.filterNot(_ == AnyNodeType).map { neighbor =>
+            entireNodeHierarchy.filterNot(_.isInstanceOf[AnyNodeType]).map { neighbor =>
               val accessorName = adjacentNode.customStepName.getOrElse(
                 s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
               )
@@ -959,7 +959,8 @@ class CodeGen(schema: Schema) {
                |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString(lineSeparator)
 
-        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[${neighborInfo.deriveNeighborNodeType.className}] = get().$edgeAccessorName
+        val neighborNodeClass = neighborInfo.deriveNeighborNodeType.getOrElse(schema.anyNode).className
+        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborNodeClass] = get().$edgeAccessorName
            |override def _$edgeAccessorName = get()._$edgeAccessorName
            |
            |$nodeDelegators
@@ -1007,7 +1008,7 @@ class CodeGen(schema: Schema) {
 
       val neighborAccessors = neighborInfos.map { case (neighborInfo, direction) =>
         val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val neighborType = neighborInfo.deriveNeighborNodeType.className
+        val neighborType = neighborInfo.deriveNeighborNodeType.getOrElse(schema.anyNode).className
         val offsetPosition = neighborInfo.offsetPosition
 
         val nodeAccessors = neighborInfo.nodeInfos.collect {

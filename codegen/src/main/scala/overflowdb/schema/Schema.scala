@@ -14,6 +14,7 @@ class Schema(val domainShortName: String,
              val basePackage: String,
              val additionalTraversalsPackages: Seq[String],
              val properties: Seq[Property[_]],
+             val anyNode: AnyNodeType,
              val nodeBaseTypes: Seq[NodeBaseType],
              val nodeTypes: Seq[NodeType],
              val edgeTypes: Seq[EdgeType],
@@ -71,7 +72,6 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
     val extendsLevel1 = extendz
     results ++= extendsLevel1
     results ++= extendsLevel1.flatMap(_.extendzRecursively)
-    results += AnyNodeType
     results.result().distinct
   }
 
@@ -152,7 +152,7 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
 }
 
 /** root node trait for all nodes - use if you want to be explicitly unspecific */
-object AnyNodeType extends NodeBaseType(
+class AnyNodeType extends NodeBaseType(
   name = "AnyNode",
   comment = Some("generic node base trait - use if you want to be explicitly unspecific"),
   SchemaInfo.Unknown) {
@@ -161,10 +161,6 @@ object AnyNodeType extends NodeBaseType(
   /** all node types extend this node */
   override def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType] =
     allNodes
-
-  /* this is the top of the hierarchy */
-  override def extendzRecursively: Seq[NodeBaseType] =
-    Nil
 
   override def toString: String = name
 }
@@ -189,9 +185,7 @@ case class ContainedNode(nodeType: AbstractNodeType,
                          localName: String,
                          cardinality: Property.Cardinality,
                          comment: Option[String]) {
-  lazy val classNameForStoredNode =
-    if (nodeType == AnyNodeType) "StoredNode"
-    else nodeType.className
+  lazy val classNameForStoredNode = nodeType.className
 }
 
 /** An empty trait without any implementation, e.g. to mark a semantic relationship between certain types */
@@ -294,7 +288,7 @@ object Constant {
 }
 
 case class NeighborInfoForEdge(edge: EdgeType, nodeInfos: Seq[NeighborInfoForNode], offsetPosition: Int) {
-  lazy val deriveNeighborNodeType: AbstractNodeType =
+  lazy val deriveNeighborNodeType: Option[AbstractNodeType] =
     deriveCommonRootType(nodeInfos.map(_.neighborNode).toSet)
 }
 

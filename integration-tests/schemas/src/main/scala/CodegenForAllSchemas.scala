@@ -17,9 +17,9 @@ object CodegenForAllSchemas {
       new TestSchema03a,
       new TestSchema03b,
       new TestSchema03c,
-      // new TestSchema04,
-      // new TestSchema05,
-      // new TestSchema06,
+      new TestSchema04,
+      new TestSchema05,
+      new TestSchema06,
     ).foreach { schema =>
       new CodeGen(schema.instance).disableScalafmt.run(outputDir)
     }
