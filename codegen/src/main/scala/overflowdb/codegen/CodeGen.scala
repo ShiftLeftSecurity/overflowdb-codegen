@@ -493,10 +493,11 @@ class CodeGen(schema: Schema) {
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
-            entireNodeHierarchy.map { neighbor =>
+            entireNodeHierarchy.filterNot(_ == AnyNodeType).map { neighbor =>
               val accessorName = adjacentNode.customStepName.getOrElse(
                 s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
               )
+
               val accessorImpl0 = s"$edgeAccessorName.collectAll[${neighbor.className}]"
               val cardinality = adjacentNode.cardinality
               val accessorImpl1 = cardinality match {
@@ -516,7 +517,7 @@ class CodeGen(schema: Schema) {
                  |  $accessorImpl1
                  |  """.stripMargin
             }
-          }.distinct.mkString(lineSeparator)
+          }.mkString(lineSeparator)
 
           s"""$genericEdgeAccessor
              |
