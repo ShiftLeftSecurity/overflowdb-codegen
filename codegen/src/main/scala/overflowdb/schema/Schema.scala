@@ -157,8 +157,14 @@ object AnyNodeType extends NodeBaseType(
   comment = Some("generic node base trait - use if you want to be explicitly unspecific"),
   SchemaInfo.Unknown) {
   override val className = DefaultNodeTypes.StoredNodeClassname
+
   /** all node types extend this node */
-  override def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType] = allNodes
+  override def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType] =
+    allNodes
+
+  /* this is the top of the hierarchy */
+  override def extendzRecursively: Seq[NodeBaseType] =
+    Nil
 
   override def toString: String = name
 }
