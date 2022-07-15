@@ -7,7 +7,6 @@ import overflowdb.schema.Property.ValueType
 
 import scala.annotation.tailrec
 
-// TODO drop
 object DefaultNodeTypes {
   /** root type for all nodes */
   val AbstractNodeName = "ABSTRACT_NODE"
@@ -125,12 +124,12 @@ object Helpers {
     getCompleteType(property.cardinality, typeFor(property))
 
   def typeFor(containedNode: ContainedNode): String = {
-    if (containedNode.nodeType == AnyNodeType) {
-      "AbstractNode"
-    } else {
-      val className = containedNode.nodeType.className
-      if (DefaultNodeTypes.AllClassNames.contains(className)) className
-      else className + "Base"
+    containedNode.nodeType match {
+      case anyNode: AnyNodeType => "AbstractNode"
+      case nodeType =>
+        val className = containedNode.nodeType.className
+        if (DefaultNodeTypes.AllClassNames.contains(className)) className
+        else className + "Base"
     }
   }
 
@@ -238,12 +237,9 @@ object Helpers {
     }
   }
 
-  // TODO return AbstractNodeType - need DefaultNodeTypes.StoredNode: AbstractNodeType
-  def deriveCommonRootType(neighborNodeInfos: Set[AbstractNodeType]): String = {
+  def deriveCommonRootType(neighborNodeInfos: Set[AbstractNodeType]): Option[AbstractNodeType] = {
     lowestCommonAncestor(neighborNodeInfos)
       .orElse(findSharedRoot(neighborNodeInfos))
-      .map(_.className)
-      .getOrElse(DefaultNodeTypes.StoredNodeClassname)
   }
 
   /** in theory there can be multiple candidates - we're just returning one of those for now */

@@ -17,7 +17,7 @@ class SchemaBuilder(domainShortName: String,
   val noWarnList: mutable.Set[(AbstractNodeType, Property[_])] = mutable.Set.empty
 
   /** root node trait for all nodes - use if you want to be explicitly unspecific */
-  lazy val anyNode: AnyNodeType.type = AnyNodeType
+  lazy val anyNode: AnyNodeType = new AnyNodeType
 
   def addProperty[A](name: String, valueType: ValueType[A], comment: String = "")(
     implicit schemaInfo: SchemaInfo = SchemaInfo.Unknown): Property[A] = {
@@ -60,6 +60,7 @@ class SchemaBuilder(domainShortName: String,
       basePackage,
       additionalTraversalsPackages,
       properties.sortBy(_.name.toLowerCase).toSeq,
+      anyNode,
       nodeBaseTypes.sortBy(_.name.toLowerCase).toSeq,
       nodeTypes.sortBy(_.name.toLowerCase).toSeq,
       edgeTypes.sortBy(_.name.toLowerCase).toSeq,

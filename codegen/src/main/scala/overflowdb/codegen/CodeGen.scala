@@ -616,9 +616,9 @@ class CodeGen(schema: Schema) {
           *  Later on, we will create edge accessors for all inherited neighbors, but only create the node accessors
           *  on the base types (if they are defined there). Note: they may even be inherited with a different cardinality */
         def adjacentNodesWithInheritanceStatus(adjacentNodes: AbstractNodeType => Seq[AdjacentNode]): Seq[AjacentNodeWithInheritanceStatus] = {
-          val inherited = nodeType.extendzRecursively
-            .flatMap(adjacentNodes)
-            .map(AjacentNodeWithInheritanceStatus(_, true))
+          // nodes may have been linked from any of their parents, including `AnyNode`
+          val allParentNodes = nodeType.extendzRecursively :+ schema.anyNode
+          val inherited = allParentNodes.flatMap(adjacentNodes).map(AjacentNodeWithInheritanceStatus(_, true))
 
           // only edge and neighbor node matter, not the cardinality
           val inheritedLookup: Set[(EdgeType, AbstractNodeType)] =
@@ -958,7 +958,8 @@ class CodeGen(schema: Schema) {
                |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
         }.mkString(lineSeparator)
 
-        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[${neighborInfo.deriveNeighborNodeType}] = get().$edgeAccessorName
+        val neighborNodeClass = neighborInfo.deriveNeighborNodeType.getOrElse(schema.anyNode).className
+        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborNodeClass] = get().$edgeAccessorName
            |override def _$edgeAccessorName = get()._$edgeAccessorName
            |
            |$nodeDelegators
@@ -1006,7 +1007,7 @@ class CodeGen(schema: Schema) {
 
       val neighborAccessors = neighborInfos.map { case (neighborInfo, direction) =>
         val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val neighborType = neighborInfo.deriveNeighborNodeType
+        val neighborType = neighborInfo.deriveNeighborNodeType.getOrElse(schema.anyNode).className
         val offsetPosition = neighborInfo.offsetPosition
 
         val nodeAccessors = neighborInfo.nodeInfos.collect {
