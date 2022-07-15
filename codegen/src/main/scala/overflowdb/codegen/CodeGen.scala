@@ -497,7 +497,6 @@ class CodeGen(schema: Schema) {
               val accessorName = adjacentNode.customStepName.getOrElse(
                 s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
               )
-
               val accessorImpl0 = s"$edgeAccessorName.collectAll[${neighbor.className}]"
               val cardinality = adjacentNode.cardinality
               val accessorImpl1 = cardinality match {
@@ -517,7 +516,7 @@ class CodeGen(schema: Schema) {
                  |  $accessorImpl1
                  |  """.stripMargin
             }
-          }.mkString(lineSeparator)
+          }.distinct.mkString(lineSeparator)
 
           s"""$genericEdgeAccessor
              |
