@@ -1283,10 +1283,12 @@ class CodeGen(schema: Schema) {
              |  * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
              |  * */
              |def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
-             |  //fixme: use the index
-             |  val vset = values.to(Set)
-             |  traversal.filter{node => vset.contains(node.${nameCamelCase})}
+             |  if (values.size == 1)
+             |    ${nameCamelCase}Exact(values.head)
+             |  else
+             |    overflowdb.traversal.filter.StringPropertyFilter.exactMultiple[NodeType, $baseType](traversal, node => Some(node.$nameCamelCase), values, "${property.name}")
              |}
+             |
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
@@ -1330,14 +1332,16 @@ class CodeGen(schema: Schema) {
              |  * Traverse to nodes where $nameCamelCase matches `value` exactly.
              |  * */
              |def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
-             |  traversal.filter{node => node.$nameCamelCase.isDefined && node.${nameCamelCase}.get == value}
+             |  traversal.filter{node => node.$nameCamelCase.contains(value)}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
              |  * */
              |def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
-             |  val vset = values.to(Set)
-             |  traversal.filter{node => node.$nameCamelCase.isDefined && vset.contains(node.${nameCamelCase}.get)}
+             |  if (values.size == 1)
+             |    ${nameCamelCase}Exact(values.head)
+             |  else
+             |    overflowdb.traversal.filter.StringPropertyFilter.exactMultiple[NodeType, $baseType](traversal, _.$nameCamelCase, values, "${property.name}")
              |}
              |
              |/**
