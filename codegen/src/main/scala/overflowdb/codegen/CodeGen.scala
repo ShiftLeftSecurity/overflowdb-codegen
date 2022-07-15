@@ -493,7 +493,7 @@ class CodeGen(schema: Schema) {
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
-            entireNodeHierarchy.filterNot(_.isInstanceOf[AnyNodeType]).map { neighbor =>
+            entireNodeHierarchy.map { neighbor =>
               val accessorName = adjacentNode.customStepName.getOrElse(
                 s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
               )
