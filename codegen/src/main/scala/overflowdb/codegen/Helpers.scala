@@ -192,11 +192,20 @@ object Helpers {
        |""".stripMargin
   }
 
-  def propertyDefaultCases(properties: Seq[Property[_]]): String =
+  def propertyDefaultCases(properties: Seq[Property[_]]): String = {
     properties.collect {
       case p if p.hasDefault =>
         s"""val ${p.className} = ${defaultValueImpl(p.default.get)}"""
-    }.mkString("\n|    ")
+    }.mkString(s"$lineSeparator|    ")
+  }
+
+  def propertyAccessors(properties: Seq[Property[_]]): String = {
+    properties.map { property =>
+      val camelCaseName = camelCase(property.name)
+      val tpe = getCompleteType(property)
+      s"def $camelCaseName: $tpe"
+    }.mkString(lineSeparator)
+  }
 
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {

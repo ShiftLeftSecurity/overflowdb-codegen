@@ -365,18 +365,6 @@ class CodeGen(schema: Schema) {
           .sorted
           .mkString(lineSeparator)
 
-      val keyBasedTraits =
-        schema.nodeProperties.map { property =>
-          val camelCaseName = camelCase(property.name)
-          val tpe = getCompleteType(property)
-          val traitName = s"Has${property.className}"
-          s"""trait $traitName {
-             |  def $camelCaseName: $tpe
-             |}
-             |""".stripMargin
-
-        }.mkString(lineSeparator)
-
       val factories = {
         val nodeFactories =
           schema.nodeTypes.map(nodeType => nodeType.className + ".factory").mkString(", ")
@@ -427,7 +415,6 @@ class CodeGen(schema: Schema) {
          |  ${genericNeighborAccessors.mkString(lineSeparator)}
          |}
          |
-         |  $keyBasedTraits
          |  $markerTraits
          |
          |  $factories
@@ -444,10 +431,7 @@ class CodeGen(schema: Schema) {
     def generateNodeBaseTypeSource(nodeBaseType: NodeBaseType): String = {
       val className = nodeBaseType.className
       val properties = nodeBaseType.properties
-
-      val mixinsForPropertyAccessorsReadOnly = nodeBaseType.properties.map { property =>
-        s"with Has${property.className}"
-      }.mkString(" ")
+      val propertyAccessors = Helpers.propertyAccessors(properties)
 
       val mixinsForBaseTypes = nodeBaseType.extendz.map { baseTrait =>
         s"with ${baseTrait.className}"
@@ -571,13 +555,13 @@ class CodeGen(schema: Schema) {
          |
          |$companionObject
          |
-         |trait ${className}Base extends AbstractNode
-         |$mixinsForPropertyAccessorsReadOnly
-         |$mixinsForBaseTypes2
-         |$mixinsForMarkerTraits
+         |trait ${className}Base extends AbstractNode $mixinsForBaseTypes2 $mixinsForMarkerTraits {
+         |  $propertyAccessors
+         |}
          |
-         |trait ${className}New extends NewNode $mixinForBaseTypesNew $mixinsForPropertyAccessorsReadOnly {
+         |trait ${className}New extends NewNode $mixinForBaseTypesNew {
          |  $newNodePropertySetters
+         |  $propertyAccessors
          |}
          |
          |trait $className extends StoredNode with ${className}Base
@@ -717,8 +701,6 @@ class CodeGen(schema: Schema) {
         nodeType.markerTraits.map { case MarkerTrait(name) =>
           s"with $name"
         }.mkString(" ")
-
-      val propertyBasedTraits = properties.map(p => s"with Has${p.className}").mkString(" ")
 
       val propertiesMapImpl = {
         import Property.Cardinality
@@ -940,8 +922,10 @@ class CodeGen(schema: Schema) {
       }.mkString(lineSeparator)
 
       val nodeBaseImpl =
-        s"""trait ${className}Base extends AbstractNode $mixinsForExtendedNodesBase $mixinsForMarkerTraits $propertyBasedTraits {
+        s"""trait ${className}Base extends AbstractNode $mixinsForExtendedNodesBase $mixinsForMarkerTraits {
            |  def asStored : StoredNode = this.asInstanceOf[StoredNode]
+           |
+           |  ${Helpers.propertyAccessors(properties)}
            |
            |  $abstractContainedNodeAccessors
            |}
