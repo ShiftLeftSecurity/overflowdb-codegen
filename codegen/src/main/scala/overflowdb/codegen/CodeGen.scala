@@ -1198,7 +1198,7 @@ class CodeGen(schema: Schema) {
          |}
          |
          |// lower priority implicits for base types
-         |trait NodeBaseTypeTraversalImplicits {
+         |trait NodeBaseTypeTraversalImplicits extends overflowdb.traversal.Implicits {
          |  $implicitsForNodeBaseTypeTraversals
          |}
          |""".stripMargin
