@@ -1198,7 +1198,7 @@ class CodeGen(schema: Schema) {
          |}
          |
          |// lower priority implicits for base types
-         |trait NodeBaseTypeTraversalImplicits {
+         |trait NodeBaseTypeTraversalImplicits extends overflowdb.traversal.Implicits {
          |  $implicitsForNodeBaseTypeTraversals
          |}
          |""".stripMargin
@@ -1207,7 +1207,7 @@ class CodeGen(schema: Schema) {
     def generateCustomStepNameTraversals(nodeType: AbstractNodeType): Seq[String] = {
       for {
         direction <- Seq(Direction.IN, Direction.OUT)
-        AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) <- nodeType.edges(direction).sortBy(_.customStepName)
+        case AdjacentNode(viaEdge, neighbor, cardinality, Some(customStepName), customStepDoc) <- nodeType.edges(direction).sortBy(_.customStepName)
       } yield {
         val mapOrFlatMap = cardinality match {
           case Cardinality.One => "map"
