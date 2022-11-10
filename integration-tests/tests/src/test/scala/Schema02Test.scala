@@ -1,7 +1,7 @@
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import overflowdb.SchemaViolationException
-import overflowdb.traversal._
+import overflowdb.traversal.Traversal
 import testschema02._
 import testschema02.edges._
 import testschema02.nodes._
