@@ -398,9 +398,6 @@ class CodeGen(schema: Schema) {
          |   * since this is a StoredNode, this is always set */
          |  def underlying: Node = this
          |
-         |  /** labels of product elements, used e.g. for pretty-printing */
-         |  def productElementLabel(n: Int): String
-         |
          |  /* all properties plus label and id */
          |  def toMap: Map[String, Any] = {
          |    val map = propertiesMap()
@@ -889,7 +886,7 @@ class CodeGen(schema: Schema) {
         forId +: (forKeys ++ forContainedNodes)
       }
 
-      val productElementLabels =
+      val productElementNames =
         productElements.map { case ProductElement(name, _, index) =>
           s"""case $index => "$name" """
         }.mkString(lineSeparator)
@@ -973,9 +970,9 @@ class CodeGen(schema: Schema) {
            |      $className.Label
            |    }
            |
-           |    override def productElementLabel(n: Int): String =
+           |    override def productElementName(n: Int): String =
            |      n match {
-           |        $productElementLabels
+           |        $productElementNames
            |      }
            |
            |    override def productElement(n: Int): Any =
@@ -1121,9 +1118,9 @@ class CodeGen(schema: Schema) {
            |    $className.Label
            |  }
            |
-           |  override def productElementLabel(n: Int): String =
+           |  override def productElementName(n: Int): String =
            |    n match {
-           |      $productElementLabels
+           |      $productElementNames
            |    }
            |
            |  override def productElement(n: Int): Any =
