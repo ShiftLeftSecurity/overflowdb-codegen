@@ -955,7 +955,7 @@ class CodeGen(schema: Schema) {
 
         val propertyDefaultValues = propertyDefaultValueImpl(s"$className.PropertyDefaults", properties)
 
-        s"""class $className(graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
+        s"""class $className(graph_4762: Graph, id_4762: Long /*cf wtflol https://github.com/scala/bug/issues/4762 */) extends NodeRef[$classNameDb](graph_4762, id_4762)
            |  with ${className}Base
            |  with StoredNode
            |  $mixinsForExtendedNodes {
