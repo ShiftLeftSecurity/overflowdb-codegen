@@ -955,7 +955,7 @@ class CodeGen(schema: Schema) {
 
         val propertyDefaultValues = propertyDefaultValueImpl(s"$className.PropertyDefaults", properties)
 
-        s"""class $className(graph: Graph, id: Long) extends NodeRef[$classNameDb](graph, id)
+        s"""class $className(graph_4762: Graph, id_4762: Long /*cf https://github.com/scala/bug/issues/4762 */) extends NodeRef[$classNameDb](graph_4762, id_4762)
            |  with ${className}Base
            |  with StoredNode
            |  $mixinsForExtendedNodes {
@@ -963,6 +963,16 @@ class CodeGen(schema: Schema) {
            |  $propertyDefaultValues
            |  $delegatingContainedNodeAccessors
            |    $neighborAccessorDelegators
+           |  // In view of https://github.com/scala/bug/issues/4762 it is advisable to use different variable names in
+           |  // patterns like `class Base(x:Int)` and `class Derived(x:Int) extends Base(x)`.
+           |  // This must become `class Derived(x_4762:Int) extends Base(x_4762)`.
+           |  // Otherwise, it is very hard to figure out whether uses of the identifier `x` refer to the base class x
+           |  // or the derived class x.
+           |  // When using that pattern, the class parameter `x_47672` should only be used in the `extends Base(x_4762)`
+           |  // clause and nowhere else. Otherwise, the compiler may well decide that this is not just a constructor
+           |  // parameter but also a field of the class, and we end up with two `x` fields. At best, this wastes memory;
+           |  // at worst both fields go out-of-sync for hard-to-debug correctness bugs.
+           |
            |
            |    override def fromNewNode(newNode: NewNode, mapping: NewNode => StoredNode): Unit = get().fromNewNode(newNode, mapping)
            |    override def canEqual(that: Any): Boolean = get.canEqual(that)

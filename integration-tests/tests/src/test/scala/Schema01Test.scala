@@ -97,5 +97,8 @@ class Schema01Test extends AnyWordSpec with Matchers {
       innerNode.get shouldBe node3
     }
   }
+  "work around scala bug 4762, ie generate no extraneous fields" in {
+    Class.forName("testschema01.nodes.Node1").getDeclaredFields.length shouldBe 0
+  }
 
 }
