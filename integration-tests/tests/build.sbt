@@ -7,7 +7,7 @@ name := "integration-tests"
 libraryDependencies ++= Seq(
   "io.shiftleft" %% "overflowdb-traversal" % Versions.overflowdb,
   "org.scalatest" %% "scalatest" % "3.2.12" % Test,
-  "org.slf4j" % "slf4j-simple" % "2.0.6" % Test,
+  "org.slf4j" % "slf4j-simple" % "2.0.7" % Test,
 )
 
 // Compile/sourceGenerators += Projects.integrationTestSchemas / generateDomainClasses
