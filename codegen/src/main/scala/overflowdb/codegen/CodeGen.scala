@@ -1761,9 +1761,9 @@ class CodeGen(schema: Schema) {
          |  def apply(): $classNameNewNode = new $classNameNewNode
          |}
          |
-         |class $classNameNewNode($memberVariables)
+         |class $classNameNewNode private ($memberVariables)
          |  extends NewNode with ${nodeClassName}Base $mixins {
-         |
+         | // the constructor must be private, because argument positions are unstable (e.g. if we extend the schema)
          |  type StoredType = $nodeClassName
          |
          |  override def label: String = "${nodeType.name}"
