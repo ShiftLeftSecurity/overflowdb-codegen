@@ -1661,7 +1661,7 @@ class CodeGen(schema: Schema) {
           }
           s"var $name: $fullType = $defaultValue"
 
-      }.mkString(", ")
+      }.mkString("\n")
 
       val propertiesMapImpl = {
         val putKeysImpl = properties
@@ -1761,10 +1761,11 @@ class CodeGen(schema: Schema) {
          |  def apply(): $classNameNewNode = new $classNameNewNode
          |}
          |
-         |class $classNameNewNode($memberVariables)
+         |class $classNameNewNode
          |  extends NewNode with ${nodeClassName}Base $mixins {
-         |
          |  type StoredType = $nodeClassName
+         |
+         |  $memberVariables
          |
          |  override def label: String = "${nodeType.name}"
          |
