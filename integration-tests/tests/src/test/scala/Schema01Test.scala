@@ -5,9 +5,9 @@ import testschema01._
 import testschema01.nodes._
 import testschema01.edges._
 import testschema01.traversal._
-
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 class Schema01Test extends AnyWordSpec with Matchers {
-
+  import testschema01.traversal._
   "constants" in {
     PropertyNames.NAME shouldBe "NAME"
     Properties.ORDER.name shouldBe "ORDER"
@@ -37,13 +37,13 @@ class Schema01Test extends AnyWordSpec with Matchers {
     val node3 = graph.addNode(Node3.Label).asInstanceOf[Node3]
 
     // TODO generate node type starters
-    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
-    def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
+    def node1Traversal = graph.nodes(Node1.Label).asScala.cast[Node1]
+    def node2Traversal = graph.nodes(Node2.Label).asScala.cast[Node2]
 
     "lookup and traverse nodes/edges/properties" in {
       // generic traversal
-      graph.nodes.property(Properties.NAME).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
-      graph.edges.property(Properties.NAME).toSetMutable shouldBe Set("edge 2")
+      graph.nodes.asScala.property(Properties.NAME).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
+      graph.edges.asScala.property(Properties.NAME).toSetMutable shouldBe Set("edge 2")
       node1Traversal.out.toList shouldBe Seq(node2a)
       node1Traversal.name.toSetMutable shouldBe Set("node 1a", "node 1b")
       node1Traversal.order.l shouldBe Seq(2)
@@ -92,7 +92,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
       builder.addNode(newNode2)
       BatchedUpdate.applyDiff(graph, builder)
 
-      val node2 = node2Traversal.name("name1").head
+      val node2 = node2Traversal.name("name1").next()
       val innerNode: Option[Node3] = node2.node3
       innerNode.get shouldBe node3
     }

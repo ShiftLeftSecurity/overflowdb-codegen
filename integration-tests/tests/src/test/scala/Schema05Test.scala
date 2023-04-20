@@ -5,9 +5,10 @@ import testschema05._
 import testschema05.edges._
 import testschema05.nodes._
 import testschema05.traversal._
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 class Schema05Test extends AnyWordSpec with Matchers {
-
+  import overflowdb.traversal._
   "default property values: all empty" in {
     val graph = TestSchema.empty.graph
 
@@ -37,8 +38,8 @@ class Schema05Test extends AnyWordSpec with Matchers {
     edge1.char shouldBe None
     edge1.propertiesMap.isEmpty shouldBe true
 
-    graph.nodes(Node1.Label).cast[Node1].str.size shouldBe 0
-    graph.edges(Edge1.Label).property(Edge1.Properties.Str).size shouldBe 0
+    graph.nodes(Node1.Label).asScala.cast[Node1].str.size shouldBe 0
+    graph.edges(Edge1.Label).asScala.property(Edge1.Properties.Str).size shouldBe 0
   }
 
   "defined property values" in {
@@ -89,11 +90,11 @@ class Schema05Test extends AnyWordSpec with Matchers {
     edge1.property("DOESNT_EXIST") shouldBe null
     edge1.propertiesMap.get("STR") shouldBe "foo"
 
-    def node1Trav = graph.nodes(Node1.Label).cast[Node1]
-    def edge1Trav = graph.edges(Edge1.Label).cast[Edge1]
-    node1Trav.str.head shouldBe "foo"
-    node1Trav.property(Node1.Properties.Str).head shouldBe "foo"
-    edge1Trav.property(Edge1.Properties.Str).head shouldBe "foo"
+    def node1Trav = graph.nodes(Node1.Label).asScala.cast[Node1]
+    def edge1Trav = graph.edges(Edge1.Label).asScala.cast[Edge1]
+    node1Trav.str.next() shouldBe "foo"
+    node1Trav.property(Node1.Properties.Str).next() shouldBe "foo"
+    edge1Trav.property(Edge1.Properties.Str).next() shouldBe "foo"
   }
 
   "generated string property filters" in {
@@ -103,7 +104,7 @@ class Schema05Test extends AnyWordSpec with Matchers {
       """node2 name line 1
         |node2 name line 2""")
     val node3 = graph.addNode(Node1.Label)
-    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
+    def node1Traversal = graph.nodes(Node1.Label).asScala.cast[Node1]
 
     node1Traversal.size shouldBe 3
     node1Traversal.str(".*").size shouldBe 2
