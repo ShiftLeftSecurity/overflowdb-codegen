@@ -5,7 +5,6 @@ import testschema05._
 import testschema05.edges._
 import testschema05.nodes._
 import testschema05.traversal._
-
 class Schema05Test extends AnyWordSpec with Matchers {
 
   "default property values: all empty" in {
@@ -38,7 +37,7 @@ class Schema05Test extends AnyWordSpec with Matchers {
     edge1.propertiesMap.isEmpty shouldBe true
 
     graph.nodes(Node1.Label).cast[Node1].str.size shouldBe 0
-    graph.edges(Edge1.Label).property(Edge1.Properties.Str).size shouldBe 0
+    overflowdb.traversal.Traversal.from(graph.edges(Edge1.Label)).property(Edge1.Properties.Str).size shouldBe 0
   }
 
   "defined property values" in {

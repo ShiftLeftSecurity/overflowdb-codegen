@@ -5,7 +5,6 @@ import testschema01._
 import testschema01.nodes._
 import testschema01.edges._
 import testschema01.traversal._
-
 class Schema01Test extends AnyWordSpec with Matchers {
 
   "constants" in {
@@ -42,8 +41,8 @@ class Schema01Test extends AnyWordSpec with Matchers {
 
     "lookup and traverse nodes/edges/properties" in {
       // generic traversal
-      graph.nodes.property(Properties.NAME).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
-      graph.edges.property(Properties.NAME).toSetMutable shouldBe Set("edge 2")
+      overflowdb.traversal.Traversal.from(graph.nodes).property(Properties.NAME).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
+      overflowdb.traversal.Traversal.from(graph.edges).property(Properties.NAME).toSetMutable shouldBe Set("edge 2")
       node1Traversal.out.toList shouldBe Seq(node2a)
       node1Traversal.name.toSetMutable shouldBe Set("node 1a", "node 1b")
       node1Traversal.order.l shouldBe Seq(2)
