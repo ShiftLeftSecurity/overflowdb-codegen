@@ -2,7 +2,7 @@ import sbt._
 import com.lucidchart.sbtcross.BaseProject
 
 object Versions {
-  val overflowdb = "1.172+10-d16223c9"
+  val overflowdb = "1.174"
   val scala_2_12 = "2.12.17"
   val scala_2_13 = "2.13.10"
   val scala_3 = "3.2.2"
