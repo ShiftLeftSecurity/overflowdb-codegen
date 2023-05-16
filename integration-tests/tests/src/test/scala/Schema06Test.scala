@@ -5,8 +5,10 @@ import testschema06._
 import testschema06.nodes._
 import testschema06.edges._
 import testschema06.traversal._
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 class Schema06Test extends AnyWordSpec with Matchers {
+  import overflowdb.traversal._
 
   "working with graph, DiffGraph etc." in {
     val node1New = NewNode1().name("node 1")
@@ -18,22 +20,23 @@ class Schema06Test extends AnyWordSpec with Matchers {
     builder.addEdge(node2New, node1New, Edge2.Label)
     val graph = TestSchema.empty.graph
     BatchedUpdate.applyDiff(graph, builder)
+   // import overflowdb.traversal.ImplicitsTmp._
 
     // TODO generate node type starters
-    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
-    def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
+    def node1Traversal = graph.nodes(Node1.Label).asScala.cast[Node1]
+    def node2Traversal = graph.nodes(Node2.Label).asScala.cast[Node2]
 
-    val node1 = node1Traversal.head
-    val node2 = node2Traversal.head
+    val node1 = node1Traversal.next()
+    val node2 = node2Traversal.next()
     // ensure contained nodes have the correct types - they should both be StoredNodes
     val innerNode: Option[StoredNode] = node2.containedAnyNode
     innerNode.get shouldBe node1
 
     // verify traversals: node1 <-> node2
-    val node2ViaEdge1Out: StoredNode = node1Traversal.edge1OutNamed.head
+    val node2ViaEdge1Out: StoredNode = node1Traversal.edge1OutNamed.next()
     node2ViaEdge1Out shouldBe node2
 
-    val node2ViaEdge2In: StoredNode = node1Traversal.edge2InNamed.head
+    val node2ViaEdge2In: StoredNode = node1Traversal.edge2InNamed.next()
     node2ViaEdge2In shouldBe node2
   }
 

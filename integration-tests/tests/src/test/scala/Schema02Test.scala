@@ -1,13 +1,14 @@
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import overflowdb.SchemaViolationException
-import overflowdb.traversal.Traversal
 import testschema02._
 import testschema02.edges._
 import testschema02.nodes._
 import testschema02.traversal._
-
+import scala.jdk.CollectionConverters.IteratorHasAsScala
+import overflowdb.traversal._
 class Schema02Test extends AnyWordSpec with Matchers {
+  import testschema02.traversal._
 
   "constants" in {
     BaseNode.Properties.Name.name shouldBe "NAME"
@@ -86,28 +87,26 @@ class Schema02Test extends AnyWordSpec with Matchers {
     val node2 = graph.addNode(Node2.Label, PropertyNames.NAME, "node 02", PropertyNames.ORDER, 3)
     node1.addEdge(Edge1.Label, node2)
     node2.addEdge(Edge2.Label, node1, PropertyNames.NAME, "edge 02")
-
-    def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
-    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
-    def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
+    def baseNodeTraversal = graph.nodes(Node1.Label).asScala.cast[BaseNode]
+    def node1Traversal = graph.nodes(Node1.Label).asScala.cast[Node1]
+    def node2Traversal = graph.nodes(Node2.Label).asScala.cast[Node2]
 
     "lookup and traverse nodes/edges via domain specific dsl" in {
-      def baseNode = baseNodeTraversal.head
-      def node1 = node1Traversal.head
-      def node2 = node2Traversal.head
+      def baseNode = baseNodeTraversal.next()
+      def node1 = node1Traversal.next()
+      def node2 = node2Traversal.next()
 
       baseNode.label shouldBe Node1.Label
       node1.label shouldBe Node1.Label
       node2.label shouldBe Node2.Label
-
       baseNode.edge2In.l shouldBe Seq(node2)
       baseNode.edge1Out.l shouldBe Seq(node2)
     }
 
     "generate custom defined stepNames from schema definition" in {
-      def baseNode = baseNodeTraversal.head
-      def node1 = node1Traversal.head
-      def node2 = node2Traversal.head
+      def baseNode = baseNodeTraversal.next()
+      def node1 = node1Traversal.next()
+      def node2 = node2Traversal.next()
 
       val baseNodeToNode2: Traversal[Node2] = baseNode.customStepName1
       baseNodeToNode2.l shouldBe Seq(node2)
@@ -156,9 +155,9 @@ class Schema02Test extends AnyWordSpec with Matchers {
 
   "provide detailed error message for schema violation" in {
     val graph = TestSchema.empty.graph
-    def baseNodeTraversal = graph.nodes(Node1.Label).cast[BaseNode]
-    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
-    def node2Traversal = graph.nodes(Node2.Label).cast[Node2]
+    def baseNodeTraversal = graph.nodes(Node1.Label).asScala.cast[BaseNode]
+    def node1Traversal = graph.nodes(Node1.Label).asScala.cast[Node1]
+    def node2Traversal = graph.nodes(Node2.Label).asScala.cast[Node2]
 
     val node1 = graph.addNode(Node1.Label)
     val node2 = graph.addNode(Node2.Label)
