@@ -49,6 +49,9 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   /** all node types that extend this node */
   def subtypes(allNodes: Set[AbstractNodeType]): Set[AbstractNodeType]
 
+  /** the name for the generated node starter. Generatiion of starters can be suppressed by setting to None, or custom
+   * names can be assigned to prevent compile errors for e.g. `type`*/
+  var starterName: Option[String] = Some(camelCase(name))
 
   /** properties (including potentially inherited properties) */
   override def properties: Seq[Property[_]] = {

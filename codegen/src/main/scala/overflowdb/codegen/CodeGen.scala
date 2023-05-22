@@ -75,6 +75,18 @@ class CodeGen(schema: Schema) {
       }.mkString("")
     }
 
+    val starters = mutable.ArrayBuffer[String]()
+    for(typ <- schema.nodeTypes if typ.starterName.isDefined){
+      starters.append(
+        s"""@overflowdb.traversal.help.Doc(info = "All nodes of type ${typ.className}, i.e. with label ${typ.name}")
+           |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] = overflowdb.traversal.InitialTraversal.from[nodes.${typ.className}](wrapper.graph, "${typ.name}")""".stripMargin)
+    }
+    for (typ <- schema.nodeBaseTypes if typ.starterName.isDefined) {
+      val types = schema.nodeTypes.filter{_.extendzRecursively.contains(typ)}
+      starters.append(
+        s"""@overflowdb.traversal.help.Doc(info = "All nodes of type ${typ.className}, i.e. with label in ${types.map{_.name}.sorted.mkString(", ")}")
+           |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] =  wrapper.graph.nodes(${types.map{concrete => "\"" + concrete.name + "\""}.mkString(", ") }).asScala.asInstanceOf[Iterator[nodes.${typ.className}]]""".stripMargin)
+    }
     val domainMain = baseDir.createChild(s"$domainShortName.scala").write(
       s"""package $basePackage
          |
@@ -141,6 +153,19 @@ class CodeGen(schema: Schema) {
          |
          |  override def toString(): String =
          |    String.format("$domainShortName (%s)", graph)
+         |}
+         |
+         |class GeneratedNodeStarterExt(val wrapper: ${domainShortName}) extends AnyVal {
+         |import scala.jdk.CollectionConverters.IteratorHasAsScala
+         |${starters.mkString("\n\n")}
+         |}
+         |
+         |/**
+         |  * Domain-specific version of diffgraph builder. This is to allow schema checking before diffgraph application
+         |  * in the future, as well as a schema-aware point for providing backwards compatibility in odbv2.
+         |  */
+         |class ${domainShortName}DiffGraphBuilder extends overflowdb.BatchedUpdate.DiffGraphBuilder {
+         |  override def absorb(other: overflowdb.BatchedUpdate.DiffGraphBuilder): this.type = {super.absorb(other); this}
          |}
          |
          |""".stripMargin
@@ -387,8 +412,10 @@ class CodeGen(schema: Schema) {
          |  def isRegex(pattern: String): Boolean = pattern.exists(reChars.contains(_))
          |}
          |
+         |trait StaticType[+T]
+         |
          |/** Abstract supertype for overflowdb.Node and NewNode */
-         |trait AbstractNode extends overflowdb.NodeOrDetachedNode {
+         |trait AbstractNode extends overflowdb.NodeOrDetachedNode with StaticType[AnyRef]{
          |  def label: String
          |}
          |
