@@ -8,7 +8,7 @@ import sbt.Keys._
 
 import scala.util.Try
 
-object CodegenSbtPlugin extends AutoPlugin {
+object OdbCodegenSbtPlugin extends AutoPlugin {
 
   object autoImport {
     val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for our schema")
