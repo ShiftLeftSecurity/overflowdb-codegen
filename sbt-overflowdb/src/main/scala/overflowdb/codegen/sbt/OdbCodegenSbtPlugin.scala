@@ -11,7 +11,7 @@ import scala.util.Try
 object OdbCodegenSbtPlugin extends AutoPlugin {
 
   object autoImport {
-    val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for our schema")
+    val generateDomainClasses = taskKey[File]("generate overflowdb domain classes for the given schema - return value is the output root directory")
     val classWithSchema = settingKey[String]("class with schema field, e.g. `org.example.MyDomain$`")
     val fieldName = settingKey[String]("(static) field name for schema within the specified `classWithSchema` with schema field, e.g. `org.example.MyDomain$`")
     val disableFormatting = settingKey[Boolean]("disable scalafmt formatting")
@@ -58,7 +58,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
       if (outputDirValue.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
         // inputs did not change, don't regenerate
         Def.task {
-          FileUtils.listFilesRecursively(outputDirValue)
+          outputDirValue
         }
       } else {
         Def.task {
@@ -67,7 +67,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
             s" overflowdb.codegen.Main --classWithSchema=$classWithSchemaValue --field=$fieldNameValue --out=$outputDirValue $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
           ).value
           IO.write(schemaAndDependenciesHashFile, currentSchemaAndDependenciesHash)
-          FileUtils.listFilesRecursively(outputDirValue)
+          outputDirValue
         }
       }
     }
