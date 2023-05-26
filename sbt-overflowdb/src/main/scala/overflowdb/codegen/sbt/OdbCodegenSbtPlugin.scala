@@ -12,6 +12,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
 
   object autoImport {
     val generateDomainClasses = taskKey[File]("generate overflowdb domain classes for the given schema - return value is the output root directory")
+    val outputDir = settingKey[File]("target directory for the generated domain classes, e.g. `Projects.domainClasses/scalaSource`")
     val classWithSchema = settingKey[String]("class with schema field, e.g. `org.example.MyDomain$`")
     val fieldName = settingKey[String]("(static) field name for schema within the specified `classWithSchema` with schema field, e.g. `org.example.MyDomain$`")
     val disableFormatting = settingKey[Boolean]("disable scalafmt formatting")
@@ -35,7 +36,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
     Def.taskDyn {
       val classWithSchemaValue = (generateDomainClasses/classWithSchema).value
       val fieldNameValue = (generateDomainClasses/fieldName).value
-      val outputDirValue = sourceManaged.value / "overflowdb-codegen"
+      val outputDirValue = (generateDomainClasses/outputDir).value
 
       val disableFormattingParamMaybe =
         if ((generateDomainClasses/disableFormatting).value) "--noformat"
