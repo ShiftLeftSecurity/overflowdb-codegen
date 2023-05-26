@@ -36,9 +36,9 @@ object CodegenSbtPlugin extends AutoPlugin {
 
   lazy val generateDomainClassesTask =
     Def.taskDyn {
-      val classWithSchema_ = (generateDomainClasses/classWithSchema).value
-      val fieldName_ = (generateDomainClasses/fieldName).value
-      val outputDir_ = (generateDomainClasses/outputDir).value
+      val classWithSchemaValue = (generateDomainClasses/classWithSchema).value
+      val fieldNameValue = (generateDomainClasses/fieldName).value
+      val outputDirValue = (generateDomainClasses/outputDir).value
 
       val disableFormattingParamMaybe =
         if ((generateDomainClasses/disableFormatting).value) "--noformat"
@@ -58,19 +58,19 @@ object CodegenSbtPlugin extends AutoPlugin {
       lazy val lastSchemaAndDependenciesHash: Option[String] =
         Try(IO.read(schemaAndDependenciesHashFile)).toOption
 
-      if (outputDir_.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
+      if (outputDirValue.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
         // inputs did not change, don't regenerate
         Def.task {
-          FileUtils.listFilesRecursively(outputDir_)
+          FileUtils.listFilesRecursively(outputDirValue)
         }
       } else {
         Def.task {
-          FileUtils.deleteRecursively(outputDir_)
+          FileUtils.deleteRecursively(outputDirValue)
           (Compile/runMain).toTask(
-            s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir_ $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
+            s" overflowdb.codegen.Main --classWithSchema=$classWithSchemaValue --field=$fieldNameValue --out=$outputDirValue $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
           ).value
           IO.write(schemaAndDependenciesHashFile, currentSchemaAndDependenciesHash)
-          FileUtils.listFilesRecursively(outputDir_)
+          FileUtils.listFilesRecursively(outputDirValue)
         }
       }
     }
