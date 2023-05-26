@@ -12,6 +12,7 @@ object CodegenSbtPlugin extends AutoPlugin {
 
   object autoImport {
     val generateDomainClasses = taskKey[Seq[File]]("generate overflowdb domain classes for our schema")
+    val outputDir = settingKey[File]("target directory for the generated domain classes, e.g. `Projects.domainClasses/scalaSource`")
     val classWithSchema = settingKey[String]("class with schema field, e.g. `org.example.MyDomain$`")
     val fieldName = settingKey[String]("(static) field name for schema within the specified `classWithSchema` with schema field, e.g. `org.example.MyDomain$`")
     val disableFormatting = settingKey[Boolean]("disable scalafmt formatting")
@@ -37,7 +38,7 @@ object CodegenSbtPlugin extends AutoPlugin {
     Def.taskDyn {
       val classWithSchema_ = (generateDomainClasses/classWithSchema).value
       val fieldName_ = (generateDomainClasses/fieldName).value
-      val outputDir = sourceManaged.value / "overflowdb-codegen"
+      val outputDir_ = (generateDomainClasses/outputDir).value
 
       val disableFormattingParamMaybe =
         if ((generateDomainClasses/disableFormatting).value) "--noformat"
@@ -57,19 +58,19 @@ object CodegenSbtPlugin extends AutoPlugin {
       lazy val lastSchemaAndDependenciesHash: Option[String] =
         Try(IO.read(schemaAndDependenciesHashFile)).toOption
 
-      if (outputDir.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
+      if (outputDir_.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
         // inputs did not change, don't regenerate
         Def.task {
-          FileUtils.listFilesRecursively(outputDir)
+          FileUtils.listFilesRecursively(outputDir_)
         }
       } else {
         Def.task {
-          FileUtils.deleteRecursively(outputDir)
+          FileUtils.deleteRecursively(outputDir_)
           (Compile/runMain).toTask(
-            s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
+            s" overflowdb.codegen.Main --classWithSchema=$classWithSchema_ --field=$fieldName_ --out=$outputDir_ $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
           ).value
           IO.write(schemaAndDependenciesHashFile, currentSchemaAndDependenciesHash)
-          FileUtils.listFilesRecursively(outputDir)
+          FileUtils.listFilesRecursively(outputDir_)
         }
       }
     }
