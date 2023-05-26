@@ -19,8 +19,6 @@ object CodegenSbtPlugin extends AutoPlugin {
 
     lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
       generateDomainClasses := generateDomainClassesTask.value,
-      generateDomainClasses/classWithSchema := "undefined",
-      generateDomainClasses/fieldName := "undefined",
       generateDomainClasses/disableFormatting := false,
     )
   }
@@ -28,8 +26,8 @@ object CodegenSbtPlugin extends AutoPlugin {
 
   override def requires = JvmPlugin && ScalafmtPlugin
 
-  // This plugin is automatically enabled for projects which are JvmPlugin.
-  override def trigger = allRequirements
+  // This plugin needs to be enabled manually via `enablePlugins`
+  override def trigger = noTrigger
 
   // a group of settings that are automatically added to projects.
   override val projectSettings = inConfig(Compile)(autoImport.baseSettings)
@@ -39,6 +37,7 @@ object CodegenSbtPlugin extends AutoPlugin {
       val classWithSchemaValue = (generateDomainClasses/classWithSchema).value
       val fieldNameValue = (generateDomainClasses/fieldName).value
       val outputDirValue = (generateDomainClasses/outputDir).value
+      assert(outputDirValue != null, "`generateDomainClasses/outputDir` is not defined, please configure it in your build definition, e.g. `generateDomainClasses/outputDir := (Projects.domainClasses/scalaSource).value`")
 
       val disableFormattingParamMaybe =
         if ((generateDomainClasses/disableFormatting).value) "--noformat"
