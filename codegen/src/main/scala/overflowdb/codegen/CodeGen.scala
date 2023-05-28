@@ -355,7 +355,7 @@ class CodeGen(schema: Schema) {
         direction <- Direction.all
         edgeType <- schema.edgeTypes
         accessor = neighborAccessorNameForEdge(edgeType, direction)
-      } yield s"def _$accessor: java.util.Iterator[StoredNode] = { java.util.Collections.emptyIterator() }"
+      } yield s"def _$accessor: Iterator[StoredNode] = Iterator.empty"
 
       val markerTraits =
         schema.allNodeTypes
@@ -469,7 +469,7 @@ class CodeGen(schema: Schema) {
 //            deriveCommonRootType(relevantNeighbors)
 //          }
           val neighborNodesType = "_ <: StoredNode"
-          val genericEdgeAccessor = s"def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborNodesType]"
+          val genericEdgeAccessor = s"def $edgeAccessorName: Iterator[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
             val neighbor = adjacentNode.neighbor
@@ -563,6 +563,7 @@ class CodeGen(schema: Schema) {
          |
          |trait $className extends StoredNode with ${className}Base
          |$mixinsForBaseTypes {
+         |import overflowdb.traversal._
          |${abstractEdgeAccessors(nodeBaseType, Direction.OUT)}
          |${abstractEdgeAccessors(nodeBaseType, Direction.IN)}
          |}""".stripMargin
@@ -940,7 +941,7 @@ class CodeGen(schema: Schema) {
         }.mkString(lineSeparator)
 
         val neighborNodeClass = neighborInfo.deriveNeighborNodeType.getOrElse(schema.anyNode).className
-        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborNodeClass] = get().$edgeAccessorName
+        s"""def $edgeAccessorName: Iterator[$neighborNodeClass] = get().$edgeAccessorName
            |override def _$edgeAccessorName = get()._$edgeAccessorName
            |
            |$nodeDelegators
@@ -1016,8 +1017,8 @@ class CodeGen(schema: Schema) {
             s"def ${accessorName(neighborNodeInfo)}: ${neighborNodeInfo.returnType} = $accessorImpl1"
         }.mkString(lineSeparator)
 
-        s"""def $edgeAccessorName: overflowdb.traversal.Traversal[$neighborType] = overflowdb.traversal.Traversal(createAdjacentNodeIteratorByOffSet[$neighborType]($offsetPosition))
-           |override def _$edgeAccessorName = createAdjacentNodeIteratorByOffSet[StoredNode]($offsetPosition)
+        s"""def $edgeAccessorName: Iterator[$neighborType] = createAdjacentNodeScalaIteratorByOffSet[$neighborType]($offsetPosition)
+           |override def _$edgeAccessorName = createAdjacentNodeScalaIteratorByOffSet[StoredNode]($offsetPosition)
            |$nodeAccessors
            |""".stripMargin
       }.mkString(lineSeparator)
@@ -1121,7 +1122,7 @@ class CodeGen(schema: Schema) {
            |  override def propertiesMapForStorage: java.util.Map[String, Any] =
            |    $propertiesMapForStorageImpl
            |
-           |
+           |  import overflowdb.traversal._
            |  $neighborAccessors
            |
            |  override def label: String = {
@@ -1223,7 +1224,7 @@ class CodeGen(schema: Schema) {
         s"""/** ${customStepDoc.getOrElse("")}
            |  * Traverse to ${neighbor.name} via ${viaEdge.name} $direction edge.
            |  */ ${docAnnotationMaybe(customStepDoc)}
-           |def $customStepName: Traversal[${neighbor.className}] =
+           |def $customStepName: Iterator[${neighbor.className}] =
            |  traversal.$mapOrFlatMap(_.$customStepName)
            |""".stripMargin
       }
@@ -1245,7 +1246,7 @@ class CodeGen(schema: Schema) {
           s"""/**
              |  * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
              |  * */
-             |def $nameCamelCase(pattern: $baseType): Traversal[NodeType] = {
+             |def $nameCamelCase(pattern: $baseType): Iterator[NodeType] = {
              |  if(!Misc.isRegex(pattern)){
              |    ${nameCamelCase}Exact(pattern)
              |  } else {
@@ -1256,13 +1257,13 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
              |  * */
-             |def $nameCamelCase(patterns: $baseType*): Traversal[NodeType] =
+             |def $nameCamelCase(patterns: $baseType*): Iterator[NodeType] =
              |  overflowdb.traversal.filter.StringPropertyFilter.regexpMultiple(traversal)(_.$nameCamelCase, patterns)
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase matches `value` exactly.
              |  * */
-             |def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] = {
+             |def ${nameCamelCase}Exact(value: $baseType): Iterator[NodeType] = {
              |  val fastResult = traversal match {
              |    case init: overflowdb.traversal.InitialTraversal[NodeType] => init.getByIndex("${property.name}", value).getOrElse(null)
              |    case _ => null
@@ -1274,7 +1275,7 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
              |  * */
-             |def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
+             |def ${nameCamelCase}Exact(values: $baseType*): Iterator[NodeType] = {
              |  if (values.size == 1)
              |    ${nameCamelCase}Exact(values.head)
              |  else
@@ -1285,7 +1286,7 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
              |  * */
-             |def ${nameCamelCase}Not(pattern: $baseType): Traversal[NodeType] = {
+             |def ${nameCamelCase}Not(pattern: $baseType): Iterator[NodeType] = {
              |  if(!Misc.isRegex(pattern)){
              |    traversal.filter{node => node.${nameCamelCase} != pattern}
              |  } else {
@@ -1296,7 +1297,7 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
              |  * */
-             |def ${nameCamelCase}Not(patterns: $baseType*): Traversal[NodeType] = {
+             |def ${nameCamelCase}Not(patterns: $baseType*): Iterator[NodeType] = {
              |    overflowdb.traversal.filter.StringPropertyFilter.regexpNotMultiple(traversal)(_.$nameCamelCase, patterns)
              | }
              |""".stripMargin
@@ -1305,7 +1306,7 @@ class CodeGen(schema: Schema) {
           s"""/**
              |  * Traverse to nodes where the $nameCamelCase matches the regular expression `value`
              |  * */
-             |def $nameCamelCase(pattern: $baseType): Traversal[NodeType] = {
+             |def $nameCamelCase(pattern: $baseType): Iterator[NodeType] = {
              |  if(!Misc.isRegex(pattern)){
              |    traversal.filter{node => node.$nameCamelCase.isDefined && node.${nameCamelCase}.get == pattern}
              |  } else {
@@ -1316,20 +1317,20 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where the $nameCamelCase matches at least one of the regular expressions in `values`
              |  * */
-             |def $nameCamelCase(patterns: $baseType*): Traversal[NodeType] = {
+             |def $nameCamelCase(patterns: $baseType*): Iterator[NodeType] = {
              |  overflowdb.traversal.filter.StringPropertyFilter.regexpMultiple(traversal.filter(_.$nameCamelCase.isDefined))(_.$nameCamelCase.get, patterns)
              |}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase matches `value` exactly.
              |  * */
-             |def ${nameCamelCase}Exact(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Exact(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => node.$nameCamelCase.contains(value)}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase matches one of the elements in `values` exactly.
              |  * */
-             |def ${nameCamelCase}Exact(values: $baseType*): Traversal[NodeType] = {
+             |def ${nameCamelCase}Exact(values: $baseType*): Iterator[NodeType] = {
              |  if (values.size == 1)
              |    ${nameCamelCase}Exact(values.head)
              |  else
@@ -1339,7 +1340,7 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where $nameCamelCase does not match the regular expression `value`.
              |  * */
-             |def ${nameCamelCase}Not(pattern: $baseType): Traversal[NodeType] = {
+             |def ${nameCamelCase}Not(pattern: $baseType): Iterator[NodeType] = {
              |  if(!Misc.isRegex(pattern)){
              |    traversal.filter{node => node.$nameCamelCase.isEmpty || node.${nameCamelCase}.get != pattern}
              |  } else {
@@ -1350,7 +1351,7 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where $nameCamelCase does not match any of the regular expressions in `values`.
              |  * */
-             |def ${nameCamelCase}Not(patterns: $baseType*): Traversal[NodeType] = {
+             |def ${nameCamelCase}Not(patterns: $baseType*): Iterator[NodeType] = {
              |  overflowdb.traversal.filter.StringPropertyFilter.regexpNotMultiple(traversal.filter(_.$nameCamelCase.isDefined))(_.$nameCamelCase.get, patterns)
              | }
              |""".stripMargin
@@ -1359,13 +1360,13 @@ class CodeGen(schema: Schema) {
           s"""/**
              |  * Traverse to nodes where the $nameCamelCase equals the given `value`
              |  * */
-             |def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |def $nameCamelCase(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase == value}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
              |  * */
-             |def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Not(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase != value}
              |""".stripMargin
 
@@ -1373,13 +1374,13 @@ class CodeGen(schema: Schema) {
           s"""/**
              |  * Traverse to nodes where the $nameCamelCase equals the given `value`
              |  * */
-             |def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |def $nameCamelCase(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => node.${nameCamelCase}.isDefined && node.$nameCamelCase.get == value}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
              |  * */
-             |def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Not(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => !node.${nameCamelCase}.isDefined || node.$nameCamelCase.get == value}
              |""".stripMargin
 
@@ -1387,13 +1388,13 @@ class CodeGen(schema: Schema) {
           s"""/**
              |  * Traverse to nodes where the $nameCamelCase equals the given `value`
              |  * */
-             |def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |def $nameCamelCase(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase == value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
              |  * */
-             |def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
+             |def $nameCamelCase(values: $baseType*): Iterator[NodeType] = {
              |  val vset = values.toSet
              |  traversal.filter{node => vset.contains(node.$nameCamelCase)}
              |}
@@ -1401,37 +1402,37 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where the $nameCamelCase is greater than the given `value`
              |  * */
-             |def ${nameCamelCase}Gt(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Gt(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase > value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase is greater than or equal the given `value`
              |  * */
-             |def ${nameCamelCase}Gte(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Gte(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase >= value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase is less than the given `value`
              |  * */
-             |def ${nameCamelCase}Lt(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Lt(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase < value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase is less than or equal the given `value`
              |  * */
-             |def ${nameCamelCase}Lte(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Lte(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase <= value}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
              |  * */
-             |def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Not(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase != value}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
              |  * */
-             |def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
+             |def ${nameCamelCase}Not(values: $baseType*): Iterator[NodeType] = {
              |  val vset = values.toSet
              |  traversal.filter{node => !vset.contains(node.$nameCamelCase)}
              |}
@@ -1441,13 +1442,13 @@ class CodeGen(schema: Schema) {
           s"""/**
              |  * Traverse to nodes where the $nameCamelCase equals the given `value`
              |  * */
-             |def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |def $nameCamelCase(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get == value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
              |  * */
-             |def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
+             |def $nameCamelCase(values: $baseType*): Iterator[NodeType] = {
              |  val vset = values.toSet
              |  traversal.filter{node => node.$nameCamelCase.isDefined && vset.contains(node.$nameCamelCase.get)}
              |}
@@ -1455,37 +1456,37 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where the $nameCamelCase is greater than the given `value`
              |  * */
-             |def ${nameCamelCase}Gt(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Gt(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get > value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase is greater than or equal the given `value`
              |  * */
-             |def ${nameCamelCase}Gte(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Gte(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get >= value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase is less than the given `value`
              |  * */
-             |def ${nameCamelCase}Lt(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Lt(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get < value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase is less than or equal the given `value`
              |  * */
-             |def ${nameCamelCase}Lte(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Lte(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get <= value}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
              |  * */
-             |def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Not(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => !node.$nameCamelCase.isDefined || node.$nameCamelCase.get != value}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
              |  * */
-             |def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
+             |def ${nameCamelCase}Not(values: $baseType*): Iterator[NodeType] = {
              |  val vset = values.toSet
              |  traversal.filter{node => !node.$nameCamelCase.isDefined || !vset.contains(node.$nameCamelCase.get)}
              |}
@@ -1495,13 +1496,13 @@ class CodeGen(schema: Schema) {
           s"""/**
              |  * Traverse to nodes where the $nameCamelCase equals the given `value`
              |  * */
-             |def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |def $nameCamelCase(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase == value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
              |  * */
-             |def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
+             |def $nameCamelCase(values: $baseType*): Iterator[NodeType] = {
              |  val vset = values.toSet
              |  traversal.filter{node => !vset.contains(node.$nameCamelCase)}
              |}
@@ -1509,13 +1510,13 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
              |  * */
-             |def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Not(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{_.$nameCamelCase != value}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
              |  * */
-             |def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
+             |def ${nameCamelCase}Not(values: $baseType*): Iterator[NodeType] = {
              |  val vset = values.toSet
              |  traversal.filter{node => !vset.contains(node.$nameCamelCase)}
              |}
@@ -1525,13 +1526,13 @@ class CodeGen(schema: Schema) {
           s"""/**
              |  * Traverse to nodes where the $nameCamelCase equals the given `value`
              |  * */
-             |def $nameCamelCase(value: $baseType): Traversal[NodeType] =
+             |def $nameCamelCase(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => node.$nameCamelCase.isDefined && node.$nameCamelCase.get == value}
              |
              |/**
              |  * Traverse to nodes where the $nameCamelCase equals at least one of the given `values`
              |  * */
-             |def $nameCamelCase(values: $baseType*): Traversal[NodeType] = {
+             |def $nameCamelCase(values: $baseType*): Iterator[NodeType] = {
              |  val vset = values.toSet
              |  traversal.filter{node => node.$nameCamelCase.isDefined && !vset.contains(node.$nameCamelCase.get)}
              |}
@@ -1539,13 +1540,13 @@ class CodeGen(schema: Schema) {
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to the given `value`.
              |  * */
-             |def ${nameCamelCase}Not(value: $baseType): Traversal[NodeType] =
+             |def ${nameCamelCase}Not(value: $baseType): Iterator[NodeType] =
              |  traversal.filter{node => !node.$nameCamelCase.isDefined || node.$nameCamelCase.get != value}
              |
              |/**
              |  * Traverse to nodes where $nameCamelCase is not equal to any of the given `values`.
              |  * */
-             |def ${nameCamelCase}Not(values: $baseType*): Traversal[NodeType] = {
+             |def ${nameCamelCase}Not(values: $baseType*): Iterator[NodeType] = {
              |  val vset = values.toSet
              |  traversal.filter{node => !node.$nameCamelCase.isDefined || !vset.contains(node.$nameCamelCase.get)}
              |}
@@ -1565,7 +1566,7 @@ class CodeGen(schema: Schema) {
         }
 
         s"""/** Traverse to $nameCamelCase property */
-           |def $nameCamelCase: Traversal[$baseType] =
+           |def $nameCamelCase: Iterator[$baseType] =
            |  traversal.$mapOrFlatMap(_.$nameCamelCase)
            |
            |$filterSteps

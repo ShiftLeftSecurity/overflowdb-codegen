@@ -6,10 +6,14 @@ import testschema04.edges._
 import testschema04.nodes._
 import testschema04.traversal._
 
+import scala.jdk.CollectionConverters.IteratorHasAsScala
+
 import java.nio.file.Files
 import scala.collection.immutable.ArraySeq
 
 class Schema04Test extends AnyWordSpec with Matchers {
+  import overflowdb.traversal._
+
 
   "default property values" in {
     val graph = TestSchema.empty.graph
@@ -56,13 +60,12 @@ class Schema04Test extends AnyWordSpec with Matchers {
     edge1.property(Edge1.Properties.Str) shouldBe "<[empty]>"
     edge1.property("DOESNT_EXIST") shouldBe null
     edge1.propertiesMap.get("STR") shouldBe "<[empty]>"
-
-    def node1Trav = graph.nodes(Node1.Label).cast[Node1]
-    def edge1Trav = graph.edges(Edge1.Label).cast[Edge1]
-    node1Trav.str.head shouldBe "<[empty]>"
+    def node1Trav = graph.nodes(Node1.Label).asScala.cast[Node1]
+    def edge1Trav = graph.edges(Edge1.Label).asScala.cast[Edge1]
+    node1Trav.str.next() shouldBe "<[empty]>"
     node1Trav.intList.l shouldBe Seq.empty
-    node1Trav.property(Node1.Properties.Str).head shouldBe "<[empty]>"
-    edge1Trav.property(Edge1.Properties.Str).head shouldBe "<[empty]>"
+    node1Trav.property(Node1.Properties.Str).next() shouldBe "<[empty]>"
+    edge1Trav.property(Edge1.Properties.Str).next() shouldBe "<[empty]>"
   }
 
   "defined property values" in {
@@ -144,13 +147,13 @@ class Schema04Test extends AnyWordSpec with Matchers {
       edge1.property("DOESNT_EXIST") shouldBe null
       edge1.propertiesMap.get("STR") shouldBe "foo"
 
-      def node1Trav = graph.nodes(Node1.Label).cast[Node1]
-      def edge1Trav = graph.edges(Edge1.Label).cast[Edge1]
+      def node1Trav = graph.nodes(Node1.Label).asScala.cast[Node1]
+      def edge1Trav = graph.edges(Edge1.Label).asScala.cast[Edge1]
 
-      node1Trav.str.head shouldBe "foo"
+      node1Trav.str.next() shouldBe "foo"
       node1Trav.intList.l shouldBe Seq(3, 4, 5)
-      node1Trav.property(Node1.Properties.Str).head shouldBe "foo"
-      edge1Trav.property(Edge1.Properties.Str).head shouldBe "foo"
+      node1Trav.property(Node1.Properties.Str).next() shouldBe "foo"
+      edge1Trav.property(Edge1.Properties.Str).next() shouldBe "foo"
     }
   }
 
@@ -192,7 +195,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
       """node2 name line 1
         |node2 name line 2""")
     val node3 = graph.addNode(Node1.Label)
-    def node1Traversal = graph.nodes(Node1.Label).cast[Node1]
+    def node1Traversal = graph.nodes(Node1.Label).asScala.cast[Node1]
 
     node1Traversal.size shouldBe 3
     node1Traversal.str(".*").size shouldBe 3
