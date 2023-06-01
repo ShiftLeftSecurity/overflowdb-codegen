@@ -56,11 +56,15 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
       lazy val lastSchemaAndDependenciesHash: Option[String] =
         Try(IO.read(schemaAndDependenciesHashFile)).toOption
 
-      if (outputDirValue.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
-        // inputs did not change, don't regenerate
+      val disabled = sys.env.getOrElse("ODB_CODEGEN_DISABLE", default = "false").toLowerCase == "true"
+      if (disabled) {
         Def.task {
+          streams.value.log.info("overflowdb codegen is disabled")
           outputDirValue
         }
+      } else if (outputDirValue.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
+        // inputs did not change, don't regenerate
+        Def.task { outputDirValue }
       } else {
         Def.task {
           FileUtils.deleteRecursively(outputDirValue)
