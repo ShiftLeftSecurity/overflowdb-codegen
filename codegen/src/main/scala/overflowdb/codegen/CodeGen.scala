@@ -447,7 +447,13 @@ class CodeGen(schema: Schema) {
       }.mkString(" ")
 
       def abstractEdgeAccessors(nodeBaseType: NodeBaseType, direction: Direction.Value) = {
-        nodeBaseType.edges(direction).groupBy(_.viaEdge).map { case (edge, neighbors) =>
+        val edgeAndNeighbors = nodeBaseType
+          .edges(direction)
+          .groupBy(_.viaEdge)
+          .toSeq
+          .map { case (edge, neighors) => (edge, neighors.sortBy(_.neighbor.name)) }
+          .sortBy { case (edge, _) => edge.name }
+        edgeAndNeighbors.map { case (edge, neighbors) =>
           val edgeAccessorName = neighborAccessorNameForEdge(edge, direction)
           /** TODO bring this back, but not as direct accessors on the type, but via extension methods
             * context: in complex schema hierarchies, type inheritance between base nodes
@@ -590,7 +596,7 @@ class CodeGen(schema: Schema) {
           * assigning numbers here must follow the same way as in NodeLayoutInformation, i.e. starting at 0,
           * first assign ids to the outEdges based on their order in the list, and then the same for inEdges */
         var _currOffsetPos = -1
-        def nextOffsetPos: Int = { _currOffsetPos += 1; _currOffsetPos }
+        def nextOffsetPos(): Int = { _currOffsetPos += 1; _currOffsetPos }
 
         case class AjacentNodeWithInheritanceStatus(adjacentNode: AdjacentNode, isInherited: Boolean)
 
@@ -614,12 +620,19 @@ class CodeGen(schema: Schema) {
         }
 
         def createNeighborInfos(neighborContexts: Seq[AjacentNodeWithInheritanceStatus], direction: Direction.Value): Seq[NeighborInfoForEdge] = {
-          neighborContexts.groupBy(_.adjacentNode.viaEdge).map { case (edge, neighborContexts) =>
-            val neighborInfoForNodes = neighborContexts.map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
-              NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, adjacentNode.customStepName, adjacentNode.customStepDoc)
+          neighborContexts
+            .groupBy(_.adjacentNode.viaEdge)
+            .toSeq
+            .sortBy { case (edge, _) => edge.name }
+            .map { case (edge, neighborContexts) =>
+              val neighborInfoForNodes =
+                neighborContexts
+                  .sortBy(_.adjacentNode.neighbor.name)
+                  .map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
+                    NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, adjacentNode.customStepName, adjacentNode.customStepDoc)
+                  }
+              NeighborInfoForEdge(edge, neighborInfoForNodes, nextOffsetPos())
             }
-            NeighborInfoForEdge(edge, neighborInfoForNodes, nextOffsetPos)
-          }.toSeq
         }
 
         val neighborOutInfos = createNeighborInfos(adjacentNodesWithInheritanceStatus(_.outEdges), Direction.OUT)
@@ -931,7 +944,7 @@ class CodeGen(schema: Schema) {
 
       val neighborAccessorDelegators = neighborInfos.map { case (neighborInfo, direction) =>
         val edgeAccessorName = neighborAccessorNameForEdge(neighborInfo.edge, direction)
-        val nodeDelegators = neighborInfo.nodeInfos.collect {
+        val nodeDelegators = neighborInfo.nodeInfos.sortBy(_.neighborNode.name).collect {
           case neighborNodeInfo if !neighborNodeInfo.isInherited =>
             val accessorNameForNode = accessorName(neighborNodeInfo)
             s"""/** ${neighborNodeInfo.customStepDoc.getOrElse("")}
