@@ -75,6 +75,18 @@ class CodeGen(schema: Schema) {
       }.mkString("")
     }
 
+    val starters = mutable.ArrayBuffer[String]()
+    for(typ <- schema.nodeTypes if typ.starterName.isDefined){
+      starters.append(
+        s"""@overflowdb.traversal.help.Doc(info = "All nodes of type ${typ.className}, i.e. with label ${typ.name}")
+           |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] = overflowdb.traversal.InitialTraversal.from[nodes.${typ.className}](wrapper.graph, "${typ.name}")""".stripMargin)
+    }
+    for (typ <- schema.nodeBaseTypes if typ.starterName.isDefined) {
+      val types = schema.nodeTypes.filter{_.extendzRecursively.contains(typ)}
+      starters.append(
+        s"""@overflowdb.traversal.help.Doc(info = "All nodes of type ${typ.className}, i.e. with label in ${types.map{_.name}.sorted.mkString(", ")}")
+           |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] =  wrapper.graph.nodes(${types.map{concrete => "\"" + concrete.name + "\""}.mkString(", ") }).asScala.asInstanceOf[Iterator[nodes.${typ.className}]]""".stripMargin)
+    }
     val domainMain = baseDir.createChild(s"$domainShortName.scala").write(
       s"""package $basePackage
          |
@@ -141,6 +153,26 @@ class CodeGen(schema: Schema) {
          |
          |  override def toString(): String =
          |    String.format("$domainShortName (%s)", graph)
+         |}
+         |
+         |class GeneratedNodeStarterExt(val wrapper: ${domainShortName}) extends AnyVal {
+         |import scala.jdk.CollectionConverters.IteratorHasAsScala
+         |${starters.mkString("\n\n")}
+         |}
+         |
+         |/**
+         |  * Domain-specific version of diffgraph builder. This is to allow schema checking before diffgraph application
+         |  * in the future, as well as a schema-aware point for providing backwards compatibility in odbv2.
+         |  */
+         |class DiffGraphBuilder extends overflowdb.BatchedUpdate.DiffGraphBuilder {
+         |  override def absorb(other: overflowdb.BatchedUpdate.DiffGraphBuilder): this.type = {super.absorb(other); this}
+         |  override def addNode(node: overflowdb.DetachedNodeData): this.type = {super.addNode(node); this}
+         |  override def addNode(label: String, keyvalues:Any*): this.type = {super.addNode(label, keyvalues:_*); this}
+         |  override def addEdge(src: overflowdb.NodeOrDetachedNode, dst: overflowdb.NodeOrDetachedNode, label: String): this.type = {super.addEdge(src, dst, label); this}
+         |  override def addEdge(src: overflowdb.NodeOrDetachedNode, dst: overflowdb.NodeOrDetachedNode, label: String, properties: Any*): this.type = {super.addEdge(src, dst, label, properties:_*); this}
+         |  override def setNodeProperty(node: overflowdb.Node, label: String, property: Any): this.type = {super.setNodeProperty(node, label, property); this}
+         |  override def removeNode(node: overflowdb.Node): this.type = {super.removeNode(node); this}
+         |  override def removeEdge(edge: overflowdb.Edge): this.type = {super.removeEdge(edge); this}
          |}
          |
          |""".stripMargin
@@ -387,8 +419,10 @@ class CodeGen(schema: Schema) {
          |  def isRegex(pattern: String): Boolean = pattern.exists(reChars.contains(_))
          |}
          |
+         |trait StaticType[+T]
+         |
          |/** Abstract supertype for overflowdb.Node and NewNode */
-         |trait AbstractNode extends overflowdb.NodeOrDetachedNode {
+         |trait AbstractNode extends overflowdb.NodeOrDetachedNode with StaticType[AnyRef]{
          |  def label: String
          |}
          |
@@ -1199,9 +1233,9 @@ class CodeGen(schema: Schema) {
 
   protected def writeNodeTraversalFiles(outputDir: File): Seq[File] = {
     lazy val nodeTraversalImplicits = {
-      def implicitForNodeType(name: String) = {
+      def implicitForNodeType(name: String): String = {
         val traversalName = s"${name}TraversalExtGen"
-        s"implicit def to$traversalName[NodeType <: $name](trav: IterableOnce[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav)"
+        s"implicit def to$traversalName[NodeType <: $name](trav: IterableOnce[NodeType]): ${traversalName}[NodeType] = new $traversalName(trav.iterator)"
       }
 
       val implicitsForNodeTraversals =
@@ -1209,12 +1243,25 @@ class CodeGen(schema: Schema) {
 
       val implicitsForNodeBaseTypeTraversals =
         schema.nodeBaseTypes.map(_.className).sorted.map(implicitForNodeType).mkString(lineSeparator)
+      val implicitsForAnyNodeTraversals = implicitForNodeType("StoredNode")
+      //todo: Relocate to specific file?
+      val edgeExt = schema.edgeTypes.map{et =>
+        val acc = s"${Helpers.camelCase(et.name)}"
+        s"""def _${acc}Out: Iterator[StoredNode] = traversal.flatMap{_._${acc}Out}
+           |def _${acc}In: Iterator[StoredNode] = traversal.flatMap{_._${acc}In} """.stripMargin
+      }.mkString("\n")
+      val anyNodeExtClass =
+        s"""class StoredNodeTraversalExtGen[NodeType <: StoredNode](val traversal: Iterator[NodeType]) extends AnyVal {
+           |  ${edgeExt}
+           |}""".stripMargin
 
       s"""package $traversalsPackage
          |
          |import $nodesPackage._
          |
          |trait NodeTraversalImplicits extends NodeBaseTypeTraversalImplicits {
+         |  $implicitsForAnyNodeTraversals
+         |
          |  $implicitsForNodeTraversals
          |}
          |
@@ -1222,6 +1269,8 @@ class CodeGen(schema: Schema) {
          |trait NodeBaseTypeTraversalImplicits extends overflowdb.traversal.Implicits {
          |  $implicitsForNodeBaseTypeTraversals
          |}
+         |
+         |$anyNodeExtClass
          |""".stripMargin
     }
 
@@ -1598,7 +1647,7 @@ class CodeGen(schema: Schema) {
          |import $nodesPackage._
          |
          |/** Traversal steps for $className */
-         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: IterableOnce[NodeType]) extends AnyVal {
+         |class ${className}TraversalExtGen[NodeType <: $className](val traversal: Iterator[NodeType]) extends AnyVal {
          |
          |${customStepNameTraversals.mkString(System.lineSeparator)}
          |
