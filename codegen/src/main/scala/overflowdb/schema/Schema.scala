@@ -72,7 +72,7 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
   }
 
   def extendz: Seq[NodeBaseType] =
-    _extendz.toSeq
+    _extendz.toSeq.sortBy(_.name)
 
   def extendzRecursively: Seq[NodeBaseType] = {
     val results = Seq.newBuilder[NodeBaseType]
