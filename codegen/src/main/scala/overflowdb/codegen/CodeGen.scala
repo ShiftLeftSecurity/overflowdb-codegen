@@ -661,7 +661,13 @@ class CodeGen(schema: Schema) {
             .map { case (edge, neighborContexts) =>
               val neighborInfoForNodes =
                 neighborContexts
-                  .sortBy(x => (x.adjacentNode.neighbor.name, x.adjacentNode.customStepName))
+                  .sortBy { x =>
+                    (x.adjacentNode.neighbor.name,
+                      x.adjacentNode.customStepName,
+                      x.adjacentNode.viaEdge.toString,
+                      x.adjacentNode.neighbor.name,
+                      x.adjacentNode.cardinality.toString)
+                  }
                   .map { case AjacentNodeWithInheritanceStatus(adjacentNode, isInherited) =>
                     NeighborInfoForNode(adjacentNode.neighbor, edge, direction, adjacentNode.cardinality, isInherited, adjacentNode.customStepName, adjacentNode.customStepDoc)
                   }
