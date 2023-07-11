@@ -251,9 +251,11 @@ object Helpers {
       .orElse(findSharedRoot(neighborNodeInfos))
   }
 
-  /** in theory there can be multiple candidates - we're just returning one of those for now */
+  /** In theory there can be multiple candidates - we're just returning one of those for now.
+   * We want the results to be stable between different codegen runs, so we simply return the first
+   * in alphabetical order... */
   def lowestCommonAncestor(nodes: Set[AbstractNodeType]): Option[AbstractNodeType] = {
-    LowestCommonAncestors(nodes)(_.extendzRecursively.toSet).headOption
+    LowestCommonAncestors(nodes)(_.extendzRecursively.toSet).toSeq.sortBy(_.name).headOption
   }
 
   /** from the given node types, find one that is part of the complete type hierarchy of *all* other node types */
