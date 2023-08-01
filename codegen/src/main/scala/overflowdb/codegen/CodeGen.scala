@@ -1,16 +1,17 @@
 package overflowdb.codegen
 
-import better.files._
-import java.lang.System.lineSeparator
+import better.files.*
 import overflowdb.codegen.CodeGen.ConstantContext
+import overflowdb.schema.*
 import overflowdb.schema.EdgeType.Cardinality
 import overflowdb.schema.Property.ValueType
-import overflowdb.schema._
+
+import java.lang.System.lineSeparator
 import scala.collection.mutable
 
 /** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
 class CodeGen(schema: Schema) {
-  import Helpers._
+  import Helpers.*
   val basePackage = schema.basePackage
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
@@ -1700,7 +1701,7 @@ class CodeGen(schema: Schema) {
          |}
          |""".stripMargin
 
-    def generateNewNodeSource(nodeType: NodeType, properties: Seq[Property[_]]) = {
+    def generateNewNodeSource(nodeType: NodeType, properties: Seq[Property[_]], inEdges: Set[(String, String)], outEdges: Set[(String, String)]) = {
       import Property.Cardinality
       case class FieldDescription(name: String, valueType: String, fullType: String, cardinality: Cardinality)
       val fieldDescriptions = mutable.ArrayBuffer.empty[FieldDescription]
@@ -1828,6 +1829,13 @@ class CodeGen(schema: Schema) {
 
       s"""object $classNameNewNode {
          |  def apply(): $classNameNewNode = new $classNameNewNode
+         |
+         |  private val outNeighbours: Set[(String, String)] = Set(${outEdges.mkString(", ")})
+         |  private val inNeighbours: Set[(String, String)] = Set(${inEdges.mkString(", ")})
+         |
+         |  def isValidOutNeighbour(edgeLabel: String, n: NewNode): Boolean = outNeighbours.contains((edgeLabel, n.label))
+         |
+         |  def isValidInNeighbour(edgeLabel: String, n: NewNode): Boolean = inNeighbours.contains((edgeLabel, n.label))
          |}
          |
          |class $classNameNewNode
@@ -1872,7 +1880,9 @@ class CodeGen(schema: Schema) {
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
-      generateNewNodeSource(nodeType, nodeType.properties)
+      val inEdges =  nodeType.inEdges.map(x => (s"\"${x.viaEdge.name}\"", s"\"${x.neighbor.name}\"")).toSet
+      val outEdges =  nodeType.outEdges.map(x => (s"\"${x.viaEdge.name}\"", s"\"${x.neighbor.name}\"")).toSet
+      generateNewNodeSource(nodeType, nodeType.properties, inEdges, outEdges)
     }.mkString(lineSeparator)
     outfile.write(s"""$staticHeader
                      |$src
