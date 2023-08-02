@@ -1698,6 +1698,8 @@ class CodeGen(schema: Schema) {
          |  override def getRefOrId(): Object = refOrId
          |  override def setRefOrId(r: Object): Unit = {this.refOrId = r}
          |  def stored: Option[StoredType] = if(refOrId != null && refOrId.isInstanceOf[StoredNode]) Some(refOrId).asInstanceOf[Option[StoredType]] else None
+         |  def isValidOutNeighbour(edgeLabel: String, n: NewNode): Boolean
+         |  def isValidInNeighbour(edgeLabel: String, n: NewNode): Boolean
          |}
          |""".stripMargin
 
@@ -1833,9 +1835,6 @@ class CodeGen(schema: Schema) {
          |  private val outNeighbours: Set[(String, String)] = Set(${outEdges.mkString(", ")})
          |  private val inNeighbours: Set[(String, String)] = Set(${inEdges.mkString(", ")})
          |
-         |  def isValidOutNeighbour(edgeLabel: String, n: NewNode): Boolean = outNeighbours.contains((edgeLabel, n.label))
-         |
-         |  def isValidInNeighbour(edgeLabel: String, n: NewNode): Boolean = inNeighbours.contains((edgeLabel, n.label))
          |}
          |
          |class $classNameNewNode
@@ -1855,6 +1854,14 @@ class CodeGen(schema: Schema) {
          |  $propertySettersImpl
          |
          |  $propertiesMapImpl
+         |
+         |  import $classNameNewNode.{outNeighbours, inNeighbours}
+         |
+         |  override def isValidOutNeighbour(edgeLabel: String, n: NewNode): Boolean =
+         |    outNeighbours.contains((edgeLabel, n.label))
+         |
+         |  override def isValidInNeighbour(edgeLabel: String, n: NewNode): Boolean =
+         |    inNeighbours.contains((edgeLabel, n.label))
          |
          |  override def productElement(n: Int): Any =
          |    n match {
