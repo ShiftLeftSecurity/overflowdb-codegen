@@ -1682,6 +1682,18 @@ class CodeGen(schema: Schema) {
     results.toSeq
   }
 
+  /**
+   * Useful string extensions to avoid Scala version incompatible interpolations.
+   */
+  implicit class StringExt(s: String) {
+
+    def quote: String = {
+      val quote = "\""
+      new StringBuilder(s.length() + 2 * quote.length(), quote).append(s).append(quote).mkString
+    }
+
+  }
+
   /** generates classes to easily add new nodes to the graph
     * this ability could have been added to the existing nodes, but it turned out as a different specialisation,
     * since e.g. `id` is not set before adding it to the graph */
@@ -1887,8 +1899,8 @@ class CodeGen(schema: Schema) {
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
-      val inEdges =  nodeType.inEdges.map(x => (s"\"${x.viaEdge.name}\"", s"\"${x.neighbor.name}\"")).toSet
-      val outEdges =  nodeType.outEdges.map(x => (s"\"${x.viaEdge.name}\"", s"\"${x.neighbor.name}\"")).toSet
+      val inEdges =  nodeType.inEdges.map(x => (x.viaEdge.name.quote, x.neighbor.name.quote)).toSet
+      val outEdges =  nodeType.outEdges.map(x => (x.viaEdge.name.quote, x.neighbor.name.quote)).toSet
       generateNewNodeSource(nodeType, nodeType.properties, inEdges, outEdges)
     }.mkString(lineSeparator)
     outfile.write(s"""$staticHeader
