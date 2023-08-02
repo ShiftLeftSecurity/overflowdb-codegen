@@ -1,8 +1,8 @@
 package overflowdb.codegen
 
-import better.files.*
+import better.files._
 import overflowdb.codegen.CodeGen.ConstantContext
-import overflowdb.schema.*
+import overflowdb.schema._
 import overflowdb.schema.EdgeType.Cardinality
 import overflowdb.schema.Property.ValueType
 
@@ -11,7 +11,7 @@ import scala.collection.mutable
 
 /** Generates a domain model for OverflowDb traversals for a given domain-specific schema. */
 class CodeGen(schema: Schema) {
-  import Helpers.*
+  import Helpers._
   val basePackage = schema.basePackage
   val nodesPackage = s"$basePackage.nodes"
   val edgesPackage = s"$basePackage.edges"
