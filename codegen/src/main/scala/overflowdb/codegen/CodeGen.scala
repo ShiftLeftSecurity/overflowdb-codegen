@@ -1715,7 +1715,7 @@ class CodeGen(schema: Schema) {
          |}
          |""".stripMargin
 
-    def generateNewNodeSource(nodeType: NodeType, properties: Seq[Property[_]], inEdges: Set[(String, String)], outEdges: Set[(String, String)]) = {
+    def generateNewNodeSource(nodeType: NodeType, properties: Seq[Property[_]], inEdges: Seq[(String, String)], outEdges: Seq[(String, String)]) = {
       import Property.Cardinality
       case class FieldDescription(name: String, valueType: String, fullType: String, cardinality: Cardinality)
       val fieldDescriptions = mutable.ArrayBuffer.empty[FieldDescription]
@@ -1899,9 +1899,23 @@ class CodeGen(schema: Schema) {
     if (outfile.exists) outfile.delete()
     outfile.createFile()
     val src = schema.nodeTypes.map { nodeType =>
+      val baseTypeInEdges = nodeType
+        .extendzRecursively
+        .flatMap(_.inEdges)
+        .map(x => (x.viaEdge.name.quote, x.neighbor.name.quote))
+        .toSet
       val inEdges =  nodeType.inEdges.map(x => (x.viaEdge.name.quote, x.neighbor.name.quote)).toSet
+      val baseTypeOutEdges = nodeType
+        .extendzRecursively
+        .flatMap(_.outEdges)
+        .map(x => (x.viaEdge.name.quote, x.neighbor.name.quote)).toSet
       val outEdges =  nodeType.outEdges.map(x => (x.viaEdge.name.quote, x.neighbor.name.quote)).toSet
-      generateNewNodeSource(nodeType, nodeType.properties, inEdges, outEdges)
+      generateNewNodeSource(
+        nodeType,
+        nodeType.properties,
+        (baseTypeInEdges ++ inEdges).toSeq.sortBy(_._1),
+        (baseTypeOutEdges ++ outEdges).toSeq.sortBy(_._1)
+      )
     }.mkString(lineSeparator)
     outfile.write(s"""$staticHeader
                      |$src
