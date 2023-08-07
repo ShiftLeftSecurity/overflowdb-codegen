@@ -1688,8 +1688,7 @@ class CodeGen(schema: Schema) {
   implicit class StringExt(s: String) {
 
     def quote: String = {
-      val quote = "\""
-      new StringBuilder(s.length() + 2 * quote.length(), quote).append(s).append(quote).mkString
+      s""""$s""""
     }
 
   }
