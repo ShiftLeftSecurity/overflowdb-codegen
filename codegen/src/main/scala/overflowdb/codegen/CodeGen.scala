@@ -1841,7 +1841,7 @@ class CodeGen(schema: Schema) {
       }.mkString(lineSeparator)
 
       def neighborEdgeStr(es: Map[String, Set[String]]): String =
-        es.map { case (k, vs) => s"$k -> Set(${vs.mkString(", ")})" }.mkString(", ")
+        es.toSeq.sortBy(_._1).map { case (k, vs) => s"$k -> Set(${vs.toSeq.sorted.mkString(", ")})" }.mkString(", ")
 
       s"""object $classNameNewNode {
          |  def apply(): $classNameNewNode = new $classNameNewNode
