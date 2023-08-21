@@ -11,11 +11,11 @@ import scala.util.Try
 object OdbCodegenSbtPlugin extends AutoPlugin {
 
   object autoImport {
-    val generateDomainClasses = taskKey[File]("generate overflowdb domain classes for the given schema - return value is the output root directory")
+    val generateDomainClasses = taskKey[File]("regenerates domain classes for the given schema; return value is the output root directory")
     val outputDir = settingKey[File]("target directory for the generated domain classes, e.g. `Projects.domainClasses/scalaSource`")
     val classWithSchema = settingKey[String]("class with schema field, e.g. `org.example.MyDomain$`")
     val fieldName = settingKey[String]("(static) field name for schema within the specified `classWithSchema` with schema field, e.g. `org.example.MyDomain$`")
-    val disableFormatting = settingKey[Boolean]("disable scalafmt formatting")
+    val disableFormatting = settingKey[Boolean]("disable automatic scalafmt invocation")
 
     lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
       generateDomainClasses := generateDomainClassesTask.value,
@@ -32,7 +32,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
   // a group of settings that are automatically added to projects.
   override val projectSettings = inConfig(Compile)(autoImport.baseSettings)
 
-  lazy val generateDomainClassesTask =
+  lazy val generateDomainClassesTask = {
     Def.taskDyn {
       val classWithSchemaValue = (generateDomainClasses/classWithSchema).value
       val fieldNameValue = (generateDomainClasses/fieldName).value
@@ -76,6 +76,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
         }
       }
     }
+  }
 
 
 }
