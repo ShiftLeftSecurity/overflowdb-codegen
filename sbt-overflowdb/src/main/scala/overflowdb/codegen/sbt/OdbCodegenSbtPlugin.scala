@@ -12,6 +12,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
 
   object autoImport {
     val generateDomainClasses = taskKey[File]("regenerates domain classes for the given schema; return value is the output root directory")
+    val generateDomainClassesCheck = taskKey[Unit]("Fails if domain classes are not generated with the latest versions. Analogous to `scalafmtCheck`, i.e. run this on PRs.")
     val outputDir = settingKey[File]("target directory for the generated domain classes, e.g. `Projects.domainClasses/scalaSource`")
     val classWithSchema = settingKey[String]("class with schema field, e.g. `org.example.MyDomain$`")
     val fieldName = settingKey[String]("(static) field name for schema within the specified `classWithSchema` with schema field, e.g. `org.example.MyDomain$`")
@@ -19,6 +20,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
 
     lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
       generateDomainClasses := generateDomainClassesTask.value,
+      generateDomainClassesCheck := generateDomainClassesCheckTask.value,
       generateDomainClasses/disableFormatting := false,
     )
   }
@@ -63,16 +65,46 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
           outputDirValue
         }
       } else if (outputDirValue.exists && lastSchemaAndDependenciesHash == Some(currentSchemaAndDependenciesHash)) {
-        // inputs did not change, don't regenerate
+        streams.value.log.info("inputs did not change -> no need to run codegen")
         Def.task { outputDirValue }
       } else {
         Def.task {
-          FileUtils.deleteRecursively(outputDirValue)
           (Compile/runMain).toTask(
             s" overflowdb.codegen.Main --classWithSchema=$classWithSchemaValue --field=$fieldNameValue --out=$outputDirValue $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
           ).value
           IO.write(schemaAndDependenciesHashFile, currentSchemaAndDependenciesHash)
           outputDirValue
+        }
+      }
+    }
+  }
+
+  lazy val generateDomainClassesCheckTask = {
+    Def.taskDyn {
+      streams.value.log.info("generateDomainClassesCheck: running codegen for comparison")
+      val classWithSchemaValue = (generateDomainClasses/classWithSchema).value
+      val fieldNameValue = (generateDomainClasses/fieldName).value
+      val outputDirValue = (generateDomainClasses/outputDir).value
+      val tempOutputDir = target.value / "generate-domain-classes-check"
+
+      val disableFormattingParamMaybe =
+        if ((generateDomainClasses/disableFormatting).value) "--noformat"
+        else ""
+
+      val scalafmtConfigFileMaybe = {
+        val file = (generateDomainClasses/scalafmtConfig).value
+        if (file.exists) s"--scalafmtConfig=$file"
+        else ""
+      }
+
+      Def.task {
+        (Compile/runMain).toTask(
+          s" overflowdb.codegen.Main --classWithSchema=$classWithSchemaValue --field=$fieldNameValue --out=$tempOutputDir $disableFormattingParamMaybe $scalafmtConfigFileMaybe"
+        ).value
+
+        val generatedSourcesIdentical = FileUtils.md5(outputDirValue) == FileUtils.md5(tempOutputDir)
+        if (!generatedSourcesIdentical) {
+          throw new MessageOnlyException("there are differences in the generated and the existing sources, please run `generateDomainClasses` to fix this")
         }
       }
     }

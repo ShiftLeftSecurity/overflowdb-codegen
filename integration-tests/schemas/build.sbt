@@ -14,12 +14,11 @@ generateDomainClasses := Def.taskDyn {
 
   if (outputRoot.exists && lastSchemaMd5 == Some(currentSchemaMd5)) {
     Def.task {
-      // inputs did not change, don't regenerate
+      streams.value.log.info("no need to run codegen, inputs did not change")
       FileUtils.listFilesRecursively(outputRoot)
     }
   } else {
     Def.task {
-      FileUtils.deleteRecursively(outputRoot)
       val invoked = (Compile/runMain).toTask(s" CodegenForAllSchemas").value
       lastSchemaMd5(currentSchemaMd5)
       FileUtils.listFilesRecursively(outputRoot)

@@ -32,6 +32,10 @@ class CodeGen(schema: Schema) {
   }
 
   def run(outputDir: java.io.File): Seq[java.io.File] = {
+    println(s"writing domain classes to $outputDir")
+    if (outputDir.exists)
+      deleteRecursively(outputDir)
+
     warnForDuplicatePropertyDefinitions()
     val _outputDir = outputDir.toScala
     val results =
@@ -1937,6 +1941,13 @@ class CodeGen(schema: Schema) {
     outfile.write(s"""$staticHeader
                      |$src
                      |""".stripMargin)
+  }
+
+  private def deleteRecursively(file: java.io.File): Unit = {
+    if (file.isDirectory)
+      file.listFiles.foreach(deleteRecursively)
+    if (file.exists)
+      file.delete()
   }
 }
 
