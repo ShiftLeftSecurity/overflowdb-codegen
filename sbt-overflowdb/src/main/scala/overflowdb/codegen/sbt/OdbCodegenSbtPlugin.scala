@@ -51,7 +51,7 @@ object OdbCodegenSbtPlugin extends AutoPlugin {
       }
 
       val schemaAndDependenciesHashFile = target.value / "overflowdb-schema-and-dependencies.md5"
-      val dependenciesFile = target.value / "dependenciesCP.txt"
+      val dependenciesFile = target.value / "dependenciesCP.txt" // includes codegen version!
       IO.write(dependenciesFile, dependencyClasspath.value.mkString(System.lineSeparator))
       lazy val currentSchemaAndDependenciesHash =
         FileUtils.md5(sourceDirectory.value, baseDirectory.value/"build.sbt", dependenciesFile)
