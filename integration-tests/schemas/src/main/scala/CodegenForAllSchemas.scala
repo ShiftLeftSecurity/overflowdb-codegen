@@ -23,9 +23,7 @@ object CodegenForAllSchemas {
       new TestSchema05,
       new TestSchema06,
     ).foreach { schema =>
-      new CodeGen(schema.instance)
-        .disableScalafmt
-        .run(outputDir, deleteExistingFiles = false)
+      new CodeGen(schema.instance).run(outputDir, deleteExistingFiles = false)
     }
   }
 
