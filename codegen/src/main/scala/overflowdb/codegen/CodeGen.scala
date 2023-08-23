@@ -31,9 +31,9 @@ class CodeGen(schema: Schema) {
     this
   }
 
-  def run(outputDir: java.io.File): Seq[java.io.File] = {
+  def run(outputDir: java.io.File, deleteExistingFiles: Boolean = true): Seq[java.io.File] = {
     println(s"writing domain classes to $outputDir")
-    if (outputDir.exists)
+    if (deleteExistingFiles && outputDir.exists)
       deleteRecursively(outputDir)
 
     warnForDuplicatePropertyDefinitions()
