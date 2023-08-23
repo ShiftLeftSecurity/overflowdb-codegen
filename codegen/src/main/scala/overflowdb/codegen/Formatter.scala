@@ -13,6 +13,7 @@ object Formatter {
       |""".stripMargin
 
   def run(sourceFiles: Seq[File], scalafmtConfig: Option[File]): Unit = {
+    println(s"invoking scalafmt on ${sourceFiles.size} files")
     val configFile: File = scalafmtConfig.getOrElse(
       Files
         .createTempFile("overflowdb-scalafmt", ".conf")

@@ -1,7 +1,7 @@
 import java.io.File
 import java.nio.file.Files
 import java.security.{DigestInputStream, MessageDigest}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.*
 
 object FileUtils {
 
@@ -11,24 +11,13 @@ object FileUtils {
     }
   }
 
-  def deleteRecursively(root: File): Unit = {
-    if (root.exists) {
-      Files.walk(root.toPath).iterator.asScala.map(_.toFile).collect {
-        case file if (file.isDirectory) => deleteRecursively(file)
-        case file => file.delete()
-      }
-    }
-  }
-
   def md5(roots: File*): String = {
     val md = MessageDigest.getInstance("MD5")
     roots.foreach { root =>
       Files.walk(root.toPath).filter(!_.toFile.isDirectory).forEach { path =>
         val dis = new DigestInputStream(Files.newInputStream(path), md)
-        // fully consume the inputstream
-        while (dis.available > 0) {
-          dis.read
-        }
+        // fully consume the InputStream
+        while (dis.available > 0) dis.read
         dis.close
       }
     }
