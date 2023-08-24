@@ -11,7 +11,7 @@ Note: the regular `sbt clean` does not touch/delete/handle the codegen-generated
 Fails if domain classes are not generated with the latest versions. Analogous to `scalafmtCheck`, i.e. run this on PRs.
 
 ## Example repositories / builds
-* TODO
+[CodePropertyGraph](https://github.com/ShiftLeftSecurity/codepropertygraph), most importantly [schema/build.sbt](https://github.com/ShiftLeftSecurity/codepropertygraph/blob/master/schema/build.sbt) and [domainClasses/build.sbt](https://github.com/ShiftLeftSecurity/codepropertygraph/blob/master/domainClasses/build.sbt). 
 
 ## Disable temporarily
 You can temporarily disable the codegen in your build by setting the environment variable `ODB_CODEGEN_DISABLE=true`. That's useful e.g. if you made some manual changes to the generated files that would otherwise be overridden by the codegen. 
