@@ -13,7 +13,7 @@ class TestSchema01 extends TestSchema {
   val node1 = builder.addNodeType(
     name = "NODE1",
     comment = "sample node 1"
-  ).addProperties(name, order)
+  ).addProperties(name, order).primaryKey(name)
 
   val node2 = builder.addNodeType(
     name = "NODE2",
