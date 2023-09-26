@@ -142,7 +142,7 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   private var _primaryKey: Option[Property[_]] = None
 
   def primaryKey(p: Property[_]): this.type = {
-    this._primaryKey = Some(p)
+    this._primaryKey = Option(p)
     this
   }
 

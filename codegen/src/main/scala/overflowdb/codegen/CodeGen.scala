@@ -87,7 +87,6 @@ class CodeGen(schema: Schema) {
            |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] = overflowdb.traversal.InitialTraversal.from[nodes.${typ.className}](wrapper.graph, "${typ.name}")""".stripMargin)
       typ.primaryKey match {
         case Some(property:Property[_]) =>
-          //fixme
           val nameCamelCase = camelCase(property.name)
           val baseType = typeFor(property)
           starters.append(
