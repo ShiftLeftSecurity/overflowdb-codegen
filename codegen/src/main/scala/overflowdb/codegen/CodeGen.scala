@@ -85,6 +85,16 @@ class CodeGen(schema: Schema) {
       starters.append(
         s"""@overflowdb.traversal.help.Doc(info = "All nodes of type ${typ.className}, i.e. with label ${typ.name}")
            |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] = overflowdb.traversal.InitialTraversal.from[nodes.${typ.className}](wrapper.graph, "${typ.name}")""".stripMargin)
+      typ.primaryKey match {
+        case Some(property:Property[_]) =>
+          val nameCamelCase = camelCase(property.name)
+          val baseType = typeFor(property)
+          starters.append(
+            s"""@overflowdb.traversal.help.Doc(info = "Shorthand for ${typ.starterName.get}.${nameCamelCase}")
+               |def ${typ.starterName.get}(key: ${baseType}): Iterator[nodes.${typ.className}] =
+               |  new  ${traversalsPackage}.${typ.className}TraversalExtGen(${typ.starterName.get}).${nameCamelCase}(key)""".stripMargin)
+        case _ =>
+      }
     }
     for (typ <- schema.nodeBaseTypes if typ.starterName.isDefined) {
       val types = schema.nodeTypes.filter{_.extendzRecursively.contains(typ)}

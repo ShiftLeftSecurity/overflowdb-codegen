@@ -81,6 +81,17 @@ class Schema01Test extends AnyWordSpec with Matchers {
       // TODO generate domain-specific setters in codegen
     }
 
+    "use generated node starters" in {
+      val domainspecific = new testschema01.TestSchema(graph)
+      object TmpImplicit {
+        implicit def toStarter(wrapped: testschema01.TestSchema): testschema01.GeneratedNodeStarterExt = new testschema01.GeneratedNodeStarterExt(wrapped)
+      }
+      import TmpImplicit._
+      domainspecific.node1.toList shouldBe List(node1a, node1b)
+      domainspecific.node1(".*1b").toList shouldBe List(node1b)
+
+    }
+
     "generate NewNodes" in {
       val newNode2 = NewNode2()
         .name("name1")

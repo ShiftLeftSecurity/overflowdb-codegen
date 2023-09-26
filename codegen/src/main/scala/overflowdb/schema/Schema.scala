@@ -139,6 +139,15 @@ class NodeType(name: String, comment: Option[String], schemaInfo: SchemaInfo)
   extends AbstractNodeType(name, comment, schemaInfo) with HasOptionalProtoId  {
   protected val _containedNodes: mutable.Set[ContainedNode] = mutable.Set.empty
 
+  private var _primaryKey: Option[Property[_]] = None
+
+  def primaryKey(p: Property[_]): this.type = {
+    this._primaryKey = Option(p)
+    this
+  }
+
+  def primaryKey: Option[Property[_]] = this._primaryKey
+
   lazy val classNameDb = s"${className}Db"
 
   /** all node types that extend this node */
