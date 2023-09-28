@@ -80,8 +80,10 @@ class CodeGen(schema: Schema) {
       }.mkString("")
     }
 
-    val starters = mutable.ArrayBuffer[String]()
+    val startersUnhidden = mutable.ArrayBuffer[String]()
+    val startersHidden = mutable.ArrayBuffer[String]()
     for(typ <- schema.nodeTypes if typ.starterName.isDefined){
+      val starters = if(typ.hiddenStarter) startersHidden else startersUnhidden
       starters.append(
         s"""@overflowdb.traversal.help.Doc(info = "All nodes of type ${typ.className}, i.e. with label ${typ.name}")
            |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] = overflowdb.traversal.InitialTraversal.from[nodes.${typ.className}](wrapper.graph, "${typ.name}")""".stripMargin)
@@ -97,6 +99,7 @@ class CodeGen(schema: Schema) {
       }
     }
     for (typ <- schema.nodeBaseTypes if typ.starterName.isDefined) {
+      val starters = if(typ.hiddenStarter) startersHidden else startersUnhidden
       val types = schema.nodeTypes.filter{_.extendzRecursively.contains(typ)}
       starters.append(
         s"""@overflowdb.traversal.help.Doc(info = "All nodes of type ${typ.className}, i.e. with label in ${types.map{_.name}.sorted.mkString(", ")}")
@@ -172,7 +175,12 @@ class CodeGen(schema: Schema) {
          |
          |class GeneratedNodeStarterExt(val wrapper: ${domainShortName}) extends AnyVal {
          |import scala.jdk.CollectionConverters.IteratorHasAsScala
-         |${starters.mkString("\n\n")}
+         |${startersUnhidden.mkString("\n\n")}
+         |}
+         |
+         |class GeneratedHiddenNodeStarterExt(val wrapper: ${domainShortName}) extends AnyVal {
+         |import scala.jdk.CollectionConverters.IteratorHasAsScala
+         |${startersHidden.mkString("\n\n")}
          |}
          |
          |/**

@@ -51,12 +51,25 @@ abstract class AbstractNodeType(val name: String, val comment: Option[String], v
 
 
   private var _starterName: Option[String] = Some(camelCase(name))
+  private var _hiddenStarter:Boolean = false
 
   /** the name for the generated node starter. Custom names can be assigned to prevent compile errors for e.g. `type`.
    * Generation of node-starter can be suppressed by passing null, or by calling `withoutStarter()`.*/
   def starterName: Option[String] = _starterName
   def starterName(name:String): this.type = {this._starterName = Option(name); this}
   def withoutStarter(): this.type = starterName(null)
+
+  /** In some rare cases, we cannot use completely generated code for the starter:
+   * the primaryKey mechanism is insufficient to express complex logic inside the starter with arguments.
+   * Unfortunately, the code for both argument-less and argument-ful starters needs to be inside the same class,
+   * due to scala implicit resolution shortcomings.
+   * In these cases, we should hide the generated starter for this node-type, and provide a hand-written one that forwards
+   * to the generated one in the no-argument case.*/
+  def hiddenStarter: Boolean = _hiddenStarter
+  def hiddenStarter(hidden:Boolean):this.type = {_hiddenStarter = hidden; this}
+
+
+
   /** properties (including potentially inherited properties) */
   override def properties: Seq[Property[_]] = {
     val entireClassHierarchy = this +: extendzRecursively
