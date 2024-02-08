@@ -84,7 +84,8 @@ class CodeGen(schema: Schema) {
     for(typ <- schema.nodeTypes if typ.starterName.isDefined){
       starters.append(
         s"""@overflowdb.traversal.help.Doc(info = "All nodes of type ${typ.className}, i.e. with label ${typ.name}")
-           |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] = overflowdb.traversal.InitialTraversal.from[nodes.${typ.className}](wrapper.graph, "${typ.name}")""".stripMargin)
+           |def ${typ.starterName.get}: Iterator[nodes.${typ.className}] = overflowdb.traversal.InitialTraversal.from[nodes.${typ.className}](wrapper.graph, "${typ.name}")""".stripMargin
+      )
       typ.primaryKey match {
         case Some(property:Property[_]) =>
           val nameCamelCase = camelCase(property.name)
@@ -106,8 +107,9 @@ class CodeGen(schema: Schema) {
       s"""package $basePackage
          |
          |import java.nio.file.{Path, Paths}
-         |import overflowdb.traversal.help.{DocSearchPackages, TraversalHelp}
          |import overflowdb.{Config, Graph}
+         |import overflowdb.traversal.help.{DocSearchPackages, TraversalHelp}
+         |import overflowdb.traversal.help.Table.AvailableWidthProvider
          |import scala.jdk.javaapi.CollectionConverters.asJava
          |
          |object $domainShortName {
@@ -160,7 +162,7 @@ class CodeGen(schema: Schema) {
          |class $domainShortName(private val _graph: Graph = $domainShortName.emptyGraph) extends AutoCloseable {
          |  def graph: Graph = _graph
          |
-         |  def help(implicit searchPackageNames: DocSearchPackages): String =
+         |  def help(implicit searchPackageNames: DocSearchPackages, availableWidthProvider: AvailableWidthProvider): String =
          |    new TraversalHelp(searchPackageNames).forTraversalSources
          |
          |  override def close(): Unit =
