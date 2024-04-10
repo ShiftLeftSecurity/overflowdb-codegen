@@ -525,7 +525,7 @@ class CodeGen(schema: Schema) {
 //            val relevantNeighbors = (neighbors ++ subtypesWithSameEdgeAndDirection).map(_.neighbor).toSet
 //            deriveCommonRootType(relevantNeighbors)
 //          }
-          val neighborNodesType = "StoredNode"
+          val neighborNodesType = "? <: StoredNode"
           val genericEdgeAccessor = s"def $edgeAccessorName: Iterator[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
@@ -1011,8 +1011,7 @@ class CodeGen(schema: Schema) {
         }.mkString(lineSeparator)
 
         val neighborNodeClass = neighborInfo.deriveNeighborNodeType.getOrElse(schema.anyNode).className
-        s"""/** Actually this Iterator includes only `$neighborNodeClass` nodes, but we need to stick to the inherited type from BaseNode */
-           |def $edgeAccessorName: Iterator[StoredNode] = get().$edgeAccessorName
+        s"""def $edgeAccessorName: Iterator[$neighborNodeClass] = get().$edgeAccessorName
            |override def _$edgeAccessorName = get()._$edgeAccessorName
            |
            |$nodeDelegators
