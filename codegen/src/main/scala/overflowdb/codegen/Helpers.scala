@@ -184,10 +184,11 @@ object Helpers {
         s"""case "${property.name}" => $propertyDefaultsPath.${property.className}"""
     }.mkString(lineSeparator)
 
-    s"""override def propertyDefaultValue(propertyKey: String) =
+    s"""override def propertyDefaultValue(propertyKey: String) = {
        |  propertyKey match {
        |    $propertyDefaultValueCases
        |    case _ => super.propertyDefaultValue(propertyKey)
+       |  }
        |}
        |""".stripMargin
   }
