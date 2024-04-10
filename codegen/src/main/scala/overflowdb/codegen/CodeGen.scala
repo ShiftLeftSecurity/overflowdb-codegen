@@ -184,9 +184,9 @@ class CodeGen(schema: Schema) {
          |class DiffGraphBuilder extends overflowdb.BatchedUpdate.DiffGraphBuilder {
          |  override def absorb(other: overflowdb.BatchedUpdate.DiffGraphBuilder): this.type = {super.absorb(other); this}
          |  override def addNode(node: overflowdb.DetachedNodeData): this.type = {super.addNode(node); this}
-         |  override def addNode(label: String, keyvalues:Any*): this.type = {super.addNode(label, keyvalues:_*); this}
+         |  override def addNode(label: String, keyvalues:Any*): this.type = {super.addNode(label, keyvalues: _*); this}
          |  override def addEdge(src: overflowdb.NodeOrDetachedNode, dst: overflowdb.NodeOrDetachedNode, label: String): this.type = {super.addEdge(src, dst, label); this}
-         |  override def addEdge(src: overflowdb.NodeOrDetachedNode, dst: overflowdb.NodeOrDetachedNode, label: String, properties: Any*): this.type = {super.addEdge(src, dst, label, properties:_*); this}
+         |  override def addEdge(src: overflowdb.NodeOrDetachedNode, dst: overflowdb.NodeOrDetachedNode, label: String, properties: Any*): this.type = {super.addEdge(src, dst, label, properties: _*); this}
          |  override def setNodeProperty(node: overflowdb.Node, label: String, property: Any): this.type = {super.setNodeProperty(node, label, property); this}
          |  override def removeNode(node: overflowdb.Node): this.type = {super.removeNode(node); this}
          |  override def removeEdge(edge: overflowdb.Edge): this.type = {super.removeEdge(edge); this}
@@ -284,8 +284,8 @@ class CodeGen(schema: Schema) {
       val factories = {
         val edgeFactories = schema.edgeTypes.map(edgeType => edgeType.className + ".factory").mkString(", ")
         s"""object Factories {
-           |  lazy val all: Seq[EdgeFactory[_]] = Seq($edgeFactories)
-           |  lazy val allAsJava: java.util.List[EdgeFactory[_]] = all.asJava
+           |  lazy val all: Seq[EdgeFactory[?]] = Seq($edgeFactories)
+           |  lazy val allAsJava: java.util.List[EdgeFactory[?]] = all.asJava
            |}
            |""".stripMargin
       }
@@ -296,7 +296,7 @@ class CodeGen(schema: Schema) {
          |""".stripMargin
     }
 
-    def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property[_]]) = {
+    def generateEdgeSource(edgeType: EdgeType, properties: Seq[Property[?]]) = {
       val edgeClassName = edgeType.className
 
       val propertyNames = properties.map(_.className)
@@ -338,7 +338,7 @@ class CodeGen(schema: Schema) {
            |}
            |""".stripMargin
 
-      def propertyBasedFieldAccessors(properties: Seq[Property[_]]): String = {
+      def propertyBasedFieldAccessors(properties: Seq[Property[?]]): String = {
         import Property.Cardinality
         properties.map { property =>
           val name = property.name
@@ -418,8 +418,8 @@ class CodeGen(schema: Schema) {
         val nodeFactories =
           schema.nodeTypes.map(nodeType => nodeType.className + ".factory").mkString(", ")
         s"""object Factories {
-           |  lazy val all: Seq[NodeFactory[_]] = Seq($nodeFactories)
-           |  lazy val allAsJava: java.util.List[NodeFactory[_]] = all.asJava
+           |  lazy val all: Seq[NodeFactory[?]] = Seq($nodeFactories)
+           |  lazy val allAsJava: java.util.List[NodeFactory[?]] = all.asJava
            |}
            |""".stripMargin
       }
@@ -525,7 +525,7 @@ class CodeGen(schema: Schema) {
 //            val relevantNeighbors = (neighbors ++ subtypesWithSameEdgeAndDirection).map(_.neighbor).toSet
 //            deriveCommonRootType(relevantNeighbors)
 //          }
-          val neighborNodesType = "_ <: StoredNode"
+          val neighborNodesType = "? <: StoredNode"
           val genericEdgeAccessor = s"def $edgeAccessorName: Iterator[$neighborNodesType]"
 
           val specificNodeAccessors = neighbors.flatMap { adjacentNode =>
@@ -1154,7 +1154,7 @@ class CodeGen(schema: Schema) {
            |}""".stripMargin
       }
 
-      def propertyBasedFields(properties: Seq[Property[_]]): String = {
+      def propertyBasedFields(properties: Seq[Property[?]]): String = {
         import Property.Cardinality
         properties.map { property =>
           val publicName = camelCase(property.name)
@@ -1315,7 +1315,7 @@ class CodeGen(schema: Schema) {
       }
     }
 
-    def generatePropertyTraversals(properties: Seq[Property[_]]): Seq[String] = {
+    def generatePropertyTraversals(properties: Seq[Property[?]]): Seq[String] = {
       import Property.Cardinality
       properties.map { property =>
         val nameCamelCase = camelCase(property.name)
@@ -1730,7 +1730,7 @@ class CodeGen(schema: Schema) {
          |}
          |""".stripMargin
 
-    def generateNewNodeSource(nodeType: NodeType, properties: Seq[Property[_]], inEdges: Map[String, Set[String]], outEdges: Map[String, Set[String]]) = {
+    def generateNewNodeSource(nodeType: NodeType, properties: Seq[Property[?]], inEdges: Map[String, Set[String]], outEdges: Map[String, Set[String]]) = {
       import Property.Cardinality
       case class FieldDescription(name: String, valueType: String, fullType: String, cardinality: Cardinality)
       val fieldDescriptions = mutable.ArrayBuffer.empty[FieldDescription]

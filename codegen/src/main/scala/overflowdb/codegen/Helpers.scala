@@ -120,7 +120,7 @@ object Helpers {
     }
   }
 
-  def getCompleteType[A](property: Property[_]): String =
+  def getCompleteType[A](property: Property[?]): String =
     getCompleteType(property.cardinality, typeFor(property))
 
   def typeFor(containedNode: ContainedNode): String = {
@@ -178,28 +178,29 @@ object Helpers {
     }
   }
 
-  def propertyDefaultValueImpl(propertyDefaultsPath: String, properties: Seq[Property[_]]): String = {
+  def propertyDefaultValueImpl(propertyDefaultsPath: String, properties: Seq[Property[?]]): String = {
     val propertyDefaultValueCases = properties.collect {
       case property if property.hasDefault =>
         s"""case "${property.name}" => $propertyDefaultsPath.${property.className}"""
     }.mkString(lineSeparator)
 
-    s"""override def propertyDefaultValue(propertyKey: String) =
+    s"""override def propertyDefaultValue(propertyKey: String) = {
        |  propertyKey match {
        |    $propertyDefaultValueCases
        |    case _ => super.propertyDefaultValue(propertyKey)
+       |  }
        |}
        |""".stripMargin
   }
 
-  def propertyDefaultCases(properties: Seq[Property[_]]): String = {
+  def propertyDefaultCases(properties: Seq[Property[?]]): String = {
     properties.collect {
       case p if p.hasDefault =>
         s"""val ${p.className} = ${defaultValueImpl(p.default.get)}"""
     }.mkString(s"$lineSeparator|    ")
   }
 
-  def propertyAccessors(properties: Seq[Property[_]]): String = {
+  def propertyAccessors(properties: Seq[Property[?]]): String = {
     properties.map { property =>
       val camelCaseName = camelCase(property.name)
       val tpe = getCompleteType(property)
@@ -209,10 +210,10 @@ object Helpers {
 
   val propertyErrorRegisterImpl =
     s"""object PropertyErrorRegister {
-       |  private var errorMap = Set[(Class[_], String)]()
+       |  private var errorMap = Set[(Class[?], String)]()
        |  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
        |
-       |  def logPropertyErrorIfFirst(clazz: Class[_], propertyName: String): Unit = {
+       |  def logPropertyErrorIfFirst(clazz: Class[?], propertyName: String): Unit = {
        |    if (!errorMap.contains((clazz, propertyName))) {
        |      logger.warn("Property " + propertyName + " is deprecated for " + clazz.getName + ".")
        |      errorMap += ((clazz, propertyName))

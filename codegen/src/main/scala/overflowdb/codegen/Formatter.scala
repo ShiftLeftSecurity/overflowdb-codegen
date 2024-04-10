@@ -6,8 +6,8 @@ import org.scalafmt.interfaces.Scalafmt
 
 object Formatter {
   val defaultScalafmtConfig = """
-      |version=3.4.3
-      |runner.dialect=scala213
+      |version=3.8.1
+      |runner.dialect=scala3
       |align.preset=some
       |maxColumn=120
       |""".stripMargin
