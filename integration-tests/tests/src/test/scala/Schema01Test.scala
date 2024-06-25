@@ -6,6 +6,7 @@ import testschema01.nodes._
 import testschema01.edges._
 import testschema01.traversal._
 import scala.jdk.CollectionConverters.IteratorHasAsScala
+
 class Schema01Test extends AnyWordSpec with Matchers {
   import testschema01.traversal._
   "constants" in {
@@ -58,7 +59,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
       val edge2Specific = edge2.asInstanceOf[Edge2]
       val name: String = node1aSpecific.name
       name shouldBe "node 1a"
-      val o1: Option[Integer] = node1aSpecific.order
+      val o1: Option[Int] = node1aSpecific.order
       node1aSpecific.order shouldBe Some(2)
       node1bSpecific.order shouldBe None
       val o2: Seq[String] = node2aSpecific.options
@@ -97,7 +98,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
         .name("name1")
         .node3(node3)
         .options(Seq("one", "two", "three"))
-        .placements(Seq(1,2,3): Seq[Integer])
+        .placements(Seq(1,2,3))
 
       val builder = new BatchedUpdate.DiffGraphBuilder
       builder.addNode(newNode2)

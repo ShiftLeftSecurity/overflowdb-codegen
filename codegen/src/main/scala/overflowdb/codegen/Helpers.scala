@@ -32,18 +32,17 @@ object Helpers {
     case nonEmptyString => Some(nonEmptyString)
   }
 
-  def typeFor[A](property: Property[A]): String = {
-    val isMandatory = property.isMandatory
+  def typeFor[A](property: Property[A], nullable: Boolean = false): String = {
     property.valueType match {
-      case ValueType.Boolean => if (isMandatory) "Boolean" else "java.lang.Boolean"
+      case ValueType.Boolean => if (nullable) "java.lang.Boolean" else "Boolean"
       case ValueType.String => "String"
-      case ValueType.Byte => if (isMandatory) "Byte" else "java.lang.Byte"
-      case ValueType.Short => if (isMandatory) "Short" else "java.lang.Short"
-      case ValueType.Int => if (isMandatory) "scala.Int" else "Integer"
-      case ValueType.Long => if (isMandatory) "Long" else "java.lang.Long"
-      case ValueType.Float => if (isMandatory) "Float" else "java.lang.Float"
-      case ValueType.Double => if (isMandatory) "Double" else "java.lang.Double"
-      case ValueType.Char => if (isMandatory) "scala.Char" else "Character"
+      case ValueType.Byte => if (nullable) "java.lang.Byte" else "Byte"
+      case ValueType.Short => if (nullable) "java.lang.Short" else "Short"
+      case ValueType.Int => if (nullable) "Integer" else "scala.Int"
+      case ValueType.Long => if (nullable) "java.lang.Long" else "Long"
+      case ValueType.Float => if (nullable) "java.lang.Float" else "Float"
+      case ValueType.Double => if (nullable) "java.lang.Double" else "Double"
+      case ValueType.Char => if (nullable) "Character" else "scala.Char"
       case ValueType.List => "Seq[_]"
       case ValueType.NodeRef => "overflowdb.NodeRef[_]"
       case ValueType.Unknown => "java.lang.Object"
@@ -120,8 +119,8 @@ object Helpers {
     }
   }
 
-  def getCompleteType[A](property: Property[?]): String =
-    getCompleteType(property.cardinality, typeFor(property))
+  def getCompleteType[A](property: Property[?], nullable: Boolean = true): String =
+    getCompleteType(property.cardinality, typeFor(property, nullable))
 
   def typeFor(containedNode: ContainedNode): String = {
     containedNode.nodeType match {
@@ -200,10 +199,10 @@ object Helpers {
     }.mkString(s"$lineSeparator|    ")
   }
 
-  def propertyAccessors(properties: Seq[Property[?]]): String = {
+  def propertyAccessors(properties: Seq[Property[?]], nullable: Boolean = true): String = {
     properties.map { property =>
       val camelCaseName = camelCase(property.name)
-      val tpe = getCompleteType(property)
+      val tpe = getCompleteType(property, nullable = nullable)
       s"def $camelCaseName: $tpe"
     }.mkString(lineSeparator)
   }

@@ -175,7 +175,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
     val node1 = NewNode1()
       .bool(true)
       .str("foo")
-      .intList(Seq(1,2,3): Seq[Integer])
+      .intList(Seq(1,2,3))
 
     val node2 = NewNode1().node1Inner(node1)
 
