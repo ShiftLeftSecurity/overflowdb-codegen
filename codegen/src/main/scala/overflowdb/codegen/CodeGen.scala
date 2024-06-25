@@ -1826,7 +1826,7 @@ class CodeGen(schema: Schema) {
 
             case Cardinality.ZeroOrOne =>
               s"""def $name(value: $valueTypeNullable): this.type = {
-                 |  this.$name = Option(value)
+                 |  this.$name = Option(value).asInstanceOf[Option[$valueType]]
                  |  this
                  |}
                  |
