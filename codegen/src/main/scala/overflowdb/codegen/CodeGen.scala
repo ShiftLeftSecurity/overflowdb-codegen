@@ -539,7 +539,7 @@ class CodeGen(schema: Schema) {
             val entireNodeHierarchy: Set[AbstractNodeType] = neighbor.subtypes(schema.allNodeTypes.toSet) ++ (neighbor.extendzRecursively :+ neighbor)
             entireNodeHierarchy.map { neighbor =>
               val accessorName = adjacentNode.customStepName.getOrElse(
-                s"_${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
+                s"${camelCase(neighbor.name)}Via${edge.className.capitalize}${camelCaseCaps(direction.toString)}"
               )
               val accessorImpl0 = s"$edgeAccessorName.collectAll[${neighbor.className}]"
               val cardinality = adjacentNode.cardinality
@@ -558,6 +558,10 @@ class CodeGen(schema: Schema) {
                  |  */ ${docAnnotationMaybe(adjacentNode.customStepDoc)}
                  |def $accessorName: ${fullScalaType(neighbor, cardinality)} =
                  |  $accessorImpl1
+                 |
+                 |@deprecated("please use `$accessorName`", "June 2024")
+                 |def _$accessorName = $accessorName
+                 |
                  |  """.stripMargin
             }
           }.distinct.mkString(lineSeparator)
@@ -1013,8 +1017,13 @@ class CodeGen(schema: Schema) {
             s"""/** ${neighborNodeInfo.customStepDoc.getOrElse("")}
                |  * Traverse to ${neighborNodeInfo.neighborNode.name} via ${neighborNodeInfo.edge.name} $direction edge.
                |  */  ${docAnnotationMaybe(neighborNodeInfo.customStepDoc)}
-               |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode""".stripMargin
+               |def $accessorNameForNode: ${neighborNodeInfo.returnType} = get().$accessorNameForNode
+               |
+               |@deprecated("please use `$accessorNameForNode`", "June 2024")
+               |def _$accessorNameForNode = $accessorNameForNode
+               |""".stripMargin
         }.mkString(lineSeparator)
+
 
         val neighborNodeClass = neighborInfo.deriveNeighborNodeType.getOrElse(schema.anyNode).className
         s"""def $edgeAccessorName: Iterator[$neighborNodeClass] = get().$edgeAccessorName
@@ -1090,11 +1099,16 @@ class CodeGen(schema: Schema) {
               case EdgeType.Cardinality.ZeroOrOne => s"$accessorImpl0.nextOption()"
               case _ => accessorImpl0
             }
-            s"def ${accessorName(neighborNodeInfo)}: ${neighborNodeInfo.returnType} = $accessorImpl1"
+            val accessorNameForNode = accessorName(neighborNodeInfo)
+            s"""@deprecated("please use `$accessorNameForNode`", "June 2024")
+               |def _$accessorNameForNode = $accessorNameForNode
+               |
+               |def $accessorNameForNode: ${neighborNodeInfo.returnType} = $accessorImpl1""".stripMargin
         }.mkString(lineSeparator)
 
         s"""def $edgeAccessorName: Iterator[$neighborType] = createAdjacentNodeScalaIteratorByOffSet[$neighborType]($offsetPosition)
            |override def _$edgeAccessorName = createAdjacentNodeScalaIteratorByOffSet[StoredNode]($offsetPosition)
+           |
            |$nodeAccessors
            |""".stripMargin
       }.mkString(lineSeparator)
