@@ -49,15 +49,15 @@ class Schema05Test extends AnyWordSpec with Matchers {
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val edge1 = node1.addEdge(Edge1.Label, node2).asInstanceOf[Edge1]
     val properties = Seq(
-      Properties.BOOL.of(false),
-      Properties.STR.of("foo"),
-      Properties.BYTE.of(100: Byte),
-      Properties.SHORT.of(101: Short),
-      Properties.INT.of(102),
-      Properties.LONG.of(103),
-      Properties.FLOAT.of(104.4f),
-      Properties.DOUBLE.of(105.5),
-      Properties.CHAR.of('Z'),
+      Properties.Bool.of(false),
+      Properties.Str.of("foo"),
+      Properties.Byte.of(100: Byte),
+      Properties.Short.of(101: Short),
+      Properties.Int.of(102),
+      Properties.Long.of(103),
+      Properties.Float.of(104.4f),
+      Properties.Double.of(105.5),
+      Properties.Char.of('Z'),
     )
     properties.foreach(node1.setProperty)
     properties.foreach(edge1.setProperty)

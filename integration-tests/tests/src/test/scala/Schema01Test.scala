@@ -11,9 +11,8 @@ class Schema01Test extends AnyWordSpec with Matchers {
   import testschema01.traversal._
   "constants" in {
     PropertyNames.NAME shouldBe "NAME"
-    Properties.ORDER.name shouldBe "ORDER"
+    Properties.Order.name shouldBe "ORDER"
     PropertyNames.ALL.contains("OPTIONS") shouldBe true
-    Properties.ALL.contains(Properties.OPTIONS) shouldBe true
 
     NodeTypes.NODE1 shouldBe "NODE1"
     NodeTypes.ALL.contains(Node2.Label) shouldBe true
@@ -43,8 +42,8 @@ class Schema01Test extends AnyWordSpec with Matchers {
 
     "lookup and traverse nodes/edges/properties" in {
       // generic traversal
-      graph.nodes.asScala.property(Properties.NAME).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
-      graph.edges.asScala.property(Properties.NAME).toSetMutable shouldBe Set("edge 2")
+      graph.nodes.asScala.property(Properties.Name).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
+      graph.edges.asScala.property(Properties.Name).toSetMutable shouldBe Set("edge 2")
       node1Traversal.out.toList shouldBe Seq(node2a)
       node1Traversal.name.toSetMutable shouldBe Set("node 1a", "node 1b")
       node1Traversal.order.l shouldBe Seq(2)

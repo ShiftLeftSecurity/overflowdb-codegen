@@ -254,20 +254,26 @@ class CodeGen(schema: Schema) {
       })
     }
 
-    writeConstantsFile("Properties", schema.properties.map { property =>
-      val src = {
+    // Properties.scala
+    val propertyKeysConstantsSource = {
+      schema.properties.map { property =>
         val valueType = typeFor(property)
-        val cardinality = property.cardinality
-        import Property.Cardinality
-        val completeType = cardinality match {
-          case Cardinality.One(_) => valueType
-          case Cardinality.ZeroOrOne => valueType
-          case Cardinality.List => s"scala.collection.IndexedSeq<$valueType>"
+        val completeType = property.cardinality match {
+          case Property.Cardinality.One(_) => valueType
+          case Property.Cardinality.ZeroOrOne => valueType
+          case Property.Cardinality.List => s"IndexedSeq[$valueType]"
         }
-        s"""public static final overflowdb.PropertyKey<$completeType> ${property.name} = new overflowdb.PropertyKey<>("${property.name}");"""
+        s"""val ${camelCaseCaps(property.name)}: overflowdb.PropertyKey[$completeType] = new overflowdb.PropertyKey("${property.name}")""".stripMargin.trim
       }
-      ConstantContext(property.name, src, property.comment)
-    })
+    }.mkString("\n\n")
+    val file = baseDir.createChild("Properties.scala").write(
+      s"""package ${schema.basePackage}
+         |
+         |object Properties {
+         |$propertyKeysConstantsSource
+         |}""".stripMargin
+    )
+    results.append(file)
 
     results.toSeq
   }
