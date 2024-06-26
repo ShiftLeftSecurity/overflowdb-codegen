@@ -78,18 +78,18 @@ class Schema04Test extends AnyWordSpec with Matchers {
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val edge1 = node1.addEdge(Edge1.Label, node2).asInstanceOf[Edge1]
     val properties = Seq(
-      Properties.BOOL.of(false),
-      Properties.STR.of("foo"),
-      Properties.BYTE.of(100: Byte),
-      Properties.SHORT.of(101: Short),
-      Properties.INT.of(102),
-      Properties.LONG.of(103),
-      Properties.FLOAT1.of(Float.NaN),
-      Properties.FLOAT2.of(104.4f),
-      Properties.DOUBLE1.of(Double.NaN),
-      Properties.DOUBLE2.of(105.5),
-      Properties.CHAR.of('Z'),
-      Properties.INT_LIST.of(ArraySeq(3, 4, 5)),
+      Properties.Bool.of(false),
+      Properties.Str.of("foo"),
+      Properties.Byte.of(100: Byte),
+      Properties.Short.of(101: Short),
+      Properties.Int.of(102),
+      Properties.Long.of(103),
+      Properties.Float1.of(Float.NaN),
+      Properties.Float2.of(104.4f),
+      Properties.Double1.of(Double.NaN),
+      Properties.Double2.of(105.5),
+      Properties.Char.of('Z'),
+      Properties.IntList.of(ArraySeq(3, 4, 5)),
     )
     properties.foreach(node1.setProperty)
     properties.foreach(edge1.setProperty)
@@ -164,8 +164,8 @@ class Schema04Test extends AnyWordSpec with Matchers {
     val node1 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val node2 = graph.addNode(Node1.Label).asInstanceOf[Node1]
     val edge1 = node1.addEdge(Edge1.Label, node2).asInstanceOf[Edge1]
-    node1.setProperty(Properties.INT_LIST.name, Array(1,2,3))
-    edge1.setProperty(Properties.INT_LIST.name, Array(3,4,5))
+    node1.setProperty(Properties.IntList.name, Array(1,2,3))
+    edge1.setProperty(Properties.IntList.name, Array(3,4,5))
 
     node1.intList shouldBe IndexedSeq(1,2,3)
     edge1.intList shouldBe IndexedSeq(3,4,5)
@@ -175,7 +175,7 @@ class Schema04Test extends AnyWordSpec with Matchers {
     val node1 = NewNode1()
       .bool(true)
       .str("foo")
-      .intList(Seq(1,2,3): Seq[Integer])
+      .intList(Seq(1,2,3))
 
     val node2 = NewNode1().node1Inner(node1)
 

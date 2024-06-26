@@ -6,13 +6,13 @@ import testschema01.nodes._
 import testschema01.edges._
 import testschema01.traversal._
 import scala.jdk.CollectionConverters.IteratorHasAsScala
+
 class Schema01Test extends AnyWordSpec with Matchers {
   import testschema01.traversal._
   "constants" in {
     PropertyNames.NAME shouldBe "NAME"
-    Properties.ORDER.name shouldBe "ORDER"
+    Properties.Order.name shouldBe "ORDER"
     PropertyNames.ALL.contains("OPTIONS") shouldBe true
-    Properties.ALL.contains(Properties.OPTIONS) shouldBe true
 
     NodeTypes.NODE1 shouldBe "NODE1"
     NodeTypes.ALL.contains(Node2.Label) shouldBe true
@@ -42,8 +42,8 @@ class Schema01Test extends AnyWordSpec with Matchers {
 
     "lookup and traverse nodes/edges/properties" in {
       // generic traversal
-      graph.nodes.asScala.property(Properties.NAME).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
-      graph.edges.asScala.property(Properties.NAME).toSetMutable shouldBe Set("edge 2")
+      graph.nodes.asScala.property(Properties.Name).toSetMutable shouldBe Set("node 1a", "node 1b", "node 2a", "node 2b")
+      graph.edges.asScala.property(Properties.Name).toSetMutable shouldBe Set("edge 2")
       node1Traversal.out.toList shouldBe Seq(node2a)
       node1Traversal.name.toSetMutable shouldBe Set("node 1a", "node 1b")
       node1Traversal.order.l shouldBe Seq(2)
@@ -58,7 +58,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
       val edge2Specific = edge2.asInstanceOf[Edge2]
       val name: String = node1aSpecific.name
       name shouldBe "node 1a"
-      val o1: Option[Integer] = node1aSpecific.order
+      val o1: Option[Int] = node1aSpecific.order
       node1aSpecific.order shouldBe Some(2)
       node1bSpecific.order shouldBe None
       val o2: Seq[String] = node2aSpecific.options
@@ -97,7 +97,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
         .name("name1")
         .node3(node3)
         .options(Seq("one", "two", "three"))
-        .placements(Seq(1,2,3): Seq[Integer])
+        .placements(Seq(1,2,3))
 
       val builder = new BatchedUpdate.DiffGraphBuilder
       builder.addNode(newNode2)
