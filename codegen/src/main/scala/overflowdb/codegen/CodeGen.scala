@@ -152,6 +152,7 @@ class CodeGen(schema: Schema) {
          |      case other => other
          |    }
          |
+         |  def newDiffGraphBuilder: DiffGraphBuilder = new DiffGraphBuilder
          |}
          |
          |
