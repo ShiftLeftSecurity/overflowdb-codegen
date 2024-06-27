@@ -1,6 +1,6 @@
 name := "overflowdb-codegen-root"
 
-ThisBuild/organization := "io.shiftleft"
+ThisBuild/organization := "com.michaelpollmeier"
 
 /** scala cross version settings for codegen:
   * we need scala 2.12 for the sbt plugin, 2.13 and 3 for everything else */
