@@ -54,7 +54,7 @@ object Helpers {
       val neighborNodeName = neighborInfoForNode.neighborNode.name
       val edgeName = neighborInfoForNode.edge.className
       val direction = neighborInfoForNode.direction.toString
-       s"_${camelCase(neighborNodeName)}Via$edgeName${camelCaseCaps(direction)}"
+       s"${camelCase(neighborNodeName)}Via$edgeName${camelCaseCaps(direction)}"
     }
   }
 
