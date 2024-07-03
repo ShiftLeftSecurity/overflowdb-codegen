@@ -1270,7 +1270,6 @@ class CodeGen(schema: Schema) {
          |
          |package object $packageSimpleName {
          |  // some type aliases so that the domain-specific code can avoid referencing the `overflowdb` namespace
-         |  type DiffGraphBuilder = _root_.overflowdb.BatchedUpdate.DiffGraphBuilder
          |  
          |  object help {
          |    type Doc = _root_.overflowdb.traversal.help.Doc
