@@ -1,3 +1,5 @@
+package overflowdb.integrationtests
+
 import overflowdb.schema.SchemaBuilder
 
 trait TestSchema {

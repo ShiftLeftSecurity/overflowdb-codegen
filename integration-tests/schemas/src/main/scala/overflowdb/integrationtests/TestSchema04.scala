@@ -1,3 +1,5 @@
+package overflowdb.integrationtests
+
 import overflowdb.schema.Property._
 
 /** For testing default values on properties with Cardinality.One: we have type-dependent defaults,

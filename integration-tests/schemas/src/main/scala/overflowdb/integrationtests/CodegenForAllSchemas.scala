@@ -1,3 +1,5 @@
+package overflowdb.integrationtests
+
 import overflowdb.codegen.CodeGen
 
 import java.io.File

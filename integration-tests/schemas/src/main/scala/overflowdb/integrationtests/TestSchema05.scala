@@ -1,3 +1,5 @@
+package overflowdb.integrationtests
+
 import overflowdb.schema.Property._
 
 /** testing all property types with Cardinality.ZeroOrOne */

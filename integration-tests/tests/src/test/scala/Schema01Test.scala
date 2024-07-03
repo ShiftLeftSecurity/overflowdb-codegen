@@ -1,6 +1,7 @@
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import overflowdb.{BatchedUpdate, Config, Graph}
+import overflowdb.integrationtests.testschema01
 import testschema01._
 import testschema01.nodes._
 import testschema01.edges._
@@ -8,7 +9,7 @@ import testschema01.traversal._
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 class Schema01Test extends AnyWordSpec with Matchers {
-  import testschema01.traversal._
+  import overflowdb.integrationtests.testschema01.traversal._
   "constants" in {
     PropertyNames.NAME shouldBe "NAME"
     Properties.Order.name shouldBe "ORDER"
@@ -109,7 +110,7 @@ class Schema01Test extends AnyWordSpec with Matchers {
     }
   }
   "work around scala bug 4762, ie generate no extraneous fields" in {
-    Class.forName("testschema01.nodes.Node1").getDeclaredFields.length shouldBe 0
+    Class.forName("overflowdb.integrationtests.testschema01.nodes.Node1").getDeclaredFields.length shouldBe 0
   }
 
 }

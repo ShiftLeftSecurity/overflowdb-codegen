@@ -1,6 +1,7 @@
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import overflowdb.{Config, Graph}
+import overflowdb.integrationtests.testschema05
 import testschema05._
 import testschema05.edges._
 import testschema05.nodes._

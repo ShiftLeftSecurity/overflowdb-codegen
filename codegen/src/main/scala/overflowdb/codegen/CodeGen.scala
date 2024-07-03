@@ -1259,6 +1259,28 @@ class CodeGen(schema: Schema) {
       val srcFile = nodeType.className + ".scala"
       results.append(baseDir.createChild(srcFile).write(src))
     }
+
+
+    val packageObject = {
+      val lastSeparatorIdx  = basePackage.lastIndexOf('.')
+      val packageParent     = basePackage.take(lastSeparatorIdx)
+      val packageSimpleName = basePackage.drop(lastSeparatorIdx + 1)
+
+      s"""package $packageParent
+         |
+         |package object $packageSimpleName {
+         |  // some type aliases so that the domain-specific code can avoid referencing the `overflowdb` namespace
+         |  
+         |  object help {
+         |    type Doc = _root_.overflowdb.traversal.help.Doc
+         |    type Traversal = _root_.overflowdb.traversal.help.Traversal
+         |    type TraversalSource = _root_.overflowdb.traversal.help.TraversalSource
+         |  }
+         |}
+         |""".stripMargin
+    }
+    results.append(baseDir.createChild("package.scala").write(packageObject))
+
     results.toSeq
   }
 

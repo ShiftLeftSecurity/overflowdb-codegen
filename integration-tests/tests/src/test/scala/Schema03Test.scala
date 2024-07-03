@@ -1,4 +1,7 @@
 import overflowdb.traversal._
+import overflowdb.integrationtests.testschema03a
+import overflowdb.integrationtests.testschema03b
+import overflowdb.integrationtests.testschema03c
 
 class Schema03aTest {
   import testschema03a._

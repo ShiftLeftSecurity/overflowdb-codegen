@@ -1,3 +1,5 @@
+package overflowdb.integrationtests
+
 /** complex scenario with multiple layers of base nodes
   * similar to what we use in docker-ext schema extension
   */
