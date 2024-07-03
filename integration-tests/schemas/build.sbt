@@ -19,7 +19,7 @@ generateDomainClasses := Def.taskDyn {
     }
   } else {
     Def.task {
-      val invoked = (Compile/runMain).toTask(s" CodegenForAllSchemas").value
+      val invoked = (Compile/runMain).toTask(s" overflowdb.integrationtests.CodegenForAllSchemas").value
       lastSchemaMd5(currentSchemaMd5)
       FileUtils.listFilesRecursively(outputRoot)
     }

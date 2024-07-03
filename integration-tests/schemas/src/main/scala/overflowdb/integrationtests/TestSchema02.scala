@@ -1,3 +1,5 @@
+package overflowdb.integrationtests
+
 import overflowdb.schema.Property.ValueType
 import overflowdb.schema._
 
